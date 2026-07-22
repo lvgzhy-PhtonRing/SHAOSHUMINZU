@@ -37,7 +37,7 @@
         <div class="group-title">关于</div>
         <div class="settings-item">
           <div class="item-left"><span class="item-icon">ℹ️</span><span>版本</span></div>
-          <span class="item-value">v1.3.6</span>
+          <span class="item-value">v1.3.7</span>
         </div>
         <div class="settings-item">
           <div class="item-left"><span class="item-icon">🏛️</span><span>数据存储</span></div>
@@ -131,22 +131,22 @@ async function doImport() {
   try {
     for (const table of TABLES) {
       const rows = pendingImportData[table]
-      if (!rows || !rows.length) continue
-
-      // 安全删除所有旧数据
-      if (table === 'stock_cache') {
-        await supabase.from(table).delete().neq('stock_code', '')
-      } else if (table === 'app_config') {
-        await supabase.from(table).delete().neq('key', '')
-      } else {
-        await supabase.from(table).delete().gt('id', 0)
+      // 先查出当前表中所有记录ID，逐条删除
+      const { data: current } = await supabase.from(table).select(table === 'stock_cache' ? 'stock_code' : table === 'app_config' ? 'key' : 'id')
+      if (current && current.length) {
+        for (const item of current) {
+          if (table === 'stock_cache') await supabase.from(table).delete().eq('stock_code', item.stock_code)
+          else if (table === 'app_config') await supabase.from(table).delete().eq('key', item.key)
+          else await supabase.from(table).delete().eq('id', item.id)
+        }
       }
-
-      // 逐条插入（避免主键冲突）
-      for (const row of rows) {
-        const { id, created_at, updated_at, ...clean } = row
-        const { error } = await supabase.from(table).insert(clean)
-        if (error) console.warn(`${table} row insert error:`, error.message)
+      // 插入备份数据
+      if (rows && rows.length) {
+        for (const row of rows) {
+          const { id, created_at, updated_at, ...clean } = row
+          const { error } = await supabase.from(table).insert(clean)
+          if (error) console.warn(`${table} row insert error:`, error.message)
+        }
       }
     }
     alert('✅ 数据导入成功！请刷新页面查看')
