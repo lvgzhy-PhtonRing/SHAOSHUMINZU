@@ -5,7 +5,8 @@ import { fetchHoldings } from '@/api/supabase'
 export const useHoldingStore = defineStore('holdings', {
   state: () => ({
     holdings: [],
-    loading: false
+    loading: false,
+    error: null
   }),
   getters: {
     holdingsByPool: (state) => {
@@ -23,8 +24,15 @@ export const useHoldingStore = defineStore('holdings', {
   actions: {
     async loadHoldings() {
       this.loading = true
-      this.holdings = await fetchHoldings()
-      this.loading = false
+      this.error = null
+      try {
+        this.holdings = await fetchHoldings()
+      } catch (e) {
+        this.error = e.message
+        console.error('Load holdings error:', e)
+      } finally {
+        this.loading = false
+      }
     }
   }
 })

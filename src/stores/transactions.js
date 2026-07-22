@@ -12,8 +12,15 @@ export const useTransactionStore = defineStore('transactions', {
   actions: {
     async loadTransactions() {
       this.loading = true
-      this.transactions = await fetchTransactions()
-      this.loading = false
+      this.error = null
+      try {
+        this.transactions = await fetchTransactions()
+      } catch (e) {
+        this.error = e.message
+        console.error('Load transactions error:', e)
+      } finally {
+        this.loading = false
+      }
     },
     async addTransaction(tx) {
       this.submitting = true
@@ -30,15 +37,22 @@ export const useTransactionStore = defineStore('transactions', {
       }
     },
     async verify(id, actualAmount) {
-      const ok = await verifyTransaction(id, actualAmount)
-      if (ok) {
-        const tx = this.transactions.find(t => t.id === id)
-        if (tx) {
-          tx.status = 'verified'
-          tx.actual_amount = actualAmount
+      this.error = null
+      try {
+        const ok = await verifyTransaction(id, actualAmount)
+        if (ok) {
+          const tx = this.transactions.find(t => t.id === id)
+          if (tx) {
+            tx.status = 'verified'
+            tx.actual_amount = actualAmount
+          }
         }
+        return ok
+      } catch (e) {
+        this.error = e.message
+        console.error('Verify error:', e)
+        return false
       }
-      return ok
     }
   }
 })

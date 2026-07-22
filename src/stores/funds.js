@@ -12,8 +12,15 @@ export const useFundStore = defineStore('funds', {
   actions: {
     async loadCapitalLogs() {
       this.loading = true
-      this.capitalLogs = await fetchCapitalLogs()
-      this.loading = false
+      this.error = null
+      try {
+        this.capitalLogs = await fetchCapitalLogs()
+      } catch (e) {
+        this.error = e.message
+        console.error('Load capital logs error:', e)
+      } finally {
+        this.loading = false
+      }
     },
     async addCapitalLog(log) {
       this.submitting = true
