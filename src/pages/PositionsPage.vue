@@ -76,7 +76,6 @@ const holdingStore = useHoldingStore()
 const priceStore = usePriceStore()
 
 const loading = ref(true)
-const totalAsset = ref(816935.51)
 
 const colorList = ['#0f3460', '#e94560', '#00d2a1', '#ffc107', '#7c4dff']
 
@@ -96,14 +95,27 @@ const poolPositionData = computed(() => {
   })
 })
 
+const totalMarketValue = computed(() => {
+  return poolPositionData.value.reduce((s, p) => s + p.marketValue, 0)
+})
+
+const totalAsset = computed(() => {
+  // 总资产 ≈ 总市值 + 各池可用资金（当前简化为持仓总市值 / 仓位比例）
+  const mv = totalMarketValue.value
+  return mv > 0 ? mv : 816935.51 // fallback
+})
+
 const totalPositionRatio = computed(() => {
   const totalMV = poolPositionData.value.reduce((s, p) => s + p.marketValue, 0)
   return totalAsset.value > 0 ? (totalMV / totalAsset.value) * 100 : 0
 })
 
+const donutSize = 200
+const chartRadius = donutSize / 2 - 20
+
 const chartSegments = computed(() => {
   let offset = 0
-  const circ = 2 * Math.PI * 70
+  const circ = 2 * Math.PI * chartRadius
   return poolPositionData.value.map(p => {
     const arcLength = (p.percent / 100) * circ
     const seg = { color: p.color, arcLength, offset: -offset }
