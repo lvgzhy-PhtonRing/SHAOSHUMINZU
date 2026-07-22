@@ -163,8 +163,8 @@ const poolPositionData = computed(() => {
     const poolCapital = poolAmounts[p.name] || 0
     // 该池仓位 = 该池持股市值 / 该池分配资金
     const positionRatio = poolCapital > 0 ? (mv / poolCapital) * 100 : 0
-    // 子池总资产 = 子池市值 + (子池分配 - 子池成本)
-    const totalPoolAsset = mv + Math.max(0, poolCapital - cost)
+    // 子池总资产 = 子池市值 + 子池分配可用资金（不减持仓成本，分配金已为可用）
+    const totalPoolAsset = mv + poolCapital
     return {
       ...p,
       marketValue: mv,
