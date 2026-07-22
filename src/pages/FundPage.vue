@@ -51,7 +51,13 @@ const holdingStore = useHoldingStore()
 const priceStore = usePriceStore()
 
 const loading = ref(true)
-const totalAsset = ref(829661.35)
+const totalCapital = ref(829661.35)
+
+const totalCost = computed(() => {
+  return holdingStore.holdings.reduce((s, h) => {
+    return s + h.cost_price * h.quantity
+  }, 0)
+})
 
 const totalMarketValue = computed(() => {
   return holdingStore.holdings.reduce((s, h) => {
@@ -60,9 +66,9 @@ const totalMarketValue = computed(() => {
   }, 0)
 })
 
-const totalAvailable = computed(() => {
-  return totalAsset.value - totalMarketValue.value
-})
+const floatPnl = computed(() => totalMarketValue.value - totalCost.value)
+const totalAsset = computed(() => totalCapital.value + floatPnl.value)
+const totalAvailable = computed(() => totalCapital.value - totalCost.value)
 
 async function onCapitalChange({ type, amount, note }) {
   try {
@@ -71,8 +77,8 @@ async function onCapitalChange({ type, amount, note }) {
       note: note || '',
       created_by: 'admin'
     })
-    if (type === 'add') totalAsset.value += amount
-    else totalAsset.value -= amount
+    if (type === 'add') totalCapital.value += amount
+    else totalCapital.value -= amount
     await fundStore.loadCapitalLogs()
   } catch (e) {
     console.error('Capital change error:', e)

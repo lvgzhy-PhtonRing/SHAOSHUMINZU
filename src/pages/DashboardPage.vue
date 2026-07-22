@@ -145,13 +145,17 @@ const displayHoldings = computed(() => {
   }).sort((a, b) => b.marketValue - a.marketValue)
 })
 
+const totalCapital = ref(829661.35)
+
 const summary = computed(() => {
   const holdings = displayHoldings.value
   const totalMarketValue = holdings.reduce((s, h) => s + h.marketValue, 0)
   const totalCost = holdings.reduce((s, h) => s + h.cost_price * h.quantity, 0)
   const floatPnl = totalMarketValue - totalCost
-  const totalAsset = 829661.35
-  const totalAvailable = totalAsset - totalMarketValue
+  // 总资产 = 资金池 + 浮动盈亏
+  const totalAsset = totalCapital.value + floatPnl
+  // 可用资金 = 资金池 - 持仓成本
+  const totalAvailable = totalCapital.value - totalCost
   return {
     totalAsset,
     totalMarketValue,
