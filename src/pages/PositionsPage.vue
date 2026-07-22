@@ -10,10 +10,20 @@
     <template v-else>
       <!-- 总仓位模块 -->
       <div class="section-card">
-        <DonutChart
-          :segments="chartSegments"
-          :total-percent="totalPositionRatio"
-        />
+        <div class="donut-layout">
+          <div class="donut-chart-area">
+            <DonutChart
+              :segments="chartSegments"
+              :total-percent="totalPositionRatio"
+            />
+          </div>
+          <div class="legend-col">
+            <div v-for="item in poolShares" :key="item.name" class="legend-item">
+              <span class="legend-dot" :style="{ background: item.color }"></span>
+              <span class="legend-label">{{ item.name }}</span>
+            </div>
+          </div>
+        </div>
         <div class="total-ratio-detail">
           <span class="trd-label">总市值</span>
           <span class="trd-value num-mono">{{ formatMoney(totalMarketValue) }}</span>
@@ -24,13 +34,6 @@
         <div class="total-slogan">
           <span class="slogan-emoji">{{ positionSlogan.emoji }}</span>
           <span class="slogan-text">{{ positionSlogan.text }}</span>
-        </div>
-        <div class="legend">
-          <div v-for="item in poolPositionData" :key="item.name" class="legend-item">
-            <span class="legend-dot" :style="{ background: item.color }"></span>
-            <span class="legend-label">{{ item.name }}</span>
-            <span class="legend-value num-mono">{{ item.percent.toFixed(1) }}%</span>
-          </div>
         </div>
       </div>
 
@@ -181,11 +184,20 @@ const poolPositionData = computed(() => {
 const donutSize = 200
 const chartRadius = donutSize / 2 - 20
 
+// 各子池占总资产比例（用于环形分段和图例）
+const poolShares = computed(() => {
+  return poolPositionData.value.map(p => ({
+    name: p.name,
+    color: p.color,
+    share: totalAsset.value > 0 ? (p.totalPoolAsset / totalAsset.value) * 100 : 0
+  }))
+})
+
 const chartSegments = computed(() => {
   let offset = 0
   const circ = 2 * Math.PI * chartRadius
-  return poolPositionData.value.map(p => {
-    const arcLength = (p.percent / 100) * circ
+  return poolShares.value.map(p => {
+    const arcLength = (p.share / 100) * circ
     const seg = { color: p.color, arcLength, offset: -offset }
     offset += arcLength
     return seg
@@ -263,6 +275,13 @@ onMounted(async () => {
   min-height: 4px;
 }
 .bar-label { font-size: 10px; color: var(--text-muted); }
+.donut-layout { display: flex; align-items: center; gap: 12px; }
+.donut-chart-area { flex-shrink: 0; }
+.legend-col { display: flex; flex-direction: column; gap: 6px; }
+.legend-item { display: flex; align-items: center; gap: 6px; }
+.legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.legend-label { font-size: 12px; color: var(--text-secondary); }
+
 .total-ratio-detail {
   text-align: center;
   padding: 0 0 6px;
