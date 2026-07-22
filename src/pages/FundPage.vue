@@ -21,7 +21,13 @@
 
     <LoadingSkeleton v-if="loading" :count="2" />
     <template v-else>
-      <FundAllocationForm :pools="poolStore.pools" :submitting="fundStore.submitting" @submit="onFundSubmit" />
+      <FundAllocationForm
+        :pools="poolStore.pools"
+        :total-available="totalAvailable"
+        :submitting="fundStore.submitting"
+        @capital-change="onCapitalChange"
+        @alloc-change="onAllocChange"
+      />
       <CapitalLogList :logs="fundStore.capitalLogs" />
     </template>
   </div>
@@ -54,16 +60,34 @@ const totalMarketValue = computed(() => {
   }, 0)
 })
 
-async function onFundSubmit(data) {
+async function onCapitalChange({ type, amount, note }) {
   try {
-    await fundStore.addCapitalLog({ pool_id: null, type: data.type, amount: data.totalAmount, note: data.note || '', created_by: 'admin' })
-    for (const alloc of data.allocations) {
-      if (alloc.amount > 0) {
-        await fundStore.addCapitalLog({ pool_id: alloc.pool_id, type: data.type, amount: alloc.amount, note: data.note ? `${data.note}（分配）` : '分配', created_by: 'admin' })
-      }
-    }
+    await fundStore.addCapitalLog({
+      pool_id: null, type, amount,
+      note: note || `${type === 'add' ? '增资' : '减资'} ${amount}`,
+      created_by: 'admin'
+    })
+    // 更新可用资金
+    totalAvailable.value += (type === 'add' ? amount : -amount)
+    await fundStore.loadCapitalLogs()
   } catch (e) {
-    console.error('Fund submit error:', e)
+    console.error('Capital change error:', e)
+  }
+}
+
+async function onAllocChange({ pools: allocs }) {
+  try {
+    for (const a of allocs) {
+      await fundStore.addCapitalLog({
+        pool_id: a.pool_id, type: 'add',
+        amount: a.amount,
+        note: `资金分配: ${a.key} ${a.percent.toFixed(1)}%`,
+        created_by: 'admin'
+      })
+    }
+    await fundStore.loadCapitalLogs()
+  } catch (e) {
+    console.error('Alloc change error:', e)
   }
 }
 
