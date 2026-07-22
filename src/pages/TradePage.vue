@@ -37,7 +37,7 @@
 
     <!-- 历史买卖记录 -->
     <div class="section-card" v-if="tradeLogs.length">
-      <div class="section-title">买卖记录</div>
+      <div class="section-title">股票交易记录</div>
       <div class="trade-log-list">
         <div v-for="log in tradeLogs" :key="log.id" class="trade-log-item">
           <div class="tli-header">
