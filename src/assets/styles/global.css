@@ -45,6 +45,22 @@ body {
 
 /* 页面容器 */
 .page {
-  padding: var(--spacing-md) var(--spacing-lg);
-  padding-bottom: 70px; /* 底部Tab高度 */
+  padding: 0 var(--spacing-lg);
+  padding-bottom: 70px;
 }
+
+/* 统一页面标题 */
+.page-header {
+  display: flex; justify-content: space-between; align-items: baseline;
+  padding: 14px 0 12px;
+}
+.page-title { font-size: 17px; font-weight: 700; }
+
+/* 统一模块卡片 */
+.section-card {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+  margin-bottom: 10px;
+}
+.section-card.compact { padding: 12px 14px; margin-bottom: 8px; }

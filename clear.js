@@ -1,0 +1,4 @@
+const h={apikey:'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xZHhtYnNhZGRlYnhsYWxsZ29zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY1MDA3MjAsImV4cCI6MjA5MjA3NjcyMH0.gdptFoYcpfHtKRcsfwU-tnSteicHYjwa_znLLzBc3pE',Authorization:'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xZHhtYnNhZGRlYnhsYWxsZ29zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY1MDA3MjAsImV4cCI6MjA5MjA3NjcyMH0.gdptFoYcpfHtKRcsfwU-tnSteicHYjwa_znLLzBc3pE'}
+fetch('https://mqdxmbsaddebxlallgos.supabase.co/rest/v1/transactions?id=gt.0',{method:'DELETE',headers:h}).then(r=>console.log('transactions',r.status))
+fetch('https://mqdxmbsaddebxlallgos.supabase.co/rest/v1/holdings?id=gt.0',{method:'DELETE',headers:h}).then(r=>console.log('holdings',r.status))
+fetch('https://mqdxmbsaddebxlallgos.supabase.co/rest/v1/capital_log?id=gt.0',{method:'DELETE',headers:h}).then(r=>console.log('capital_log',r.status))

@@ -177,8 +177,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.page-header { padding: 0 0 12px; }
-.page-title { font-size: 18px; font-weight: 700; }
 .preset-card {
   background: var(--bg-card); border-radius: var(--radius-md); padding: 14px;
   margin-bottom: 16px; border-left: 3px solid var(--color-fall);

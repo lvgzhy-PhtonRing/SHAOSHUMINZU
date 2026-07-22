@@ -112,8 +112,6 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.page-header { padding: 4px 0 12px; }
-.page-title { font-size: 18px; font-weight: 700; }
 .total-pool-card {
   margin-bottom: 16px;
   padding: 16px;

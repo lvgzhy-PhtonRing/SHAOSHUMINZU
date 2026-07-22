@@ -172,30 +172,10 @@ const summary = computed(() => {
 </script>
 
 <style scoped>
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 0 12px;
-}
-.page-title {
-  font-size: 18px;
-  font-weight: 700;
-}
-.price-time {
-  font-size: 10px;
-  color: var(--text-muted);
-}
+.price-time { font-size: 10px; color: var(--text-muted); }
 .section-title {
-  display: flex;
-  justify-content: space-between;
-  padding: 8px 16px 6px;
-  font-size: 13px;
-  font-weight: 600;
+  display: flex; justify-content: space-between;
+  padding: 8px 0 6px; font-size: 13px; font-weight: 600;
 }
-.stock-count {
-  font-size: 12px;
-  color: var(--text-secondary);
-  font-weight: 400;
-}
+.stock-count { font-size: 12px; color: var(--text-secondary); font-weight: 400; }
 </style>

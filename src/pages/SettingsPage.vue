@@ -174,8 +174,6 @@ function doLogout() {
 </script>
 
 <style scoped>
-.page-header { padding: 4px 0 12px; }
-.page-title { font-size: 18px; font-weight: 700; }
 .settings-section { padding: 0; }
 .settings-group { margin-bottom: 20px; }
 .group-title { font-size: 12px; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 8px; padding-left: 4px; }

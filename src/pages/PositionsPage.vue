@@ -23,11 +23,22 @@
         </div>
       </div>
 
-      <!-- 子池仓位网格 -->
+      <!-- 子池仓位 -->
       <div class="section-title">各子池仓位</div>
-      <div class="pool-pos-grid">
+      <!-- 共有占整行 -->
+      <div class="pos-gongyou" v-if="poolPositionData.length">
         <PoolPositionCard
-          v-for="item in poolPositionData"
+          :name="poolPositionData[0].name"
+          :percent="poolPositionData[0].percent"
+          :market-value="poolPositionData[0].marketValue"
+          :color="poolPositionData[0].color"
+          wide
+        />
+      </div>
+      <!-- 四人两排两列 -->
+      <div class="pos-users-grid" v-if="poolPositionData.length > 1">
+        <PoolPositionCard
+          v-for="item in poolPositionData.slice(1)"
           :key="item.id || item.name"
           :name="item.name"
           :percent="item.percent"
@@ -177,49 +188,22 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 4px 16px 16px;
-}
-.page-title { font-size: 18px; font-weight: 700; }
 .total-asset-label { font-size: 12px; color: var(--text-secondary); }
 .legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  justify-content: center;
-  padding: 0 16px 16px;
+  display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; padding: 0 0 12px;
 }
 .legend-item { display: flex; align-items: center; gap: 6px; }
 .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
 .legend-label { font-size: 12px; color: var(--text-secondary); }
 .legend-value { font-size: 12px; font-weight: 600; font-family: var(--font-number); }
-.section-title {
-  padding: 12px 16px 8px;
-  font-size: 14px;
-  font-weight: 600;
-}
+.section-title { padding: 10px 0 8px; font-size: 13px; font-weight: 600; }
 .section-title .subtitle { font-size: 11px; color: var(--text-secondary); font-weight: 400; }
-.pool-pos-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  padding: 0 16px 8px;
-}
-.fund-list {
-  margin: 0 16px;
-  background: var(--bg-card);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-}
+.pos-gongyou { margin-bottom: 8px; }
+.pos-users-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.fund-list { background: var(--bg-card); border-radius: var(--radius-lg); overflow: hidden; }
 .fund-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 14px;
-  border-bottom: 1px solid rgba(255,255,255,0.04);
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 14px; border-bottom: 1px solid rgba(255,255,255,0.04);
 }
 .fund-item:last-child { border-bottom: none; }
 .fund-left { display: flex; align-items: center; gap: 8px; }
