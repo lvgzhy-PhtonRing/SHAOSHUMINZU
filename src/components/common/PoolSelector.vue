@@ -30,7 +30,7 @@ defineProps({
 defineEmits(['select'])
 
 function poolColor(name) {
-  const map = { '共有': '#0f3460', '春': '#e94560', '维': '#00d2a1', '队': '#ffc107', '回': '#7c4dff' }
+  const map = { '公共池': '#0f3460', '春': '#e94560', '维': '#00d2a1', '队': '#ffc107', '回': '#7c4dff' }
   return map[name] || '#0f3460'
 }
 </script>

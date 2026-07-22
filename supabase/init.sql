@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS pools (
 );
 
 INSERT INTO pools (name, sort_order) VALUES
-  ('共有', 1), ('春', 2), ('维', 3), ('队', 4), ('回', 5)
+  ('公共池', 1), ('春', 2), ('维', 3), ('队', 4), ('回', 5)
 ON CONFLICT (name) DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS capital_log (

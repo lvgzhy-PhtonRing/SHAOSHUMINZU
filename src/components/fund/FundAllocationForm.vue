@@ -13,7 +13,7 @@
 
       <!-- 共有 = 剩余（只读） -->
       <div class="pool-row remainder">
-        <div class="pool-left"><span class="dot" style="background:#0f3460"></span>共有</div>
+        <div class="pool-left"><span class="dot" style="background:#0f3460"></span>公共池</div>
         <span class="remainder-tag">剩余</span>
         <span class="pct readonly">{{ wanGongyou }}</span>
         <span class="pc">万</span>
@@ -24,7 +24,7 @@
 
       <!-- 四人 -->
       <div class="hint" v-if="isLinked">四人联动 · 等额分配</div>
-      <div class="hint" v-else>独立分配 · 共有自动为剩余</div>
+      <div class="hint" v-else>独立分配 · 公共池自动为剩余</div>
       <div v-for="p in users" :key="p.key" class="pool-row">
         <div class="pool-left"><span class="dot" :style="{ background: p.color }"></span>{{ p.name }}</div>
         <button class="adj" @click="adjust(p.key, -0.5)">−</button>
@@ -39,7 +39,7 @@
         <span>四人合计</span>
         <span class="num-mono">{{ formatMoney(usersTotal) }}</span>
         <span class="sep">|</span>
-        <span>共有</span>
+        <span>公共池</span>
         <span class="num-mono" :class="gongyouAmt >= 0 ? '' : 'fall'">{{ formatMoney(gongyouAmt) }}</span>
       </div>
 
@@ -87,7 +87,7 @@
               <span class="num-mono">{{ wanAmts[p.key] }} 万 → {{ formatMoney(amts[p.key]) }}</span>
             </div>
             <div class="dlg-row dlg-gy">
-              <span style="color:#0f3460">● 共有（剩余）</span>
+              <span style="color:#0f3460">● 公共池（剩余）</span>
               <span class="num-mono">{{ wanGongyou }} 万 → {{ formatMoney(gongyouAmt) }}</span>
             </div>
           </div>
@@ -151,11 +151,15 @@ const users = [
 ]
 const userKeys = users.map(u => u.key)
 
-// 只保存四个人的金额（元），共有=剩余
+// 只保存四个人的金额（元），公共池=剩余
 function fallbackAmts() {
   const raw = localStorage.getItem('poolAmounts')
   if (raw) {
-    const parsed = JSON.parse(raw)
+    let parsed = JSON.parse(raw)
+    // 迁移旧 '共有' 键 → '公共池'
+    if (parsed['共有'] !== undefined && parsed['公共池'] === undefined) {
+      parsed = { ...parsed }; parsed['公共池'] = parsed['共有']; delete parsed['共有']
+    }
     const vals = Object.values(parsed)
     const sum = vals.reduce((s, v) => s + v, 0)
     if (vals.every(v => v <= 100) && Math.abs(sum - 100) < 1) {
@@ -247,7 +251,7 @@ function confirmAlloc() { showAllocConfirm.value = true }
 
 function submitAlloc() {
   // 保存四人金额（元）+ 共有金额
-  const rec = { '共有': gongyouAmt.value }
+  const rec = { '公共池': gongyouAmt.value }
   for (const k of userKeys) rec[k] = amts[k]
   localStorage.setItem('poolAmounts', JSON.stringify(rec))
   localStorage.removeItem('poolPercents')
@@ -256,11 +260,11 @@ function submitAlloc() {
 
   emit('alloc-change', {
     total: props.totalAvailable,
-    pools: [...users, { key: '共有', name: '共有', color: '#0f3460' }].map(p => ({
+    pools: [...users, { key: '公共池', name: '公共池', color: '#0f3460' }].map(p => ({
       key: p.key,
       pool_id: props.pools.find(pl => pl.name === p.name)?.id,
-      amount: p.key === '共有' ? gongyouAmt.value : amts[p.key],
-      percent: props.totalAvailable > 0 ? ((p.key === '共有' ? gongyouAmt.value : amts[p.key]) / props.totalAvailable) * 100 : 0
+      amount: p.key === '公共池' ? gongyouAmt.value : amts[p.key],
+      percent: props.totalAvailable > 0 ? ((p.key === '公共池' ? gongyouAmt.value : amts[p.key]) / props.totalAvailable) * 100 : 0
     }))
   })
   showAllocConfirm.value = false

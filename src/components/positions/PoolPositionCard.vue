@@ -8,7 +8,7 @@
       <span class="pr-label">市值</span>
       <span class="pr-value num-mono">{{ formatMoney(marketValue) }}</span>
       <span class="pr-sep">/</span>
-      <span class="pr-label">总资产</span>
+      <span class="pr-label">子池资产</span>
       <span class="pr-value num-mono">{{ formatMoney(totalPoolAsset) }}</span>
     </div>
   </div>

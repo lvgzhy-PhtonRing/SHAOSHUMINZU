@@ -18,7 +18,7 @@
           <span class="trd-label">总市值</span>
           <span class="trd-value num-mono">{{ formatMoney(totalMarketValue) }}</span>
           <span class="trd-sep">/</span>
-          <span class="trd-label">总资产</span>
+          <span class="trd-label">子池资产</span>
           <span class="trd-value num-mono">{{ formatMoney(totalAsset) }}</span>
         </div>
         <div class="total-slogan">
@@ -117,7 +117,11 @@ const totalAvailable = computed(() => totalCapital.value - totalCost.value)
 function loadLocalAlloc() {
   const raw = localStorage.getItem('poolAmounts')
   if (!raw) return null
-  const parsed = JSON.parse(raw)
+  let parsed = JSON.parse(raw)
+  // 迁移旧 '共有' 键 → '公共池'
+  if (parsed['共有'] !== undefined && parsed['公共池'] === undefined) {
+    parsed = { ...parsed }; parsed['公共池'] = parsed['共有']; delete parsed['共有']
+  }
   const vals = Object.values(parsed)
   const sum = vals.reduce((s, v) => s + v, 0)
   if (vals.every(v => v <= 100) && Math.abs(sum - 100) < 1) {
@@ -129,7 +133,7 @@ function loadLocalAlloc() {
 }
 function defaultAlloc() {
   const each = Math.floor(totalCapital.value / 5 / 10000) * 10000
-  return { '共有': each, '春': each, '维': each, '队': each, '回': each }
+  return { '公共池': each, '春': each, '维': each, '队': each, '回': each }
 }
 const poolAmounts = reactive(loadLocalAlloc() || defaultAlloc())
 
@@ -161,17 +165,13 @@ const poolPositionData = computed(() => {
     const cost = poolHoldings.reduce((s, h) => s + h.cost_price * h.quantity, 0)
     // 该池分配资金 = 保存的金额（元）
     const poolCapital = poolAmounts[p.name] || 0
-    // 该池仓位 = 该池持股市值 / 该池分配资金
-    const positionRatio = poolCapital > 0 ? (mv / poolCapital) * 100 : 0
-    // 子池总资产 = 子池市值 + 子池分配可用资金（不减持仓成本，分配金已为可用）
+    // 子池资产 = 子池市值 + 子池分配可用资金
     const totalPoolAsset = mv + poolCapital
+    // 该池仓位 = 该池持股市值 / 该池总资产
+    const positionRatio = totalPoolAsset > 0 ? (mv / totalPoolAsset) * 100 : 0
     return {
-      ...p,
-      marketValue: mv,
-      cost,
-      poolCapital,
-      positionRatio,
-      totalPoolAsset,
+      ...p, marketValue: mv, cost, poolCapital,
+      totalPoolAsset, positionRatio,
       percent: positionRatio,
       color: colorList[i % colorList.length]
     }
@@ -202,8 +202,12 @@ const trendData = [
 onMounted(async () => {
   try {
     // 优先从 Supabase 加载分配金额（跨设备同步）
-    const server = await loadPoolAllocation()
+    let server = await loadPoolAllocation()
     if (server) {
+      // 迁移旧 '共有' 键
+      if (server['共有'] !== undefined && server['公共池'] === undefined) {
+        server = { ...server }; server['公共池'] = server['共有']; delete server['共有']
+      }
       for (const k of Object.keys(server)) {
         if (poolAmounts[k] !== undefined) poolAmounts[k] = server[k]
       }
