@@ -88,7 +88,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { formatMoney } from '@/utils/formatters'
 
 const props = defineProps({
@@ -126,8 +126,18 @@ function submitCapital() {
 
 // ====== 子池分配 ======
 const isLinked = ref(true)
-const pcts = reactive({ '共有': 40, '春': 15, '维': 15, '队': 15, '回': 15 })
+const DEFAULT_PCTS = { '共有': 40, '春': 15, '维': 15, '队': 15, '回': 15 }
+const savedPcts = JSON.parse(localStorage.getItem('poolPercents') || 'null')
+const pcts = reactive(savedPcts || { ...DEFAULT_PCTS })
 const showAllocConfirm = ref(false)
+
+onMounted(() => {
+  // 页面重访时从 localStorage 恢复保存的值
+  const restored = JSON.parse(localStorage.getItem('poolPercents') || 'null')
+  if (restored) {
+    for (const k of Object.keys(restored)) pcts[k] = restored[k]
+  }
+})
 
 const users = [
   { key: '春', name: '春', color: '#e94560' },

@@ -14,6 +14,7 @@
           :segments="chartSegments"
           :total-percent="totalPositionRatio"
         />
+        <div class="total-slogan">{{ positionSlogan }}</div>
         <div class="legend">
           <div v-for="item in poolPositionData" :key="item.name" class="legend-item">
             <span class="legend-dot" :style="{ background: item.color }"></span>
@@ -117,6 +118,20 @@ const poolPercents = saved ? JSON.parse(saved) : { '共有': 40, '春': 15, '维
 
 const totalPositionRatio = computed(() => {
   return totalAsset.value > 0 ? (totalMarketValue.value / totalAsset.value) * 100 : 0
+})
+
+const positionSlogan = computed(() => {
+  const r = totalPositionRatio.value
+  if (r >= 90) return '命就一条'
+  if (r >= 80) return '准备装死'
+  if (r >= 70) return '股神出没'
+  if (r >= 60) return '稳健老登'
+  if (r >= 50) return '涨跌随缘'
+  if (r >= 40) return '真的不硬'
+  if (r >= 30) return '维族是ED'
+  if (r >= 20) return '反弹就干'
+  if (r >= 10) return '一群老GAY'
+  return '纯看热闹'
 })
 
 const poolPositionData = computed(() => {
@@ -238,4 +253,12 @@ onMounted(async () => {
   min-height: 4px;
 }
 .bar-label { font-size: 10px; color: var(--text-muted); }
+.total-slogan {
+  text-align: center;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-warn);
+  padding: 2px 0 8px;
+  letter-spacing: 2px;
+}
 </style>
