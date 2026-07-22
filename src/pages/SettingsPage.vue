@@ -52,7 +52,8 @@ const oldPwd = ref('')
 const newPwd = ref('')
 const confirmPwd = ref('')
 async function changePassword() {
-  if (oldPwd.value !== '1111') return false
+  const currentPwd = localStorage.getItem('pwd') || '1111'
+  if (oldPwd.value !== currentPwd) return false
   localStorage.setItem('pwd', newPwd.value)
   return true
 }

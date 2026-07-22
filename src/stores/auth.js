@@ -8,8 +8,8 @@ export const useAuthStore = defineStore('auth', {
   }),
   actions: {
     async login(password) {
-      // TODO: 后续接入 verifyPassword API 从 Supabase 验证
-      if (password === '1111') {
+      const storedPwd = localStorage.getItem('pwd') || '1111'
+      if (password === storedPwd) {
         this.isAuthenticated = true
         this.loginTime = Date.now()
         return true

@@ -51,7 +51,8 @@ function deleteChar() {
 
 async function doLogin() {
   if (input.value.length !== 4) return
-  if (input.value === '1111') {
+  const storedPwd = localStorage.getItem('pwd') || '1111'
+  if (input.value === storedPwd) {
     localStorage.setItem('auth', 'true')
     router.replace({ name: 'dashboard' })
   } else {
