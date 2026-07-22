@@ -11,42 +11,42 @@
         </button>
       </div>
 
-      <!-- 共有 -->
-      <div class="pool-row">
+      <!-- 共有 = 剩余（只读） -->
+      <div class="pool-row remainder">
         <div class="pool-left"><span class="dot" style="background:#0f3460"></span>共有</div>
-        <button class="adj" @click="adjust('共有', -0.5)">−</button>
-        <input type="number" class="pct" :value="wanAmts['共有']" @input="e => onAmt('共有', parseFloat(e.target.value)||0)" step="0.01" />
+        <span class="remainder-tag">剩余</span>
+        <span class="pct readonly">{{ wanGongyou }}</span>
         <span class="pc">万</span>
-        <button class="adj" @click="adjust('共有', 0.5)">+</button>
-        <span class="money num-mono">{{ formatMoney(amts['共有']) }}</span>
+        <span class="money num-mono">{{ formatMoney(gongyouAmt) }}</span>
       </div>
+
+      <div class="partition-line"></div>
 
       <!-- 四人 -->
-      <div class="user-group" :class="{ linked: isLinked }">
-        <div v-if="isLinked" class="hint">四人联动 · 平分剩余资金</div>
-        <div v-for="p in users" :key="p.key" class="pool-row">
-          <div class="pool-left"><span class="dot" :style="{ background: p.color }"></span>{{ p.name }}</div>
-          <button class="adj" @click="adjust(p.key, -0.5)">−</button>
-          <input type="number" class="pct" :value="wanAmts[p.key]" @input="e => onAmt(p.key, parseFloat(e.target.value)||0)" step="0.01" />
-          <span class="pc">万</span>
-          <button class="adj" @click="adjust(p.key, 0.5)">+</button>
-          <span class="money num-mono">{{ formatMoney(amts[p.key]) }}</span>
-        </div>
+      <div class="hint" v-if="isLinked">四人联动 · 等额分配</div>
+      <div class="hint" v-else>独立分配 · 共有自动为剩余</div>
+      <div v-for="p in users" :key="p.key" class="pool-row">
+        <div class="pool-left"><span class="dot" :style="{ background: p.color }"></span>{{ p.name }}</div>
+        <button class="adj" @click="adjust(p.key, -0.5)">−</button>
+        <input type="number" class="pct" :value="wanAmts[p.key]" @input="e => onAmt(p.key, parseFloat(e.target.value)||0)" step="0.01" />
+        <span class="pc">万</span>
+        <button class="adj" @click="adjust(p.key, 0.5)">+</button>
+        <span class="money num-mono">{{ formatMoney(amts[p.key]) }}</span>
       </div>
 
-      <!-- 合计与未分配 -->
+      <!-- 合计 -->
       <div class="total-row">
-        <span>已分配</span>
-        <span class="num-mono">{{ formatMoney(allocTotal) }}</span>
-        <span class="sep">/</span>
-        <span>未分配</span>
-        <span class="num-mono" :class="unalloc >= 0 ? '' : 'fall'">{{ formatMoney(unalloc) }}</span>
+        <span>四人合计</span>
+        <span class="num-mono">{{ formatMoney(usersTotal) }}</span>
+        <span class="sep">|</span>
+        <span>共有</span>
+        <span class="num-mono" :class="gongyouAmt >= 0 ? '' : 'fall'">{{ formatMoney(gongyouAmt) }}</span>
       </div>
 
-      <button class="apply-btn" :disabled="unalloc < 0" @click="confirmAlloc">
+      <button class="apply-btn" :disabled="gongyouAmt < 0" @click="confirmAlloc">
         确认分配
       </button>
-      <div v-if="unalloc < 0" class="err">已分配金额超过总可用资金 {{ formatMoney(unalloc) }}</div>
+      <div v-if="gongyouAmt < 0" class="err">四人合计超过总可用 {{ formatMoney(Math.abs(gongyouAmt)) }}</div>
     </div>
 
     <!-- ===== 2. 增减资金池 ===== -->
@@ -82,9 +82,13 @@
           <div class="dlg-title">确认资金分配</div>
           <div class="dlg-info">总可用 <b class="num-mono">{{ formatMoney(totalAvailable) }}</b> 元</div>
           <div class="dlg-rows">
-            <div v-for="p in allPools" :key="p.key" class="dlg-row">
+            <div v-for="p in users" :key="p.key" class="dlg-row">
               <span :style="{color:p.color}">● {{ p.name }}</span>
               <span class="num-mono">{{ wanAmts[p.key] }} 万 → {{ formatMoney(amts[p.key]) }}</span>
+            </div>
+            <div class="dlg-row dlg-gy">
+              <span style="color:#0f3460">● 共有（剩余）</span>
+              <span class="num-mono">{{ wanGongyou }} 万 → {{ formatMoney(gongyouAmt) }}</span>
             </div>
           </div>
           <div class="dlg-btns">
@@ -134,7 +138,8 @@ function submitCapital() {
   capNote.value = ''
 }
 
-// ====== 子池分配（金额·万元制） ======
+// ====== 子池分配（万元金额 · 共有=剩余） ======
+
 const isLinked = ref(true)
 
 const users = [
@@ -143,99 +148,87 @@ const users = [
   { key: '队', name: '队', color: '#ffc107' },
   { key: '回', name: '回', color: '#7c4dff' },
 ]
-const allPools = [
-  { key: '共有', name: '共有', color: '#0f3460' },
-  ...users
-]
+const userKeys = users.map(u => u.key)
 
-// 加载保存值：优先 poolAmounts（元），兼容旧 poolPercents（百分比）
-function loadSavedAmts() {
+// 只保存四个人的金额（元），共有=剩余
+function loadUserAmts() {
   const raw = localStorage.getItem('poolAmounts')
   if (raw) {
     const parsed = JSON.parse(raw)
-    // 检查是否为百分比旧数据（值在0-100之间且合计≈100）
+    // 检测旧百分比格式 → 转为金额
     const vals = Object.values(parsed)
     const sum = vals.reduce((s, v) => s + v, 0)
     if (vals.every(v => v <= 100) && Math.abs(sum - 100) < 1) {
-      // 旧百分比 → 按当前总可用换算为金额
       const amt = {}
-      for (const k of Object.keys(parsed)) {
-        amt[k] = Math.round(props.totalAvailable * parsed[k] / 100)
-      }
+      for (const k of userKeys) amt[k] = Math.round(props.totalAvailable * (parsed[k] || 15) / 100)
       return amt
     }
-    return parsed  // 已经是金额
+    // 取四个人的
+    const amt = {}
+    for (const k of userKeys) amt[k] = parsed[k] || 0
+    return amt
   }
-  // 无保存值：默认平分
-  const each = Math.floor(props.totalAvailable / allPools.length / 10000) * 10000
+  // 无保存：默认各分20%（按当前总可用）
+  const each = Math.floor(props.totalAvailable * 0.2 / 10000) * 10000
   const amt = {}
-  for (const p of allPools) amt[p.key] = each
+  for (const k of userKeys) amt[k] = each
   return amt
 }
 
-const amts = reactive(loadSavedAmts())
+const amts = reactive(loadUserAmts())
 
 onMounted(() => {
-  // 页面重访时恢复
   const raw = localStorage.getItem('poolAmounts')
   if (raw) {
     try {
       const saved = JSON.parse(raw)
-      for (const k of Object.keys(saved)) {
-        if (allPools.some(p => p.key === k)) amts[k] = saved[k]
+      for (const k of userKeys) {
+        if (saved[k] !== undefined) amts[k] = saved[k]
       }
     } catch (e) {}
   }
 })
 
-// 万元显示值（取整到2位小数）
+// 四人合计（元）
+const usersTotal = computed(() => userKeys.reduce((s, k) => s + amts[k], 0))
+
+// 共有 = 剩余（元）
+const gongyouAmt = computed(() => props.totalAvailable - usersTotal.value)
+
+// 四人万元显示
 const wanAmts = computed(() => {
   const w = {}
-  for (const p of allPools) w[p.key] = (amts[p.key] / 10000).toFixed(2)
+  for (const k of userKeys) w[k] = (amts[k] / 10000).toFixed(2)
   return w
 })
 
-// 已分配总额（元）
-const allocTotal = computed(() => allPools.reduce((s, p) => s + amts[p.key], 0))
-
-// 未分配（元），可为负数（超分配）
-const unalloc = computed(() => props.totalAvailable - allocTotal.value)
-
-// 联动：平分剩余资金
-function splitRemaining() {
-  const gongyou = amts['共有']
-  const remaining = Math.max(0, props.totalAvailable - gongyou)
-  const each = Math.floor(remaining / 4 / 100) * 100  // 取整到100元
-  for (const p of users) amts[p.key] = each
-}
+// 共有万元
+const wanGongyou = computed(() => (gongyouAmt.value / 10000).toFixed(2))
 
 // 用户输入金额（万元 → 元）
 function onAmt(key, wanVal) {
-  const yuan = Math.round(wanVal * 10000)
-  amts[key] = Math.max(0, yuan)
+  const yuan = Math.max(0, Math.round(wanVal * 10000))
   if (isLinked.value) {
-    if (key === '共有') {
-      splitRemaining()
-    } else {
-      // 四人等额
-      const each = amts[key]
-      for (const p of users) amts[p.key] = each
-      amts['共有'] = Math.max(0, props.totalAvailable - each * 4)
-    }
+    // 联动：四人等额
+    for (const k of userKeys) amts[k] = yuan
+  } else {
+    amts[key] = yuan
   }
 }
 
-// +/- 按钮（以万元为单位步进）
+// +/- 按钮（步进 0.5万）
 function adjust(key, stepWan) {
   const curWan = amts[key] / 10000
   const newWan = Math.max(0, curWan + stepWan)
-  onAmt(key, Math.round(newWan * 100) / 100)  // 保留2位小数
+  onAmt(key, Math.round(newWan * 100) / 100)
 }
 
 function toggleLink() {
   isLinked.value = !isLinked.value
   if (isLinked.value) {
-    splitRemaining()
+    // 切到联动：取四人平均值作为统一值
+    const avg = userKeys.reduce((s, k) => s + amts[k], 0) / 4
+    for (const k of userKeys) amts[k] = Math.round(avg / 100) * 100
   }
 }
 
@@ -244,20 +237,19 @@ const showAllocConfirm = ref(false)
 function confirmAlloc() { showAllocConfirm.value = true }
 
 function submitAlloc() {
-  // 保存为金额（元）
-  const rec = {}
-  for (const p of allPools) rec[p.key] = amts[p.key]
+  // 保存四人金额（元）+ 共有金额
+  const rec = { '共有': gongyouAmt.value }
+  for (const k of userKeys) rec[k] = amts[k]
   localStorage.setItem('poolAmounts', JSON.stringify(rec))
-  // 同时清理旧百分比数据
   localStorage.removeItem('poolPercents')
 
   emit('alloc-change', {
     total: props.totalAvailable,
-    pools: allPools.map(p => ({
+    pools: [...users, { key: '共有', name: '共有', color: '#0f3460' }].map(p => ({
       key: p.key,
       pool_id: props.pools.find(pl => pl.name === p.name)?.id,
-      amount: amts[p.key],
-      percent: props.totalAvailable > 0 ? (amts[p.key] / props.totalAvailable) * 100 : 0
+      amount: p.key === '共有' ? gongyouAmt.value : amts[p.key],
+      percent: props.totalAvailable > 0 ? ((p.key === '共有' ? gongyouAmt.value : amts[p.key]) / props.totalAvailable) * 100 : 0
     }))
   })
   showAllocConfirm.value = false
@@ -298,8 +290,12 @@ function submitAlloc() {
 
 .pool-row { display: flex; align-items: center; gap: 4px; padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.03); }
 .pool-row:last-child { border-bottom: none; }
+.pool-row.remainder { border-bottom: none; padding-bottom: 2px; opacity: 0.85; }
 .pool-left { display: flex; align-items: center; gap: 6px; min-width: 44px; font-size: 13px; }
 .dot { width: 7px; height: 7px; border-radius: 50%; }
+.remainder-tag { font-size: 10px; color: var(--text-muted); background: rgba(255,255,255,0.05); padding: 1px 6px; border-radius: 3px; }
+.pct.readonly { color: var(--text-secondary); background: transparent; border-color: transparent; width: 72px; text-align: center; font-size: 13px; font-family: var(--font-number); }
+.partition-line { height: 1px; background: rgba(255,255,255,0.06); margin: 2px 0 8px; }
 .adj {
   width: 24px; height: 24px; border: 1px solid rgba(255,255,255,0.1); border-radius: 50%;
   background: transparent; color: var(--text-secondary); font-size: 14px; cursor: pointer;
@@ -353,6 +349,7 @@ function submitAlloc() {
   display: flex; justify-content: space-between; padding: 5px 0;
   font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.03);
 }
+.dlg-gy { opacity: 0.65; font-style: italic; }
 .dlg-btns { display: flex; gap: 10px; margin-top: 12px; }
 .d-cancel {
   flex: 1; padding: 10px; border: 1px solid rgba(255,255,255,0.1);
