@@ -147,7 +147,7 @@ function saveEdit() {
   if (!editing.value) return
   const amount = parseFloat(editAmount.value)
   if (!amount || amount <= 0) return
-  const payload = { id: editing.value.id, amount, note: editNote.value }
+  const payload = { id: editing.value.id, amount, note: editNote.value, origAmount: editing.value.amount }
   if (editing.value.pool_id) {
     payload.quantity = parseInt(editQuantity.value) || 0
     payload.stock_code = editStockCode.value

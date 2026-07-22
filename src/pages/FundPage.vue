@@ -103,9 +103,10 @@ async function onEditLog(payload) {
       return
     }
 
-    // 1. 找对应交易记录
+    // 1. 找对应交易记录（用原金额匹配，因为金额已修改）
     const allTxs = await fetchTransactionsByPoolStock(pool_id, stock_code)
-    const matchedTx = allTxs.find(t => Math.abs(t.amount - amount) < 0.01)
+    const matchAmount = payload.origAmount || amount
+    const matchedTx = allTxs.find(t => Math.abs(t.amount - matchAmount) < 0.01)
     if (!matchedTx) {
       await fundStore.editCapitalLog(id, { amount, note })
       await fundStore.loadCapitalLogs()
