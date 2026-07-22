@@ -14,7 +14,7 @@
       <van-field
         v-model="form.totalAmount"
         label="成交总金额（元）"
-        type="digit"
+        type="number"
         placeholder="输入成交总金额（含手续费）"
         :rules="[{ required: true, message: '请输入成交总金额' }]"
       />
