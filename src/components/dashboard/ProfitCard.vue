@@ -26,7 +26,7 @@ defineProps({
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
-  padding: 0 16px 12px;
+  padding: 0 16px 6px;
 }
 .profit-item {
   padding: 10px 12px;

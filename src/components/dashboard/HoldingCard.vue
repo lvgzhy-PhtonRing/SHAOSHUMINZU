@@ -66,7 +66,7 @@ const change = computed(() => parseFloat(props.stock.changePct) || 0)
   background: var(--bg-card);
   border-radius: var(--radius-lg);
   padding: 14px 16px;
-  margin: 0 16px 10px;
+  margin: 0 16px 6px;
   position: relative;
 }
 .holding-header {

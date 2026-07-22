@@ -37,37 +37,26 @@ defineProps({
 
 <style scoped>
 .account-section {
-  padding: 16px;
+  padding: 8px 16px 0;
 }
 .account-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 6px;
-}
-.account-label {
-  font-size: 13px;
-  color: var(--text-secondary);
-}
-.account-status {
-  font-size: 11px;
-  padding: 2px 8px;
-  border-radius: 4px;
-  color: var(--text-muted);
-  text-align: right;
-  width: 100%;
-}
-.total-asset {
-  font-size: 30px;
-  font-weight: 700;
-  font-family: var(--font-number);
-  letter-spacing: -0.5px;
   margin-bottom: 2px;
 }
-.asset-meta {
-  font-size: 12px;
+.account-status {
+  font-size: 10px;
   color: var(--text-muted);
-  margin-bottom: 12px;
+}
+.total-asset {
+  font-size: 40px;
+  font-weight: 700;
+  font-family: var(--font-number);
+  letter-spacing: -1px;
+  line-height: 1.1;
+}
+.asset-meta {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
 }
 .asset-grid {
   display: grid;
@@ -77,12 +66,12 @@ defineProps({
 .asset-item {
   background: var(--bg-card);
   border-radius: var(--radius-md);
-  padding: 10px 12px;
+  padding: 8px 10px;
 }
 .asset-label {
   font-size: 11px;
   color: var(--text-secondary);
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 .asset-value {
   font-size: 15px;

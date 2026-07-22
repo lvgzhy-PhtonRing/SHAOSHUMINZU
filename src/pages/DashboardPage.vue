@@ -185,8 +185,8 @@ const summary = computed(() => {
 .section-title {
   display: flex;
   justify-content: space-between;
-  padding: 12px 16px 8px;
-  font-size: 14px;
+  padding: 8px 16px 6px;
+  font-size: 13px;
   font-weight: 600;
 }
 .stock-count {
