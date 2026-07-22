@@ -1,73 +1,66 @@
 // src/api/stock.js
-const CACHE_TTL = 15000 // 15秒缓存
-
+// 使用 JSONP 方式绕过 CORS 限制，直接调用新浪行情接口
+const CACHE_TTL = 15000
 let cache = {}
 let lastFetch = 0
 
 /**
- * 东方财富行情接口
- * secid: 0.002340 → 深市(0).格林美(002340), 1.600519 → 沪市(1).茅台
- * 响应: JSON { data: { f43: 642, f58: "格林美", f170: -0.71, ... } }
- * f43=最新价(×100), f58=名称, f170=涨跌幅(×100), f169=昨收, f44=最高, f45=最低
+ * JSONP 方式获取新浪行情
+ * <script> 标签不受 CORS 限制，加载后读取全局变量
  */
+function sinaJsonp(codes) {
+  return new Promise((resolve, reject) => {
+    const formatted = codes.map(c => {
+      if (c.startsWith('6')) return `sh${c}`
+      if (c.startsWith('0') || c.startsWith('3')) return `sz${c}`
+      return c
+    }).join(',')
 
-function getSecId(code) {
-  // 6开头=沪市, 0/3开头=深市, 4/8开头=北交所(简化处理)
-  const market = code.startsWith('6') ? 1 : 0
-  return `${market}.${code}`
-}
+    const script = document.createElement('script')
+    script.src = `https://hq.sinajs.cn/list=${formatted}&r=${Date.now()}`
+    script.charset = 'gb18030'
+    script.onerror = () => { cleanup(); reject(new Error('Script load failed')) }
 
-function parseEastMoneyResponse(raw, codes) {
-  const results = {}
-  for (const code of codes) {
-    const secid = getSecId(code)
-    // 东方财富返回的 key 是完整的 secid 格式
-    const key = `1.${code}`
-    const skey = `0.${code}`
-    const item = raw[key] || raw[skey]
-    if (!item) continue
-    const price = (item.f43 || 0) / 100
-    const prevClose = (item.f169 || 0) / 100
-    results[code] = {
-      stock_code: code,
-      stock_name: item.f58 || '',
-      open: (item.f46 || 0) / 100,
-      prev_close: prevClose,
-      price: price,
-      high: (item.f44 || 0) / 100,
-      low: (item.f45 || 0) / 100,
-      volume: item.f47 || 0,
-      amount: item.f48 || 0,
-      change_pct: prevClose > 0 ? ((price - prevClose) / prevClose * 100).toFixed(2) : '0',
-      updated_at: new Date().toISOString()
+    const timer = setTimeout(() => { cleanup(); reject(new Error('Timeout')) }, 10000)
+
+    function cleanup() {
+      clearTimeout(timer)
+      document.body.removeChild(script)
     }
-  }
-  return results
-}
 
-/**
- * 通过 CORS 代理请求东方财富 API
- * 直接请求会被浏览器 CORS 拦截，使用免费代理转发
- */
-const PROXY = 'https://api.allorigins.win/raw?url='
+    // Script 加载完成后，新浪数据已写入全局 hq_str_* 变量
+    script.onload = () => {
+      cleanup()
+      const results = {}
+      for (const code of codes) {
+        const key = code.startsWith('6') ? `hq_str_sh${code}` : `hq_str_sz${code}`
+        const raw = window[key]
+        if (!raw) continue
+        const fields = String(raw).split(',')
+        if (fields.length < 10) continue
+        const price = parseFloat(fields[3]) || 0
+        const prevClose = parseFloat(fields[2]) || 0
+        results[code] = {
+          stock_code: code,
+          stock_name: (fields[0] || '').trim(),
+          open: parseFloat(fields[1]) || 0,
+          prev_close: prevClose,
+          price: price,
+          high: parseFloat(fields[4]) || 0,
+          low: parseFloat(fields[5]) || 0,
+          volume: parseInt(fields[8]) || 0,
+          amount: parseFloat(fields[9]) || 0,
+          change_pct: prevClose > 0 ? ((price - prevClose) / prevClose * 100).toFixed(2) : '0',
+          updated_at: new Date().toISOString()
+        }
+        // 清理全局变量
+        delete window[key]
+      }
+      resolve(results)
+    }
 
-async function fetchViaProxy(codes) {
-  const fields = 'f43,f44,f45,f46,f47,f48,f57,f58,f169'
-  const requests = codes.map(code => {
-    const secid = getSecId(code)
-    const url = `https://push2.eastmoney.com/api/qt/stock/get?secid=${secid}&fields=${fields}`
-    return fetch(`${PROXY}${encodeURIComponent(url)}`)
-      .then(r => r.ok ? r.json() : null)
-      .then(d => ({ code, data: d?.data }))
-      .catch(() => ({ code, data: null }))
+    document.body.appendChild(script)
   })
-
-  const results = await Promise.all(requests)
-  const raw = {}
-  for (const r of results) {
-    if (r.data) raw[`${getSecId(r.code)}`] = r.data
-  }
-  return parseEastMoneyResponse(raw, codes)
 }
 
 /**
@@ -76,10 +69,9 @@ async function fetchViaProxy(codes) {
 export async function fetchStockPrices(codes) {
   const now = Date.now()
   const cleanCodes = [...new Set(codes.filter(c => /^\d{6}$/.test(c)))]
-
   if (!cleanCodes.length) return {}
 
-  // 检查缓存
+  // 缓存命中
   if (now - lastFetch < CACHE_TTL && Object.keys(cache).length > 0) {
     const cached = {}
     for (const code of cleanCodes) {
@@ -89,7 +81,7 @@ export async function fetchStockPrices(codes) {
   }
 
   try {
-    const prices = await fetchViaProxy(cleanCodes)
+    const prices = await sinaJsonp(cleanCodes)
     if (Object.keys(prices).length > 0) {
       cache = { ...cache, ...prices }
       lastFetch = now
