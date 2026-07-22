@@ -44,6 +44,7 @@
         :stock="h"
         :pool-name="poolNameMap[h.pool_id] || ''"
         :pool-color="poolColorMap[h.pool_id] || '#0f3460'"
+        @sell="onSellStock"
       />
     </template>
   </div>
@@ -51,6 +52,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { usePoolStore } from '@/stores/pools'
 import { useHoldingStore } from '@/stores/holdings'
 import { usePriceStore } from '@/stores/prices'
@@ -70,6 +72,8 @@ const loading = ref(true)
 const lastUpdated = ref('')
 
 // 子池名称/颜色映射
+const router = useRouter()
+
 const poolNameMap = {}
 const poolColorMap = {}
 const colorList = ['#0f3460', '#e94560', '#00d2a1', '#ffc107', '#7c4dff']
@@ -103,6 +107,17 @@ onMounted(async () => {
 function updateTime() {
   const now = new Date()
   lastUpdated.value = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`
+}
+
+function onSellStock(stock) {
+  router.push({
+    name: 'trade',
+    query: {
+      code: stock.stock_code,
+      name: stock.stock_name,
+      price: stock.currentPrice || stock.cost_price
+    }
+  })
 }
 
 const displayHoldings = computed(() => {

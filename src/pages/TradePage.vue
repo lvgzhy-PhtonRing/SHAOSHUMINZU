@@ -31,6 +31,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { usePoolStore } from '@/stores/pools'
 import { useTransactionStore } from '@/stores/transactions'
 import { useHoldingStore } from '@/stores/holdings'
@@ -113,6 +114,14 @@ function onVerified(actualAmount) {
 
 onMounted(() => {
   poolStore.loadPools()
+  const route = useRoute()
+  if (route.query.code) {
+    // 从持仓页左滑进入：预填股票信息，默认卖出模式
+    stockCode.value = route.query.code
+    stockName.value = route.query.name || ''
+    currentPrice.value = parseFloat(route.query.price) || 0
+    isBuy.value = false
+  }
 })
 </script>
 
