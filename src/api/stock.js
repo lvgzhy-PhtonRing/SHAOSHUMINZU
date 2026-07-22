@@ -1,45 +1,44 @@
 // src/api/stock.js
-const BASE_URL = 'https://hq.sinajs.cn/list='
 const CACHE_TTL = 15000 // 15秒缓存
 
 let cache = {}
 let lastFetch = 0
 
 /**
- * 构建新浪股票代码格式：深市 sz, 沪市 sh
+ * 东方财富行情接口
+ * secid: 0.002340 → 深市(0).格林美(002340), 1.600519 → 沪市(1).茅台
+ * 响应: JSON { data: { f43: 642, f58: "格林美", f170: -0.71, ... } }
+ * f43=最新价(×100), f58=名称, f170=涨跌幅(×100), f169=昨收, f44=最高, f45=最低
  */
-function formatCode(code) {
-  if (code.startsWith('6')) return `sh${code}`
-  if (code.startsWith('0') || code.startsWith('3')) return `sz${code}`
-  return code
+
+function getSecId(code) {
+  // 6开头=沪市, 0/3开头=深市, 4/8开头=北交所(简化处理)
+  const market = code.startsWith('6') ? 1 : 0
+  return `${market}.${code}`
 }
 
-/**
- * 解析新浪返回的 CSV 格式
- * 格式：var hq_str_sh600519="贵州茅台,1482.00,-1.23,..."
- * 字段：名称,今开,昨收,现价,最高,最低,买入价,卖出价,成交量,成交额,日期,时间,...
- */
-function parseSinaResponse(text) {
+function parseEastMoneyResponse(raw, codes) {
   const results = {}
-  const lines = text.split(';\n').filter(l => l.trim())
-  for (const line of lines) {
-    const match = line.match(/hq_str_(\w+)="(.+)"/)
-    if (!match) continue
-    const code = match[1].replace(/^(sh|sz)/, '')
-    const fields = match[2].split(',')
+  for (const code of codes) {
+    const secid = getSecId(code)
+    // 东方财富返回的 key 是完整的 secid 格式
+    const key = `1.${code}`
+    const skey = `0.${code}`
+    const item = raw[key] || raw[skey]
+    if (!item) continue
+    const price = (item.f43 || 0) / 100
+    const prevClose = (item.f169 || 0) / 100
     results[code] = {
       stock_code: code,
-      stock_name: fields[0],
-      open: parseFloat(fields[1]) || 0,
-      prev_close: parseFloat(fields[2]) || 0,
-      price: parseFloat(fields[3]) || 0,
-      high: parseFloat(fields[4]) || 0,
-      low: parseFloat(fields[5]) || 0,
-      volume: parseInt(fields[8]) || 0,
-      amount: parseFloat(fields[9]) || 0,
-      change_pct: fields[2] && fields[3]
-        ? (((parseFloat(fields[3]) - parseFloat(fields[2])) / parseFloat(fields[2])) * 100).toFixed(2)
-        : '0',
+      stock_name: item.f58 || '',
+      open: (item.f46 || 0) / 100,
+      prev_close: prevClose,
+      price: price,
+      high: (item.f44 || 0) / 100,
+      low: (item.f45 || 0) / 100,
+      volume: item.f47 || 0,
+      amount: item.f48 || 0,
+      change_pct: prevClose > 0 ? ((price - prevClose) / prevClose * 100).toFixed(2) : '0',
       updated_at: new Date().toISOString()
     }
   }
@@ -47,39 +46,59 @@ function parseSinaResponse(text) {
 }
 
 /**
+ * 通过 CORS 代理请求东方财富 API
+ * 直接请求会被浏览器 CORS 拦截，使用免费代理转发
+ */
+const PROXY = 'https://api.allorigins.win/raw?url='
+
+async function fetchViaProxy(codes) {
+  const fields = 'f43,f44,f45,f46,f47,f48,f57,f58,f169'
+  const requests = codes.map(code => {
+    const secid = getSecId(code)
+    const url = `https://push2.eastmoney.com/api/qt/stock/get?secid=${secid}&fields=${fields}`
+    return fetch(`${PROXY}${encodeURIComponent(url)}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => ({ code, data: d?.data }))
+      .catch(() => ({ code, data: null }))
+  })
+
+  const results = await Promise.all(requests)
+  const raw = {}
+  for (const r of results) {
+    if (r.data) raw[`${getSecId(r.code)}`] = r.data
+  }
+  return parseEastMoneyResponse(raw, codes)
+}
+
+/**
  * 获取实时行情（带缓存）
  */
 export async function fetchStockPrices(codes) {
   const now = Date.now()
+  const cleanCodes = [...new Set(codes.filter(c => /^\d{6}$/.test(c)))]
 
-  // 如果缓存还在有效期内，直接返回缓存数据
+  if (!cleanCodes.length) return {}
+
+  // 检查缓存
   if (now - lastFetch < CACHE_TTL && Object.keys(cache).length > 0) {
     const cached = {}
-    for (const code of codes) {
+    for (const code of cleanCodes) {
       if (cache[code]) cached[code] = cache[code]
     }
-    if (Object.keys(cached).length === codes.length) return cached
+    if (Object.keys(cached).length === cleanCodes.length) return cached
   }
 
   try {
-    const formattedCodes = codes.map(formatCode).join(',')
-    // 添加随机参数避免浏览器缓存
-    const url = `${BASE_URL}${formattedCodes}&r=${now}`
-    const response = await fetch(url, {
-      headers: { 'Referer': 'https://finance.sina.com.cn' }
-    })
-    const text = await response.text()
-    const prices = parseSinaResponse(text)
-
-    // 更新缓存
-    cache = { ...cache, ...prices }
-    lastFetch = now
+    const prices = await fetchViaProxy(cleanCodes)
+    if (Object.keys(prices).length > 0) {
+      cache = { ...cache, ...prices }
+      lastFetch = now
+    }
     return prices
   } catch (err) {
     console.error('Fetch stock prices error:', err)
-    // 出错时返回缓存数据
     const fallback = {}
-    for (const code of codes) {
+    for (const code of cleanCodes) {
       if (cache[code]) fallback[code] = cache[code]
     }
     return fallback
@@ -90,6 +109,7 @@ export async function fetchStockPrices(codes) {
  * 单只股票查询
  */
 export async function fetchStockPrice(code) {
+  if (!/^\d{6}$/.test(code)) return null
   const result = await fetchStockPrices([code])
   return result[code] || null
 }
