@@ -46,6 +46,7 @@ export function formatPrice(value) {
 export function formatDate(value) {
   if (!value) return '—'
   const d = typeof value === 'string' ? new Date(value) : value
+  if (isNaN(d.getTime())) return '—'
   const year = d.getFullYear()
   const month = String(d.getMonth() + 1).padStart(2, '0')
   const day = String(d.getDate()).padStart(2, '0')
