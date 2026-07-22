@@ -50,7 +50,7 @@ const holdingStore = useHoldingStore()
 const priceStore = usePriceStore()
 
 const loading = ref(true)
-const totalAsset = ref(816935.51)
+const totalAsset = ref(829661.35)
 
 const totalMarketValue = computed(() => {
   return holdingStore.holdings.reduce((s, h) => {

@@ -1,20 +1,6 @@
 <template>
   <div class="allocation-form">
-    <!-- ===== 1. 增资/减资 ===== -->
-    <div class="card">
-      <div class="card-title">增减资金池</div>
-      <div class="card-desc">为总资金池增加或减少资金</div>
-      <div class="amount-row">
-        <input v-model="deltaAmount" type="number" inputmode="decimal" placeholder="输入金额" class="big-input num-mono" />
-        <span class="unit">元</span>
-      </div>
-      <div class="action-row">
-        <button class="act-btn add" :disabled="!deltaValid" @click="doCapital('add')">增资 ➕</button>
-        <button class="act-btn remove" :disabled="!deltaValid" @click="doCapital('remove')">减资 ➖</button>
-      </div>
-    </div>
-
-    <!-- ===== 2. 子池资金分配 ===== -->
+    <!-- ===== 1. 子池资金分配 ===== -->
     <div class="card">
       <div class="card-title">子池资金分配</div>
       <div class="card-desc">
@@ -51,6 +37,20 @@
         确认分配 ({{ pctTotal.toFixed(0) }}%)
       </button>
       <div v-if="Math.abs(pctTotal - 100) > 0.5" class="err">百分比合计需为100%，当前{{ pctTotal.toFixed(1) }}%</div>
+    </div>
+
+    <!-- ===== 2. 增减资金池 ===== -->
+    <div class="card">
+      <div class="card-title">增减资金池</div>
+      <div class="card-desc">为总资金池增加或减少资金</div>
+      <div class="amount-row">
+        <input v-model="deltaAmount" type="number" inputmode="decimal" placeholder="输入金额" class="big-input num-mono" />
+        <span class="amount-unit-text">元</span>
+      </div>
+      <div class="action-row">
+        <button class="act-btn add" :disabled="!deltaValid" @click="doCapital('add')">增资 ➕</button>
+        <button class="act-btn remove" :disabled="!deltaValid" @click="doCapital('remove')">减资 ➖</button>
+      </div>
     </div>
 
     <!-- ===== 确认弹窗 (增资/减资) ===== -->
@@ -201,13 +201,13 @@ computed(() => { /* placeholder for external sync */ })
 
 /* 增资/减资 */
 .big-input {
-  width: 100%; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+  flex: 1; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
   border-radius: var(--radius-md); color: #fff; font-size: 22px; padding: 12px;
   text-align: right; outline: none; font-family: var(--font-number);
 }
 .big-input:focus { border-color: var(--bg-accent); }
-.unit { font-size: 13px; color: var(--text-secondary); position: absolute; right: 12px; top: 50%; }
-.amount-row { position: relative; display: flex; align-items: center; margin-bottom: 12px; }
+.amount-unit-text { font-size: 13px; color: var(--text-secondary); margin-left: 6px; }
+.amount-row { display: flex; align-items: center; margin-bottom: 12px; }
 .action-row { display: flex; gap: 10px; }
 .act-btn {
   flex: 1; padding: 12px; border: none; border-radius: var(--radius-md);

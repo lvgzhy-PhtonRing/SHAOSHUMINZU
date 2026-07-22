@@ -102,7 +102,7 @@ const totalMarketValue = computed(() => {
 const totalAsset = computed(() => {
   // 总资产 ≈ 总市值 + 各池可用资金（当前简化为持仓总市值 / 仓位比例）
   const mv = totalMarketValue.value
-  return mv > 0 ? mv : 816935.51 // fallback
+  return mv > 0 ? mv : 829661.35 // fallback
 })
 
 const totalPositionRatio = computed(() => {

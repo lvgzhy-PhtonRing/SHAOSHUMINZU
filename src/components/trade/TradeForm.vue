@@ -71,7 +71,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { formatMoney, formatPrice } from '@/utils/formatters'
 import PoolSelector from '@/components/common/PoolSelector.vue'
 
@@ -84,14 +84,8 @@ const props = defineProps({
   presetPoolId: { type: Number, default: null }
 })
 
-onMounted(() => {
-  if (props.hidePool && props.presetPoolId) {
-    selectedPool.value = props.presetPoolId
-  }
-})
-
 const emit = defineEmits(['submit'])
-const selectedPool = ref(null)
+const selectedPool = ref(props.presetPoolId)
 const submitted = ref(false)
 
 const form = ref({
