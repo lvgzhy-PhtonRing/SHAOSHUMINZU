@@ -1,5 +1,5 @@
 <template>
-  <div class="page trade-page" style="padding:16px">
+  <div class="page trade-page">
     <div class="page-header">
       <span class="page-title">{{ isSell ? '卖出' : '录入买入' }}</span>
     </div>
@@ -137,7 +137,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.page-header { padding: 4px 0 12px; }
+.page-header { padding: 0 0 12px; }
 .page-title { font-size: 18px; font-weight: 700; }
 .preset-card {
   background: var(--bg-card);

@@ -81,6 +81,12 @@ export async function insertCapitalLog(log) {
   return data[0]
 }
 
+/* 删除资金记录 */
+export async function deleteCapitalLog(id) {
+  const { error } = await supabase.from('capital_log').delete().eq('id', id)
+  if (error) throw new Error(error.message)
+}
+
 /* 更新持仓 */
 export async function upsertHolding(holding) {
   const { data, error } = await supabase

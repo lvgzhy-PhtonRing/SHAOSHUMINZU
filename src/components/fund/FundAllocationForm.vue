@@ -45,7 +45,6 @@
       <div class="card-desc">为总资金池增加或减少资金</div>
       <div class="amount-row">
         <input v-model="deltaAmount" type="number" inputmode="decimal" placeholder="输入金额" class="big-input num-mono" />
-        <span class="amount-unit-text">元</span>
       </div>
       <div class="action-row">
         <button class="act-btn add" :disabled="!deltaValid" @click="doCapital('add')">增资 ➕</button>

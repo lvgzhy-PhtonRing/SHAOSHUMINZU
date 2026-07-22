@@ -34,7 +34,7 @@ defineProps({
 
 <style scoped>
 .account-section {
-  padding: 8px 16px 0;
+  padding: 0 0 8px;
 }
 .account-header {
   margin-bottom: 2px;

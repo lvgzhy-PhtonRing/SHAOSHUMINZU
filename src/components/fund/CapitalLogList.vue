@@ -16,12 +16,11 @@
             </span>
           </div>
           <div class="log-meta">
-            <span v-if="log.pools?.name">分配至：{{ log.pools.name }} · </span>
             <span>{{ formatDateString(log.created_at) }}</span>
-            <span v-if="log.created_by"> · {{ log.created_by }}</span>
+            <span v-if="log.note"> · {{ log.note }}</span>
           </div>
-          <div v-if="log.note" class="log-note">{{ log.note }}</div>
         </div>
+        <button class="del-btn" @click="$emit('delete', log.id)">✕</button>
       </div>
     </div>
   </div>
@@ -31,9 +30,8 @@
 import { formatMoney } from '@/utils/formatters'
 import EmptyState from '@/components/common/EmptyState.vue'
 
-defineProps({
-  logs: { type: Array, default: () => [] }
-})
+defineProps({ logs: { type: Array, default: () => [] } })
+defineEmits(['delete'])
 
 function formatDateString(isoStr) {
   if (!isoStr) return ''
@@ -57,5 +55,9 @@ function formatDateString(isoStr) {
 .log-amount.rise { color: var(--color-rise); }
 .log-amount.fall { color: var(--color-fall); }
 .log-meta { font-size: 11px; color: var(--text-muted); }
-.log-note { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+.del-btn {
+  background: none; border: none; color: var(--text-muted); font-size: 14px;
+  cursor: pointer; padding: 0 4px; align-self: flex-start;
+}
+.del-btn:active { color: var(--color-fall); }
 </style>

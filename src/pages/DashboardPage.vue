@@ -172,7 +172,7 @@ const summary = computed(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 4px 16px 0;
+  padding: 0 0 12px;
 }
 .page-title {
   font-size: 18px;

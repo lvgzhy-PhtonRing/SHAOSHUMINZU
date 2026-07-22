@@ -1,5 +1,5 @@
 <template>
-  <div class="page fund-page" style="padding:16px">
+  <div class="page fund-page">
     <div class="page-header">
       <span class="page-title">资金池管理</span>
     </div>
@@ -28,7 +28,7 @@
         @capital-change="onCapitalChange"
         @alloc-change="onAllocChange"
       />
-      <CapitalLogList :logs="fundStore.capitalLogs" />
+      <CapitalLogList :logs="fundStore.capitalLogs" @delete="onDeleteLog" />
     </template>
   </div>
 </template>
@@ -40,6 +40,7 @@ import { useFundStore } from '@/stores/funds'
 import { useHoldingStore } from '@/stores/holdings'
 import { usePriceStore } from '@/stores/prices'
 import { formatMoney } from '@/utils/formatters'
+import { deleteCapitalLog } from '@/api/supabase'
 import FundAllocationForm from '@/components/fund/FundAllocationForm.vue'
 import CapitalLogList from '@/components/fund/CapitalLogList.vue'
 import LoadingSkeleton from '@/components/common/LoadingSkeleton.vue'
@@ -67,30 +68,27 @@ async function onCapitalChange({ type, amount, note }) {
   try {
     await fundStore.addCapitalLog({
       pool_id: null, type, amount,
-      note: note || `${type === 'add' ? '增资' : '减资'} ${amount}`,
+      note: note || '',
       created_by: 'admin'
     })
-    // 更新可用资金
-    totalAvailable.value += (type === 'add' ? amount : -amount)
+    if (type === 'add') totalAsset.value += amount
+    else totalAsset.value -= amount
     await fundStore.loadCapitalLogs()
   } catch (e) {
     console.error('Capital change error:', e)
   }
 }
 
-async function onAllocChange({ pools: allocs }) {
+function onAllocChange({ pools: allocs }) {
+  console.log('Allocation saved:', allocs)
+}
+
+async function onDeleteLog(id) {
   try {
-    for (const a of allocs) {
-      await fundStore.addCapitalLog({
-        pool_id: a.pool_id, type: 'add',
-        amount: a.amount,
-        note: `资金分配: ${a.key} ${a.percent.toFixed(1)}%`,
-        created_by: 'admin'
-      })
-    }
+    await deleteCapitalLog(id)
     await fundStore.loadCapitalLogs()
   } catch (e) {
-    console.error('Alloc change error:', e)
+    console.error('Delete log error:', e)
   }
 }
 

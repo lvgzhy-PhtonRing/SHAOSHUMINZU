@@ -1,5 +1,5 @@
 <template>
-  <div class="page settings-page" style="padding:16px">
+  <div class="page settings-page">
     <div class="page-header">
       <span class="page-title">设置</span>
     </div>
@@ -37,7 +37,7 @@
         <div class="group-title">关于</div>
         <div class="settings-item">
           <div class="item-left"><span class="item-icon">ℹ️</span><span>版本</span></div>
-          <span class="item-value">v1.3.5</span>
+          <span class="item-value">v1.3.6</span>
         </div>
         <div class="settings-item">
           <div class="item-left"><span class="item-icon">🏛️</span><span>数据存储</span></div>
