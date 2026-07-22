@@ -98,20 +98,6 @@ const totalAvailable = computed(() => totalCapital.value - totalCost.value)
 const saved = localStorage.getItem('poolPercents')
 const poolPercents = saved ? JSON.parse(saved) : { '共有': 40, '春': 15, '维': 15, '队': 15, '回': 15 }
 
-const totalCost = computed(() => {
-  return holdingStore.holdings.reduce((s, h) => s + h.cost_price * h.quantity, 0)
-})
-
-const totalMarketValue = computed(() => {
-  return holdingStore.holdings.reduce((s, h) => {
-    const price = priceStore.prices[h.stock_code]?.price || 0
-    return s + price * h.quantity
-  }, 0)
-})
-
-const floatPnl = computed(() => totalMarketValue.value - totalCost.value)
-const totalAsset = computed(() => totalCapital.value + floatPnl.value)
-const totalAvailable = computed(() => totalCapital.value - totalCost.value)
 const totalPositionRatio = computed(() => {
   return totalAsset.value > 0 ? (totalMarketValue.value / totalAsset.value) * 100 : 0
 })
