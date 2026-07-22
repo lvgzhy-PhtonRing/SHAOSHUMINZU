@@ -163,9 +163,9 @@ const summary = computed(() => {
     positionRatio: calcPositionRatio(totalMarketValue, totalAsset),
     floatPnl,
     dailyPnl: holdings.reduce((s, h) => {
-      const changePct = parseFloat(h.changePct) || 0
-      const prevClose = changePct !== 0 ? h.currentPrice / (1 + changePct / 100) : h.currentPrice
-      return s + (h.currentPrice - prevClose) * h.quantity
+      const prevClose = priceStore.prices[h.stock_code]?.prev_close
+      if (prevClose && prevClose > 0) return s + (h.currentPrice - prevClose) * h.quantity
+      return s
     }, 0)
   }
 })
