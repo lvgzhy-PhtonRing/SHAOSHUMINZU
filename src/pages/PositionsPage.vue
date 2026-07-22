@@ -43,6 +43,7 @@
             :name="poolPositionData[0].name"
             :percent="poolPositionData[0].percent"
             :market-value="poolPositionData[0].marketValue"
+            :total-pool-asset="poolPositionData[0].totalPoolAsset"
             :color="poolPositionData[0].color"
             wide
           />
@@ -55,22 +56,9 @@
             :name="item.name"
             :percent="item.percent"
             :market-value="item.marketValue"
+            :total-pool-asset="item.totalPoolAsset"
             :color="item.color"
           />
-        </div>
-      </div>
-
-      <!-- 各池可用资金模块 -->
-      <div class="section-card">
-        <div class="section-title">各池可用资金</div>
-        <div class="fund-list">
-          <div v-for="item in poolFundData" :key="item.name" class="fund-item">
-            <div class="fund-left">
-              <span class="fund-dot" :style="{ background: item.color }"></span>
-              <span class="fund-name">{{ item.name }}</span>
-            </div>
-            <span class="fund-amount num-mono">{{ formatMoney(item.available) }}</span>
-          </div>
         </div>
       </div>
 
@@ -175,12 +163,15 @@ const poolPositionData = computed(() => {
     const poolCapital = poolAmounts[p.name] || 0
     // 该池仓位 = 该池持股市值 / 该池分配资金
     const positionRatio = poolCapital > 0 ? (mv / poolCapital) * 100 : 0
+    // 子池总资产 = 子池市值 + (子池分配 - 子池成本)
+    const totalPoolAsset = mv + Math.max(0, poolCapital - cost)
     return {
       ...p,
       marketValue: mv,
       cost,
       poolCapital,
       positionRatio,
+      totalPoolAsset,
       percent: positionRatio,
       color: colorList[i % colorList.length]
     }
@@ -198,18 +189,6 @@ const chartSegments = computed(() => {
     const seg = { color: p.color, arcLength, offset: -offset }
     offset += arcLength
     return seg
-  })
-})
-
-const poolFundData = computed(() => {
-  return poolStore.pools.map((p, i) => {
-    const poolData = poolPositionData.value.find(d => d.id === p.id)
-    const percent = poolData?.percent || 0
-    return {
-      name: p.name,
-      available: (percent / 100) * totalAvailable.value,
-      color: colorList[i % colorList.length]
-    }
   })
 })
 
@@ -250,16 +229,6 @@ onMounted(async () => {
 .section-title .subtitle { font-size: 11px; color: var(--text-secondary); font-weight: 400; }
 .pos-gongyou { margin-bottom: 8px; }
 .pos-users-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.fund-list { border-radius: var(--radius-lg); overflow: hidden; }
-.fund-item {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
-}
-.fund-item:last-child { border-bottom: none; }
-.fund-left { display: flex; align-items: center; gap: 8px; }
-.fund-dot { width: 8px; height: 8px; border-radius: 50%; }
-.fund-name { font-size: 14px; }
-.fund-amount { font-size: 14px; font-weight: 600; font-family: var(--font-number); }
 .bars {
   display: flex;
   align-items: flex-end;
