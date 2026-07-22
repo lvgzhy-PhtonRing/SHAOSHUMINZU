@@ -4,18 +4,14 @@
       <span class="page-title">资金池管理</span>
     </div>
 
-    <div class="total-pool-card">
-      <div class="tpc-label">总资金池</div>
-      <div class="tpc-amount num-mono">{{ formatMoney(totalAsset) }}</div>
-      <div class="tpc-grid">
-        <div class="tpc-item">
-          <span class="tpc-item-label">总市值</span>
-          <span class="tpc-item-value num-mono">{{ formatMoney(totalMarketValue) }}</span>
-        </div>
-        <div class="tpc-item">
-          <span class="tpc-item-label">总可用</span>
-          <span class="tpc-item-value num-mono">{{ formatMoney(totalAvailable) }}</span>
-        </div>
+    <div class="fund-summary">
+      <div class="fs-row">
+        <span class="fs-label">总可用资金</span>
+        <span class="fs-amount num-mono">{{ formatMoney(totalAvailable) }}</span>
+      </div>
+      <div class="fs-row">
+        <span class="fs-label">股票总市值</span>
+        <span class="fs-amount num-mono">{{ formatMoney(totalMarketValue) }}</span>
       </div>
     </div>
 
@@ -183,16 +179,16 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.total-pool-card {
+.fund-summary {
   margin-bottom: 16px;
   padding: 16px;
-  background: linear-gradient(135deg, #0f3460, #1a1a2e);
+  background: var(--bg-card);
   border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
-.tpc-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; }
-.tpc-amount { font-size: 28px; font-weight: 700; font-family: var(--font-number); margin-bottom: 12px; }
-.tpc-grid { display: flex; gap: 16px; }
-.tpc-item { display: flex; flex-direction: column; gap: 2px; }
-.tpc-item-label { font-size: 11px; color: var(--text-muted); }
-.tpc-item-value { font-size: 14px; font-weight: 500; font-family: var(--font-number); }
+.fs-row { display: flex; justify-content: space-between; align-items: baseline; }
+.fs-label { font-size: 13px; color: var(--text-secondary); }
+.fs-amount { font-size: 22px; font-weight: 700; font-family: var(--font-number); }
 </style>
