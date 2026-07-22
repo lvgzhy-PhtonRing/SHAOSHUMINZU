@@ -1,0 +1,129 @@
+<h2>💹 交易录入页面</h2>
+<p class="subtitle">记录买入/卖出 · 指定操作人 · 校对修正</p>
+
+<div class="mockup">
+  <div class="mockup-header">📱 交易录入 · 移动端预览</div>
+  <div class="mockup-body" style="padding:16px">
+    <div style="background:#1a1a2e;border-radius:12px;overflow:hidden;max-width:375px;margin:0 auto;font-family:'Inter',-apple-system,sans-serif;color:#fff;box-shadow:0 8px 32px rgba(0,0,0,0.3)">
+      <div style="display:flex;justify-content:space-between;padding:12px 16px 8px;font-size:12px;color:#888">
+        <span>09:41</span><span>📶 🔋 98%</span>
+      </div>
+
+      <div style="padding:0 16px 16px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <span style="font-size:18px;font-weight:700">录入交易</span>
+          <span style="font-size:12px;padding:4px 10px;background:rgba(255,255,255,0.06);border-radius:6px;color:#888">操作人：管理员</span>
+        </div>
+
+        <!-- 交易类型切换 -->
+        <div style="display:flex;background:#16213e;border-radius:8px;padding:3px;margin-bottom:16px">
+          <div style="flex:1;text-align:center;padding:8px;border-radius:6px;background:#e94560;font-weight:600;font-size:14px">买入</div>
+          <div style="flex:1;text-align:center;padding:8px;border-radius:6px;font-size:14px;color:#888">卖出</div>
+        </div>
+
+        <!-- 表单 -->
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <!-- 股票代码 -->
+          <div>
+            <label style="font-size:12px;color:#888;margin-bottom:4px;display:block">股票代码</label>
+            <div style="display:flex;gap:8px">
+              <div style="flex:1;padding:12px;background:#16213e;border-radius:8px;border:1px solid rgba(255,255,255,0.06);color:#fff;font-size:16px">002340</div>
+              <div style="padding:12px;background:#16213e;border-radius:8px;border:1px solid rgba(255,255,255,0.06);color:#888;font-size:13px;white-space:nowrap">🔍 查询</div>
+            </div>
+          </div>
+
+          <!-- 自动填入股票名称 -->
+          <div style="padding:8px 12px;background:rgba(0,210,161,0.06);border-radius:6px;font-size:13px;color:#00d2a1">
+            ✅ 格林美 002340 · 深圳A股 · 现价 6.42
+          </div>
+
+          <!-- 所属子池 -->
+          <div>
+            <label style="font-size:12px;color:#888;margin-bottom:4px;display:block">所属子池</label>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <div style="padding:8px 14px;background:#0f3460;border-radius:16px;font-size:13px;font-weight:500">共有</div>
+              <div style="padding:8px 14px;background:rgba(255,255,255,0.06);border-radius:16px;font-size:13px;color:#888">春</div>
+              <div style="padding:8px 14px;background:rgba(255,255,255,0.06);border-radius:16px;font-size:13px;color:#888">维</div>
+              <div style="padding:8px 14px;background:rgba(255,255,255,0.06);border-radius:16px;font-size:13px;color:#888">队</div>
+              <div style="padding:8px 14px;background:rgba(255,255,255,0.06);border-radius:16px;font-size:13px;color:#888">回</div>
+            </div>
+          </div>
+
+          <!-- 双列输入 -->
+          <div style="display:flex;gap:10px">
+            <div style="flex:1">
+              <label style="font-size:12px;color:#888;margin-bottom:4px;display:block">成交数量（股）</label>
+              <div style="padding:12px;background:#16213e;border-radius:8px;border:1px solid rgba(255,255,255,0.06);color:#fff;font-size:16px">5,000</div>
+            </div>
+            <div style="flex:1">
+              <label style="font-size:12px;color:#888;margin-bottom:4px;display:block">成交价格（元）</label>
+              <div style="padding:12px;background:#16213e;border-radius:8px;border:1px solid rgba(255,255,255,0.06);color:#fff;font-size:16px">6.42</div>
+            </div>
+          </div>
+
+          <div>
+            <label style="font-size:12px;color:#888;margin-bottom:4px;display:block">成交金额（元）</label>
+            <div style="display:flex;gap:8px;align-items:center">
+              <div style="flex:1;padding:12px;background:#16213e;border-radius:8px;border:1px solid rgba(255,255,255,0.06);color:#fff;font-size:16px">32,100</div>
+              <span style="font-size:11px;color:#888">含预估手续费 -0.02%</span>
+            </div>
+          </div>
+
+          <div>
+            <label style="font-size:12px;color:#888;margin-bottom:4px;display:block">成交日期</label>
+            <div style="padding:12px;background:#16213e;border-radius:8px;border:1px solid rgba(255,255,255,0.06);color:#fff;font-size:15px">2026-07-22</div>
+          </div>
+
+          <div>
+            <label style="font-size:12px;color:#888;margin-bottom:4px;display:block">备注（可选）</label>
+            <div style="padding:12px;background:#16213e;border-radius:8px;border:1px solid rgba(255,255,255,0.06);color:#666;font-size:14px">例：盘中买入，均价成交</div>
+          </div>
+
+          <!-- 提交按钮 -->
+          <button style="width:100%;padding:14px;background:#0f3460;border:none;border-radius:10px;color:#fff;font-size:16px;font-weight:600;margin-top:8px">📝 录入交易</button>
+
+          <!-- 校对区域 -->
+          <div style="margin-top:16px;padding:14px;background:rgba(233,69,96,0.06);border-radius:10px;border:1px dashed rgba(233,69,96,0.2)">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+              <span style="font-size:13px;font-weight:600;color:#e94560">🔍 校对交易</span>
+              <span style="font-size:11px;color:#888">实际成交可能有手续费差异</span>
+            </div>
+            <div style="display:flex;gap:8px">
+              <div style="flex:1;padding:10px;background:#16213e;border-radius:6px;border:1px solid rgba(233,69,96,0.2);color:#fff;font-size:14px">32,100</div>
+              <button style="padding:10px 16px;background:#e94560;border:none;border-radius:6px;color:#fff;font-size:13px;font-weight:500">✓ 校正</button>
+            </div>
+            <div style="display:flex;gap:12px;margin-top:6px;font-size:11px;color:#888">
+              <span>原录：32,100</span>
+              <span>校正：32,102.50</span>
+              <span>差额：+2.50（手续费）</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 底部导航 -->
+      <div style="border-top:1px solid rgba(255,255,255,0.06);display:flex;padding:8px 0">
+        <div style="flex:1;text-align:center;padding:6px"><div style="font-size:20px">📋</div><div style="font-size:10px;color:#888">持仓</div></div>
+        <div style="flex:1;text-align:center;padding:6px"><div style="font-size:20px;color:#0f3460">💹</div><div style="font-size:10px;color:#0f3460;font-weight:600">交易</div></div>
+        <div style="flex:1;text-align:center;padding:6px"><div style="font-size:20px">🥧</div><div style="font-size:10px;color:#888">仓位</div></div>
+        <div style="flex:1;text-align:center;padding:6px"><div style="font-size:20px">💰</div><div style="font-size:10px;color:#888">资金</div></div>
+        <div style="flex:1;text-align:center;padding:6px"><div style="font-size:20px">⚙️</div><div style="font-size:10px;color:#888">设置</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:20px">
+  <h3>交易录入页面是否满意？</h3>
+  <p class="subtitle">含买入/卖出切换、子池选择、实时行情自动填入、校对修正功能</p>
+  <div class="options">
+    <div class="option" data-choice="approve" onclick="toggleSelect(this)">
+      <div class="letter">👍</div>
+      <div class="content"><h3>满意，继续</h3><p>展示资金池管理页面</p></div>
+    </div>
+    <div class="option" data-choice="adjust" onclick="toggleSelect(this)">
+      <div class="letter">🔄</div>
+      <div class="content"><h3>需要调整</h3><p>有一些修改想法</p></div>
+    </div>
+  </div>
+</div>

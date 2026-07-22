@@ -1,0 +1,50 @@
+/* src/assets/styles/global.css */
+@import './variables.css';
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 14px;
+  line-height: 1.5;
+  overflow-x: hidden;
+}
+
+/* 数字等宽 */
+.num-mono {
+  font-family: var(--font-number);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 涨跌色 */
+.text-rise { color: var(--color-rise); }
+.text-fall { color: var(--color-fall); }
+
+/* 卡片 */
+.card {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-md);
+}
+
+/* 横向滚动容器 */
+.scroll-x {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.scroll-x::-webkit-scrollbar { display: none; }
+
+/* 页面容器 */
+.page {
+  padding: var(--spacing-md) var(--spacing-lg);
+  padding-bottom: 70px; /* 底部Tab高度 */
+}

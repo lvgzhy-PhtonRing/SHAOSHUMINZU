@@ -1,0 +1,41 @@
+/* src/assets/styles/variables.css */
+:root {
+  /* 主题色 */
+  --bg-primary: #1a1a2e;
+  --bg-card: #16213e;
+  --bg-accent: #0f3460;
+  --bg-hover: rgba(255,255,255,0.06);
+
+  /* 涨跌色 */
+  --color-rise: #00d2a1;
+  --color-fall: #e94560;
+  --color-warn: #ffc107;
+
+  /* 子池颜色 */
+  --pool-gongyou: #0f3460;
+  --pool-chun: #e94560;
+  --pool-wei: #00d2a1;
+  --pool-dui: #ffc107;
+  --pool-hui: #7c4dff;
+
+  /* 文字色 */
+  --text-primary: #ffffff;
+  --text-secondary: #888888;
+  --text-muted: #666666;
+
+  /* 间距 */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 24px;
+
+  /* 圆角 */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-round: 999px;
+
+  /* 字体 */
+  --font-number: 'SF Mono', 'Fira Code', 'Courier New', monospace;
+}

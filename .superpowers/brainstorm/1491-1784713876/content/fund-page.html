@@ -1,0 +1,130 @@
+<h2>💰 资金池管理页面</h2>
+<p class="subtitle">总池增资/减资 → 分配到 共有 + 春/维/队/回</p>
+
+<div class="mockup">
+  <div class="mockup-header">📱 资金池管理 · 移动端预览</div>
+  <div class="mockup-body" style="padding:16px">
+    <div style="background:#1a1a2e;border-radius:12px;overflow:hidden;max-width:375px;margin:0 auto;font-family:'Inter',-apple-system,sans-serif;color:#fff;box-shadow:0 8px 32px rgba(0,0,0,0.3)">
+
+      <div style="display:flex;justify-content:space-between;padding:12px 16px 8px;font-size:12px;color:#888">
+        <span>09:41</span><span>📶 🔋 98%</span>
+      </div>
+
+      <div style="padding:0 16px 16px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <span style="font-size:18px;font-weight:700">资金池管理</span>
+        </div>
+
+        <!-- 总资金池概览卡片 -->
+        <div style="padding:16px;background:linear-gradient(135deg,#0f3460,#1a1a2e);border-radius:12px;margin-bottom:16px">
+          <div style="font-size:12px;color:#888;margin-bottom:4px">总资金池</div>
+          <div style="font-size:28px;font-weight:700">816,935.51</div>
+          <div style="display:flex;gap:16px;margin-top:8px">
+            <div><span style="font-size:11px;color:#888">总市值</span><div style="font-size:14px;font-weight:500">212,685</div></div>
+            <div><span style="font-size:11px;color:#888">总可用</span><div style="font-size:14px;font-weight:500">604,251</div></div>
+          </div>
+        </div>
+
+        <!-- 增资 / 减资 切换 -->
+        <div style="display:flex;background:#16213e;border-radius:8px;padding:3px;margin-bottom:16px">
+          <div style="flex:1;text-align:center;padding:8px;border-radius:6px;background:#00d2a1;font-weight:600;font-size:14px;color:#1a1a2e">增资 ➕</div>
+          <div style="flex:1;text-align:center;padding:8px;border-radius:6px;font-size:14px;color:#888">减资 ➖</div>
+        </div>
+
+        <!-- 分配表单 -->
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div>
+            <label style="font-size:12px;color:#888;margin-bottom:4px;display:block">增资金额（元）</label>
+            <div style="padding:12px;background:#16213e;border-radius:8px;border:1px solid rgba(255,255,255,0.06);color:#fff;font-size:16px">50,000</div>
+          </div>
+
+          <div>
+            <label style="font-size:12px;color:#888;margin-bottom:4px;display:block">分配到各子池</label>
+            <div style="display:flex;flex-direction:column;gap:6px;margin-top:4px">
+              <!-- 共有 -->
+              <div style="display:flex;align-items:center;gap:8px;padding:10px;background:#16213e;border-radius:8px">
+                <span style="font-size:13px;font-weight:500;width:36px">共有</span>
+                <div style="flex:1;padding:8px 10px;background:rgba(255,255,255,0.04);border-radius:6px;color:#fff;font-size:14px">20,000</div>
+                <span style="font-size:12px;color:#888">40%</span>
+              </div>
+              <!-- 春 -->
+              <div style="display:flex;align-items:center;gap:8px;padding:10px;background:#16213e;border-radius:8px">
+                <span style="font-size:13px;font-weight:500;width:36px;color:#e94560">春</span>
+                <div style="flex:1;padding:8px 10px;background:rgba(255,255,255,0.04);border-radius:6px;color:#fff;font-size:14px">7,500</div>
+                <span style="font-size:12px;color:#888">15%</span>
+              </div>
+              <!-- 维 -->
+              <div style="display:flex;align-items:center;gap:8px;padding:10px;background:#16213e;border-radius:8px">
+                <span style="font-size:13px;font-weight:500;width:36px;color:#00d2a1">维</span>
+                <div style="flex:1;padding:8px 10px;background:rgba(255,255,255,0.04);border-radius:6px;color:#fff;font-size:14px">7,500</div>
+                <span style="font-size:12px;color:#888">15%</span>
+              </div>
+              <!-- 队 -->
+              <div style="display:flex;align-items:center;gap:8px;padding:10px;background:#16213e;border-radius:8px">
+                <span style="font-size:13px;font-weight:500;width:36px;color:#ffc107">队</span>
+                <div style="flex:1;padding:8px 10px;background:rgba(255,255,255,0.04);border-radius:6px;color:#fff;font-size:14px">7,500</div>
+                <span style="font-size:12px;color:#888">15%</span>
+              </div>
+              <!-- 回 -->
+              <div style="display:flex;align-items:center;gap:8px;padding:10px;background:#16213e;border-radius:8px">
+                <span style="font-size:13px;font-weight:500;width:36px;color:#0f3460">回</span>
+                <div style="flex:1;padding:8px 10px;background:rgba(255,255,255,0.04);border-radius:6px;color:#fff;font-size:14px">7,500</div>
+                <span style="font-size:12px;color:#888">15%</span>
+              </div>
+            </div>
+            <div style="text-align:right;font-size:12px;color:#888;margin-top:4px">合计：50,000 ✓</div>
+          </div>
+
+          <div>
+            <label style="font-size:12px;color:#888;margin-bottom:4px;display:block">备注（可选）</label>
+            <div style="padding:12px;background:#16213e;border-radius:8px;border:1px solid rgba(255,255,255,0.06);color:#666;font-size:14px">7月新增资金，按比例分配</div>
+          </div>
+
+          <button style="width:100%;padding:14px;background:#00d2a1;border:none;border-radius:10px;color:#1a1a2e;font-size:16px;font-weight:600;margin-top:4px">✅ 确认增资并分配</button>
+        </div>
+
+        <!-- 资金变动历史 -->
+        <div style="margin-top:16px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <span style="font-size:14px;font-weight:600">资金变动记录</span>
+            <span style="font-size:11px;color:#888">查看全部 →</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <div style="display:flex;justify-content:space-between;padding:8px 10px;background:#16213e;border-radius:6px">
+              <div><span style="font-size:12px">➕ 增资</span><span style="font-size:11px;color:#888;margin-left:6px">50,000</span></div>
+              <div><span style="font-size:11px;color:#888">2026-07-22</span><span style="font-size:11px;color:#888;margin-left:8px">管理员</span></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:8px 10px;background:#16213e;border-radius:6px">
+              <div><span style="font-size:12px">➖ 减资</span><span style="font-size:11px;color:#888;margin-left:6px">20,000</span></div>
+              <div><span style="font-size:11px;color:#888">2026-07-15</span><span style="font-size:11px;color:#888;margin-left:8px">管理员</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 底部导航 -->
+      <div style="border-top:1px solid rgba(255,255,255,0.06);display:flex;padding:8px 0">
+        <div style="flex:1;text-align:center;padding:6px"><div style="font-size:20px">📋</div><div style="font-size:10px;color:#888">持仓</div></div>
+        <div style="flex:1;text-align:center;padding:6px"><div style="font-size:20px">💹</div><div style="font-size:10px;color:#888">交易</div></div>
+        <div style="flex:1;text-align:center;padding:6px"><div style="font-size:20px">🥧</div><div style="font-size:10px;color:#888">仓位</div></div>
+        <div style="flex:1;text-align:center;padding:6px"><div style="font-size:20px;color:#00d2a1">💰</div><div style="font-size:10px;color:#00d2a1;font-weight:600">资金</div></div>
+        <div style="flex:1;text-align:center;padding:6px"><div style="font-size:20px">⚙️</div><div style="font-size:10px;color:#888">设置</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:20px">
+  <h3>资金池管理页面是否满意？</h3>
+  <p class="subtitle">总池增/减资 → 按比例分配到5个子池 → 变动记录</p>
+  <div class="options">
+    <div class="option" data-choice="approve" onclick="toggleSelect(this)">
+      <div class="letter">👍</div>
+      <div class="content"><h3>满意，所有页面确认</h3><p>可以进入设计文档阶段</p></div>
+    </div>
+    <div class="option" data-choice="adjust" onclick="toggleSelect(this)">
+      <div class="letter">🔄</div>
+      <div class="content"><h3>需要调整</h3><p>还有一些修改想法</p></div>
+    </div>
+  </div>
+</div>

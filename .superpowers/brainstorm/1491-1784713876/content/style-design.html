@@ -1,0 +1,190 @@
+<h2>🎨 整体设计风格</h2>
+<p class="subtitle">现代简约 SaaS 仪表盘 · 卡片化布局 · 移动端优先</p>
+
+<div class="section">
+  <h3>配色方案</h3>
+  <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:12px">
+    <div style="width:80px;text-align:center">
+      <div style="width:80px;height:80px;border-radius:12px;background:#1a1a2e;box-shadow:0 2px 8px rgba(0,0,0,0.15)"></div>
+      <p style="font-size:12px;margin-top:4px;color:#666">深色背景<br><code>#1a1a2e</code></p>
+    </div>
+    <div style="width:80px;text-align:center">
+      <div style="width:80px;height:80px;border-radius:12px;background:#16213e;box-shadow:0 2px 8px rgba(0,0,0,0.15)"></div>
+      <p style="font-size:12px;margin-top:4px;color:#666">卡片背景<br><code>#16213e</code></p>
+    </div>
+    <div style="width:80px;text-align:center">
+      <div style="width:80px;height:80px;border-radius:12px;background:#0f3460;box-shadow:0 2px 8px rgba(0,0,0,0.15)"></div>
+      <p style="font-size:12px;margin-top:4px;color:#666">强调色<br><code>#0f3460</code></p>
+    </div>
+    <div style="width:80px;text-align:center">
+      <div style="width:80px;height:80px;border-radius:12px;background:#e94560;box-shadow:0 2px 8px rgba(0,0,0,0.15)"></div>
+      <p style="font-size:12px;margin-top:4px;color:#666">涨/跌红<br><code>#e94560</code></p>
+    </div>
+    <div style="width:80px;text-align:center">
+      <div style="width:80px;height:80px;border-radius:12px;background:#00d2a1;box-shadow:0 2px 8px rgba(0,0,0,0.15)"></div>
+      <p style="font-size:12px;margin-top:4px;color:#666">涨/跌绿<br><code>#00d2a1</code></p>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>页面结构</h3>
+  <p>底部 Tab 导航栏，4 个主要标签页：</p>
+  <div style="display:flex;gap:8px;margin-top:12px">
+    <div style="flex:1;padding:12px;background:#16213e;border-radius:8px;text-align:center;color:white;font-size:13px">
+      📊 持仓
+    </div>
+    <div style="flex:1;padding:12px;background:rgba(255,255,255,0.06);border-radius:8px;text-align:center;color:#999;font-size:13px">
+      💹 交易
+    </div>
+    <div style="flex:1;padding:12px;background:rgba(255,255,255,0.06);border-radius:8px;text-align:center;color:#999;font-size:13px">
+      💰 资金
+    </div>
+    <div style="flex:1;padding:12px;background:rgba(255,255,255,0.06);border-radius:8px;text-align:center;color:#999;font-size:13px">
+      ⚙️ 设置
+    </div>
+  </div>
+</div>
+
+<div class="mockup">
+  <div class="mockup-header">📱 持仓主页面 · 移动端预览</div>
+  <div class="mockup-body" style="padding:16px">
+    <div style="background:#1a1a2e;border-radius:12px;overflow:hidden;max-width:375px;margin:0 auto;font-family:'Inter',-apple-system,sans-serif;color:#fff;box-shadow:0 8px 32px rgba(0,0,0,0.3)">
+      <!-- 状态栏 -->
+      <div style="display:flex;justify-content:space-between;padding:12px 16px 8px;font-size:12px;color:#888">
+        <span>09:41</span>
+        <span>📶 🔋 98%</span>
+      </div>
+      <!-- 顶部账户概览 -->
+      <div style="padding:0 16px 16px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+          <span style="font-size:14px;color:#999">账号 27***87</span>
+          <span style="font-size:11px;background:rgba(233,69,96,0.15);color:#e94560;padding:2px 8px;border-radius:4px">清算中</span>
+        </div>
+        <div style="font-size:28px;font-weight:700;letter-spacing:-0.5px">816,935.51</div>
+        <div style="display:flex;gap:16px;margin-top:8px">
+          <div style="flex:1;padding:10px;background:#16213e;border-radius:8px">
+            <div style="font-size:11px;color:#888">总市值</div>
+            <div style="font-size:16px;font-weight:600">212,685</div>
+          </div>
+          <div style="flex:1;padding:10px;background:#16213e;border-radius:8px">
+            <div style="font-size:11px;color:#888">可用资金</div>
+            <div style="font-size:16px;font-weight:600">604,251</div>
+          </div>
+          <div style="flex:1;padding:10px;background:#16213e;border-radius:8px">
+            <div style="font-size:11px;color:#888">仓位</div>
+            <div style="font-size:16px;font-weight:600">26.0%</div>
+          </div>
+        </div>
+        <!-- 盈亏 -->
+        <div style="display:flex;gap:12px;margin-top:8px">
+          <div style="flex:1;padding:8px 10px;background:rgba(233,69,96,0.08);border-radius:8px">
+            <div style="font-size:11px;color:#888">浮动盈亏</div>
+            <div style="font-size:14px;font-weight:600;color:#e94560">-12,725.84</div>
+          </div>
+          <div style="flex:1;padding:8px 10px;background:rgba(0,210,161,0.08);border-radius:8px">
+            <div style="font-size:11px;color:#888">当日盈亏</div>
+            <div style="font-size:14px;font-weight:600;color:#00d2a1">+1,318.00</div>
+          </div>
+        </div>
+      </div>
+      <!-- 子池资金切换 -->
+      <div style="padding:0 16px 12px">
+        <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px">
+          <div style="flex-shrink:0;padding:6px 14px;background:#0f3460;border-radius:16px;font-size:12px;font-weight:500">总账户</div>
+          <div style="flex-shrink:0;padding:6px 14px;background:rgba(255,255,255,0.06);border-radius:16px;font-size:12px;color:#999">公共</div>
+          <div style="flex-shrink:0;padding:6px 14px;background:rgba(255,255,255,0.06);border-radius:16px;font-size:12px;color:#999">用户A</div>
+          <div style="flex-shrink:0;padding:6px 14px;background:rgba(255,255,255,0.06);border-radius:16px;font-size:12px;color:#999">用户B</div>
+          <div style="flex-shrink:0;padding:6px 14px;background:rgba(255,255,255,0.06);border-radius:16px;font-size:12px;color:#999">用户C</div>
+          <div style="flex-shrink:0;padding:6px 14px;background:rgba(255,255,255,0.06);border-radius:16px;font-size:12px;color:#999">用户D</div>
+        </div>
+      </div>
+      <!-- 持仓列表 -->
+      <div style="border-top:1px solid rgba(255,255,255,0.06);padding:12px 16px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:12px">
+          <span style="font-size:14px;font-weight:600">持仓股票</span>
+          <span style="font-size:12px;color:#888">更新时间 17:36:23</span>
+        </div>
+        <!-- 格林美 -->
+        <div style="padding:12px;background:#16213e;border-radius:10px;margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <span style="font-weight:600;font-size:15px">格林美</span>
+              <span style="font-size:11px;color:#888;margin-left:6px">002340</span>
+            </div>
+            <span style="font-size:12px;color:#e94560">-0.71%</span>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <div style="flex:1"><span style="font-size:11px;color:#888">现价</span><div style="font-size:14px;font-weight:600">6.42</div></div>
+            <div style="flex:1"><span style="font-size:11px;color:#888">成本</span><div style="font-size:14px">6.47</div></div>
+            <div style="flex:1"><span style="font-size:11px;color:#888">持仓</span><div style="font-size:14px">17,000</div></div>
+            <div style="flex:1"><span style="font-size:11px;color:#888">盈亏</span><div style="font-size:14px;color:#e94560">-782</div></div>
+          </div>
+          <div style="margin-top:6px">
+            <span style="font-size:11px;color:#888">市值</span>
+            <span style="font-size:13px;font-weight:500;margin-left:4px">109,140</span>
+            <span style="font-size:11px;color:#888;margin-left:12px">所属:</span>
+            <span style="font-size:11px;padding:1px 6px;background:rgba(233,69,96,0.12);color:#e94560;border-radius:4px;margin-left:4px">公共</span>
+          </div>
+        </div>
+        <!-- 百邦科技 -->
+        <div style="padding:12px;background:#16213e;border-radius:10px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <span style="font-weight:600;font-size:15px">百邦科技</span>
+              <span style="font-size:11px;color:#888;margin-left:6px">300736</span>
+            </div>
+            <span style="font-size:12px;color:#e94560">-10.34%</span>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <div style="flex:1"><span style="font-size:11px;color:#888">现价</span><div style="font-size:14px;font-weight:600">26.55</div></div>
+            <div style="flex:1"><span style="font-size:11px;color:#888">成本</span><div style="font-size:14px">29.61</div></div>
+            <div style="flex:1"><span style="font-size:11px;color:#888">持仓</span><div style="font-size:14px">3,900</div></div>
+            <div style="flex:1"><span style="font-size:14px;color:#e94560;font-weight:600">-11,941</span></div>
+          </div>
+          <div style="margin-top:6px">
+            <span style="font-size:11px;color:#888">市值</span>
+            <span style="font-size:13px;font-weight:500;margin-left:4px">103,545</span>
+            <span style="font-size:11px;color:#888;margin-left:12px">所属:</span>
+            <span style="font-size:11px;padding:1px 6px;background:rgba(255,193,7,0.12);color:#ffc107;border-radius:4px;margin-left:4px">用户B</span>
+          </div>
+        </div>
+      </div>
+      <!-- 底部导航 -->
+      <div style="border-top:1px solid rgba(255,255,255,0.06);display:flex;padding:8px 0">
+        <div style="flex:1;text-align:center;padding:6px"><div style="font-size:20px">📊</div><div style="font-size:10px;color:#0f3460;font-weight:600">持仓</div></div>
+        <div style="flex:1;text-align:center;padding:6px"><div style="font-size:20px">💹</div><div style="font-size:10px;color:#888">交易</div></div>
+        <div style="flex:1;text-align:center;padding:6px"><div style="font-size:20px">💰</div><div style="font-size:10px;color:#888">资金</div></div>
+        <div style="flex:1;text-align:center;padding:6px"><div style="font-size:20px">⚙️</div><div style="font-size:10px;color:#888">设置</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:20px">
+  <h3>您觉得这个整体方向如何？</h3>
+  <p class="subtitle">深色主题 + 卡片化布局 + 底部Tab导航</p>
+  <div class="options">
+    <div class="option" data-choice="approve" onclick="toggleSelect(this)">
+      <div class="letter">👍</div>
+      <div class="content">
+        <h3>很好，继续</h3>
+        <p>风格方向认同，展示其他页面</p>
+      </div>
+    </div>
+    <div class="option" data-choice="adjust" onclick="toggleSelect(this)">
+      <div class="letter">🔄</div>
+      <div class="content">
+        <h3>需要调整</h3>
+        <p>风格可以，但有些细节想修改</p>
+      </div>
+    </div>
+    <div class="option" data-choice="light" onclick="toggleSelect(this)">
+      <div class="letter">☀️</div>
+      <div class="content">
+        <h3>想要浅色主题</h3>
+        <p>偏好白色背景的清爽风格</p>
+      </div>
+    </div>
+  </div>
+</div>
