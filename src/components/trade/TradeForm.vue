@@ -59,13 +59,14 @@
           round
           block
           type="primary"
-          native-type="submit"
           :loading="submitting"
           :color="isBuy ? '#e94560' : '#00d2a1'"
+          @click="onSubmit"
         >
           {{ isBuy ? '📝 录入买入' : '📝 录入卖出' }}
         </van-button>
       </div>
+      <div v-if="submitError" style="color:var(--color-fall);font-size:12px;text-align:center;margin-bottom:8px">{{ submitError }}</div>
     </van-form>
   </div>
 </template>
@@ -87,6 +88,7 @@ const props = defineProps({
 const emit = defineEmits(['submit'])
 const selectedPool = ref(props.presetPoolId)
 const submitted = ref(false)
+const submitError = ref('')
 
 const form = ref({
   totalAmount: '',
@@ -106,11 +108,27 @@ const computedCostPrice = computed(() => {
 
 function onSubmit() {
   submitted.value = true
-  if (!selectedPool.value) return
+  submitError.value = ''
+  if (!selectedPool.value && !props.hidePool) {
+    submitError.value = '请选择所属子池'
+    return
+  }
+  if (!form.value.totalAmount || parseFloat(form.value.totalAmount) <= 0) {
+    submitError.value = '请输入成交总金额'
+    return
+  }
+  if (!form.value.quantity || parseInt(form.value.quantity) <= 0) {
+    submitError.value = '请输入成交数量'
+    return
+  }
+  if (parseInt(form.value.quantity) % 100 !== 0) {
+    submitError.value = '数量必须为100的整数倍'
+    return
+  }
   const amount = parseFloat(form.value.totalAmount)
   const qty = parseInt(form.value.quantity)
   emit('submit', {
-    pool_id: selectedPool.value,
+    pool_id: selectedPool.value || props.presetPoolId,
     quantity: qty,
     price: qty > 0 ? amount / qty : 0,
     amount: amount,
