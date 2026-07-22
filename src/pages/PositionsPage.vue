@@ -10,20 +10,10 @@
     <template v-else>
       <!-- 总仓位模块 -->
       <div class="section-card">
-        <div class="donut-layout">
-          <div class="donut-chart-area">
-            <DonutChart
-              :segments="chartSegments"
-              :total-percent="totalPositionRatio"
-            />
-          </div>
-          <div class="legend-col">
-            <div v-for="item in poolShares" :key="item.name" class="legend-item">
-              <span class="legend-dot" :style="{ background: item.color }"></span>
-              <span class="legend-label">{{ item.name }}</span>
-            </div>
-          </div>
-        </div>
+        <DonutChart
+          :segments="chartSegments"
+          :total-percent="totalPositionRatio"
+        />
         <div class="total-ratio-detail">
           <span class="trd-label">总市值</span>
           <span class="trd-value num-mono">{{ formatMoney(totalMarketValue) }}</span>
@@ -34,6 +24,13 @@
         <div class="total-slogan">
           <span class="slogan-emoji">{{ positionSlogan.emoji }}</span>
           <span class="slogan-text">{{ positionSlogan.text }}</span>
+        </div>
+        <div class="legend-horizontal">
+          <div v-for="item in poolShares" :key="item.name" class="lh-item">
+            <span class="lh-dot" :style="{ background: item.color }"></span>
+            <span class="lh-label">{{ item.name }}</span>
+            <span class="lh-value num-mono">{{ item.share.toFixed(1) }}%</span>
+          </div>
         </div>
       </div>
 
@@ -275,12 +272,13 @@ onMounted(async () => {
   min-height: 4px;
 }
 .bar-label { font-size: 10px; color: var(--text-muted); }
-.donut-layout { display: flex; align-items: center; gap: 12px; }
-.donut-chart-area { flex-shrink: 0; }
-.legend-col { display: flex; flex-direction: column; gap: 6px; }
-.legend-item { display: flex; align-items: center; gap: 6px; }
-.legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.legend-label { font-size: 12px; color: var(--text-secondary); }
+.legend-horizontal {
+  display: flex; flex-wrap: wrap; gap: 10px 16px; justify-content: center; padding: 4px 0 0;
+}
+.lh-item { display: flex; align-items: center; gap: 5px; }
+.lh-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.lh-label { font-size: 11px; color: var(--text-secondary); }
+.lh-value { font-size: 11px; font-weight: 600; font-family: var(--font-number); }
 
 .total-ratio-detail {
   text-align: center;
