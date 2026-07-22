@@ -116,8 +116,10 @@ const displayHoldings = computed(() => {
   return filtered.map(h => {
     const priceData = priceStore.prices[h.stock_code] || {}
     const currentPrice = priceData.price || h.cost_price || 0
+    const stockName = priceData.stock_name || h.stock_name || ''
     return {
       ...h,
+      stock_name: stockName,
       currentPrice,
       changePct: priceData.change_pct || 0,
       marketValue: currentPrice * h.quantity,

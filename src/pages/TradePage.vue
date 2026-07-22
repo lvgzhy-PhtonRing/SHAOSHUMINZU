@@ -47,11 +47,13 @@ const holdingStore = useHoldingStore()
 const isBuy = ref(true)
 const currentPrice = ref(0)
 const stockCode = ref('')
+const stockName = ref('')
 const lastTransaction = ref(null)
 
 function onStockSelected(stock) {
   currentPrice.value = stock.price
   stockCode.value = stock.stock_code
+  stockName.value = stock.stock_name || ''
 }
 
 async function onTradeSubmit(data) {
@@ -60,6 +62,7 @@ async function onTradeSubmit(data) {
       ...data,
       type: isBuy.value ? 'buy' : 'sell',
       stock_code: stockCode.value,
+      stock_name: stockName.value,
       status: 'pending',
       created_by: 'admin'
     }
@@ -75,6 +78,7 @@ async function onTradeSubmit(data) {
       await upsertHolding({
         pool_id: data.pool_id,
         stock_code: stockCode.value,
+        stock_name: stockName.value,
         quantity: (existing?.quantity || 0) + data.quantity,
         cost_price: newCost
       })
@@ -83,7 +87,7 @@ async function onTradeSubmit(data) {
       if (remaining <= 0) {
         await deleteHolding(data.pool_id, stockCode.value)
       } else {
-        await upsertHolding({ pool_id: data.pool_id, stock_code: stockCode.value, quantity: remaining })
+        await upsertHolding({ pool_id: data.pool_id, stock_code: stockCode.value, stock_name: existing?.stock_name || stockName.value, quantity: remaining, cost_price: existing?.cost_price || 0 })
       }
     }
 
