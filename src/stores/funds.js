@@ -11,7 +11,10 @@ export const useFundStore = defineStore('funds', {
   }),
   getters: {
     totalCapital: (state) => {
-      return state.capitalLogs.reduce((sum, l) => sum + (l.type === 'add' ? l.amount : -l.amount), 0)
+      // 只计外部资金变动（pool_id IS NULL），股票买卖不影响总资金池
+      return state.capitalLogs
+        .filter(l => l.pool_id === null)
+        .reduce((sum, l) => sum + (l.type === 'add' ? l.amount : -l.amount), 0)
     }
   },
   actions: {
