@@ -90,15 +90,17 @@ function onAllocChange({ pools: allocs }) {
 async function onEditLog(payload) {
   try {
     const { id, amount, note } = payload
-    // 普通资金变动直接改
+    // 普通资金变动（增资/减资）：更新后刷新，确保总可用联动
     if (!payload.pool_id) {
       await fundStore.editCapitalLog(id, { amount, note })
+      await fundStore.loadCapitalLogs()
       return
     }
     // 买入/卖出：需要联动交易 + 持仓
     const { stock_code, quantity: newQty, pool_id, type: capType } = payload
     if (!stock_code || !newQty) {
       await fundStore.editCapitalLog(id, { amount, note })
+      await fundStore.loadCapitalLogs()
       return
     }
 
@@ -107,6 +109,7 @@ async function onEditLog(payload) {
     const matchedTx = allTxs.find(t => Math.abs(t.amount - amount) < 0.01)
     if (!matchedTx) {
       await fundStore.editCapitalLog(id, { amount, note })
+      await fundStore.loadCapitalLogs()
       return
     }
 
@@ -120,12 +123,10 @@ async function onEditLog(payload) {
     // 3. 用所有交易重算该子池+该股票的持仓
     const isBuy = capType === 'remove'  // capital_log.remove = 买入
     const otherTxs = allTxs.filter(t => t.id !== matchedTx.id)
-    // 重算：把所有其他交易 + 新的交易汇总
     const allCalculated = [
       ...otherTxs,
       { ...matchedTx, quantity: newQty, amount, price: newPrice, type: isBuy ? 'buy' : 'sell' }
     ]
-    // 汇总买入
     let totalBuyQty = 0, totalBuyAmt = 0
     for (const tx of allCalculated) {
       if (tx.type === 'buy') { totalBuyQty += tx.quantity; totalBuyAmt += tx.amount }
@@ -134,11 +135,9 @@ async function onEditLog(payload) {
     const netQty = allCalculated.reduce((s, tx) => s + (tx.type === 'buy' ? tx.quantity : -tx.quantity), 0)
 
     if (netQty <= 0) {
-      // 清仓
       const { deleteHolding } = await import('@/api/supabase')
       await deleteHolding(pool_id, stock_code)
     } else {
-      // 更新持仓
       const { upsertHolding } = await import('@/api/supabase')
       await upsertHolding({
         pool_id, stock_code,
@@ -149,10 +148,11 @@ async function onEditLog(payload) {
     }
     await holdingStore.loadHoldings()
 
-    // 4. 更新资金记录
+    // 4. 更新资金记录 + 全量刷新
     await fundStore.editCapitalLog(id, { amount, note })
+    await fundStore.loadCapitalLogs()
   } catch (e) {
-    console.error('Edit trade log error:', e)
+    console.error('Edit log error:', e)
   }
 }
 
