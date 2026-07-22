@@ -61,7 +61,7 @@ defineProps({
   gap: 8px;
 }
 .asset-item {
-  background: var(--bg-card);
+  background: var(--bg-hover);
   border-radius: var(--radius-md);
   padding: 8px 10px;
 }

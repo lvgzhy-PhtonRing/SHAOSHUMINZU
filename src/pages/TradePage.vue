@@ -6,7 +6,7 @@
 
     <!-- step 1: 填写交易信息 -->
     <template v-if="!pendingTrade">
-      <div v-if="isSell" class="preset-card">
+      <div v-if="isSell" class="section-card preset-section">
         <div class="preset-name">{{ stockName }} <span class="preset-code">{{ stockCode }}</span></div>
         <div class="preset-info">
           <span>现价 {{ formatPrice(currentPrice) }}</span>
@@ -14,20 +14,25 @@
         </div>
       </div>
 
-      <StockSearch v-if="!isSell" @stock-selected="onStockSelected" />
+      <div v-if="!isSell" class="section-card">
+        <div class="search-section-label">搜索股票</div>
+        <StockSearch @stock-selected="onStockSelected" />
+      </div>
 
-      <TradeForm
-        ref="formRef"
-        :pools="poolStore.pools"
-        :is-buy="!isSell"
-        :stock-price="currentPrice"
-        :submitting="false"
-        :hide-pool="isSell"
-        :preset-pool-id="sellPoolId"
-        @submit="onFormSubmit"
-      />
+      <div class="section-card">
+        <TradeForm
+          ref="formRef"
+          :pools="poolStore.pools"
+          :is-buy="!isSell"
+          :stock-price="currentPrice"
+          :submitting="false"
+          :hide-pool="isSell"
+          :preset-pool-id="sellPoolId"
+          @submit="onFormSubmit"
+        />
 
-      <div v-if="formError" class="form-err">{{ formError }}</div>
+        <div v-if="formError" class="form-err">{{ formError }}</div>
+      </div>
     </template>
 
     <!-- step 2: 校对（必须） -->
@@ -177,10 +182,8 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.preset-card {
-  background: var(--bg-card); border-radius: var(--radius-md); padding: 14px;
-  margin-bottom: 16px; border-left: 3px solid var(--color-fall);
-}
+.search-section-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; }
+.preset-section { border-left: 3px solid var(--color-fall); }
 .preset-name { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
 .preset-code { font-size: 13px; color: var(--text-secondary); font-weight: 400; }
 .preset-info { display: flex; justify-content: space-between; font-size: 13px; color: var(--text-secondary); }

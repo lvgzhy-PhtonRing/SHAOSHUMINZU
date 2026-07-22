@@ -139,15 +139,15 @@ function onSubmit() {
 </script>
 
 <style scoped>
-.trade-form { padding: 0 4px; }
+.trade-form { }
 .form-section { margin-bottom: 12px; }
 .form-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; display: block; }
 .form-error { color: var(--color-fall); font-size: 12px; margin-top: 4px; }
 .calc-display {
-  padding: 12px;
-  background: var(--bg-card);
+  padding: 10px 12px;
+  background: rgba(255,255,255,0.03);
   border-radius: var(--radius-md);
-  margin: 12px 0;
+  margin: 8px 0;
   display: flex;
   gap: 16px;
   flex-wrap: wrap;

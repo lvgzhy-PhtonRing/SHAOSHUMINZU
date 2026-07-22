@@ -6,17 +6,23 @@
       <span class="price-time" v-if="lastUpdated">非实时市值，更新于 {{ lastUpdated }}</span>
     </div>
 
-    <AccountSummary
-      :total-asset="summary.totalAsset"
-      :market-value="summary.totalMarketValue"
-      :available="summary.totalAvailable"
-      :position-ratio="summary.positionRatio"
-    />
+    <!-- 账户总资产模块 -->
+    <div class="section-card">
+      <AccountSummary
+        :total-asset="summary.totalAsset"
+        :market-value="summary.totalMarketValue"
+        :available="summary.totalAvailable"
+        :position-ratio="summary.positionRatio"
+      />
+    </div>
 
-    <ProfitCard
-      :float-pnl="summary.floatPnl"
-      :daily-pnl="summary.dailyPnl"
-    />
+    <!-- 盈亏概览模块 -->
+    <div class="section-card">
+      <ProfitCard
+        :float-pnl="summary.floatPnl"
+        :daily-pnl="summary.dailyPnl"
+      />
+    </div>
 
     <PoolSelector
       :pools="poolStore.pools"

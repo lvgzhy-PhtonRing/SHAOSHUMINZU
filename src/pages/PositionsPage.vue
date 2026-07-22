@@ -8,8 +8,8 @@
     <LoadingSkeleton v-if="loading" :count="2" />
 
     <template v-else>
-      <!-- 环形饼图 + 图例 -->
-      <div class="card" style="margin:0 16px 16px">
+      <!-- 总仓位模块 -->
+      <div class="section-card">
         <DonutChart
           :segments="chartSegments"
           :total-percent="totalPositionRatio"
@@ -23,49 +23,55 @@
         </div>
       </div>
 
-      <!-- 子池仓位 -->
-      <div class="section-title">各子池仓位</div>
-      <!-- 共有占整行 -->
-      <div class="pos-gongyou" v-if="poolPositionData.length">
-        <PoolPositionCard
-          :name="poolPositionData[0].name"
-          :percent="poolPositionData[0].percent"
-          :market-value="poolPositionData[0].marketValue"
-          :color="poolPositionData[0].color"
-          wide
-        />
-      </div>
-      <!-- 四人两排两列 -->
-      <div class="pos-users-grid" v-if="poolPositionData.length > 1">
-        <PoolPositionCard
-          v-for="item in poolPositionData.slice(1)"
-          :key="item.id || item.name"
-          :name="item.name"
-          :percent="item.percent"
-          :market-value="item.marketValue"
-          :color="item.color"
-        />
-      </div>
-
-      <!-- 各池可用资金 -->
-      <div class="section-title">各池可用资金</div>
-      <div class="fund-list">
-        <div v-for="item in poolFundData" :key="item.name" class="fund-item">
-          <div class="fund-left">
-            <span class="fund-dot" :style="{ background: item.color }"></span>
-            <span class="fund-name">{{ item.name }}</span>
-          </div>
-          <span class="fund-amount num-mono">{{ formatMoney(item.available) }}</span>
+      <!-- 各子池仓位模块 -->
+      <div class="section-card">
+        <div class="section-title">各子池仓位</div>
+        <!-- 共有占整行 -->
+        <div class="pos-gongyou" v-if="poolPositionData.length">
+          <PoolPositionCard
+            :name="poolPositionData[0].name"
+            :percent="poolPositionData[0].percent"
+            :market-value="poolPositionData[0].marketValue"
+            :color="poolPositionData[0].color"
+            wide
+          />
+        </div>
+        <!-- 四人两排两列 -->
+        <div class="pos-users-grid" v-if="poolPositionData.length > 1">
+          <PoolPositionCard
+            v-for="item in poolPositionData.slice(1)"
+            :key="item.id || item.name"
+            :name="item.name"
+            :percent="item.percent"
+            :market-value="item.marketValue"
+            :color="item.color"
+          />
         </div>
       </div>
 
-      <!-- 仓位趋势 -->
-      <div class="section-title">总仓位变化 <span class="subtitle">近7天</span></div>
-      <div class="card trend-chart">
-        <div class="bars">
-          <div v-for="(day, i) in trendData" :key="i" class="bar-wrapper">
-            <div class="bar" :style="{ height: day.ratio * 2 + 'px' }"></div>
-            <div class="bar-label">{{ day.label }}</div>
+      <!-- 各池可用资金模块 -->
+      <div class="section-card">
+        <div class="section-title">各池可用资金</div>
+        <div class="fund-list">
+          <div v-for="item in poolFundData" :key="item.name" class="fund-item">
+            <div class="fund-left">
+              <span class="fund-dot" :style="{ background: item.color }"></span>
+              <span class="fund-name">{{ item.name }}</span>
+            </div>
+            <span class="fund-amount num-mono">{{ formatMoney(item.available) }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 总仓位变化模块 -->
+      <div class="section-card">
+        <div class="section-title">总仓位变化 <span class="subtitle">近7天</span></div>
+        <div class="trend-chart">
+          <div class="bars">
+            <div v-for="(day, i) in trendData" :key="i" class="bar-wrapper">
+              <div class="bar" :style="{ height: day.ratio * 2 + 'px' }"></div>
+              <div class="bar-label">{{ day.label }}</div>
+            </div>
           </div>
         </div>
       </div>
@@ -196,27 +202,26 @@ onMounted(async () => {
 .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
 .legend-label { font-size: 12px; color: var(--text-secondary); }
 .legend-value { font-size: 12px; font-weight: 600; font-family: var(--font-number); }
-.section-title { padding: 10px 0 8px; font-size: 13px; font-weight: 600; }
+.section-title { padding: 0 0 10px; font-size: 13px; font-weight: 600; }
 .section-title .subtitle { font-size: 11px; color: var(--text-secondary); font-weight: 400; }
 .pos-gongyou { margin-bottom: 8px; }
 .pos-users-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.fund-list { background: var(--bg-card); border-radius: var(--radius-lg); overflow: hidden; }
+.fund-list { border-radius: var(--radius-lg); overflow: hidden; }
 .fund-item {
   display: flex; justify-content: space-between; align-items: center;
-  padding: 12px 14px; border-bottom: 1px solid rgba(255,255,255,0.04);
+  padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
 }
 .fund-item:last-child { border-bottom: none; }
 .fund-left { display: flex; align-items: center; gap: 8px; }
 .fund-dot { width: 8px; height: 8px; border-radius: 50%; }
 .fund-name { font-size: 14px; }
 .fund-amount { font-size: 14px; font-weight: 600; font-family: var(--font-number); }
-.trend-chart { margin: 0 16px 16px; }
 .bars {
   display: flex;
   align-items: flex-end;
   gap: 4px;
   height: 60px;
-  padding: 8px 0;
+  padding: 4px 0;
 }
 .bar-wrapper {
   flex: 1;

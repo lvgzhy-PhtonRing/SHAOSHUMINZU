@@ -72,7 +72,7 @@ async function search() {
 </script>
 
 <style scoped>
-.stock-search { margin-bottom: 12px; }
+.stock-search { }
 .search-row {
   display: flex;
   gap: 8px;

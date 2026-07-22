@@ -41,12 +41,11 @@ function formatDateString(isoStr) {
 </script>
 
 <style scoped>
-.log-list { margin-top: 16px; }
-.log-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 0 8px; }
+.log-header { display: flex; justify-content: space-between; align-items: center; padding: 0 0 8px; }
 .log-title { font-size: 14px; font-weight: 600; }
 .log-count { font-size: 12px; color: var(--text-secondary); }
-.log-items { display: flex; flex-direction: column; gap: 6px; }
-.log-item { display: flex; gap: 10px; padding: 10px; background: var(--bg-card); border-radius: var(--radius-md); }
+.log-items { display: flex; flex-direction: column; gap: 4px; }
+.log-item { display: flex; gap: 10px; padding: 8px 10px; background: rgba(255,255,255,0.03); border-radius: var(--radius-md); }
 .log-icon { font-size: 18px; padding-top: 2px; }
 .log-info { flex: 1; min-width: 0; }
 .log-detail { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }

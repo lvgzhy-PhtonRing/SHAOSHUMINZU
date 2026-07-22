@@ -28,7 +28,9 @@
         @capital-change="onCapitalChange"
         @alloc-change="onAllocChange"
       />
-      <CapitalLogList :logs="fundStore.capitalLogs" @delete="onDeleteLog" />
+      <div class="section-card">
+        <CapitalLogList :logs="fundStore.capitalLogs" @delete="onDeleteLog" />
+      </div>
     </template>
   </div>
 </template>

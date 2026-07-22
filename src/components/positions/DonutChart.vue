@@ -48,7 +48,7 @@ const circumference = computed(() => 2 * Math.PI * radius.value)
 .donut-chart {
   display: flex;
   justify-content: center;
-  padding: 20px 0;
+  padding: 8px 0;
 }
 .donut-segment {
   transition: stroke-dasharray 0.6s ease;
