@@ -76,38 +76,42 @@ const holdingStore = useHoldingStore()
 const priceStore = usePriceStore()
 
 const loading = ref(true)
+const totalCapital = ref(829661.35)
 
 const colorList = ['#0f3460', '#e94560', '#00d2a1', '#ffc107', '#7c4dff']
+
+const totalCost = computed(() => {
+  return holdingStore.holdings.reduce((s, h) => s + h.cost_price * h.quantity, 0)
+})
+
+const totalMarketValue = computed(() => {
+  return holdingStore.holdings.reduce((s, h) => {
+    const price = priceStore.prices[h.stock_code]?.price || 0
+    return s + price * h.quantity
+  }, 0)
+})
+
+const floatPnl = computed(() => totalMarketValue.value - totalCost.value)
+const totalAsset = computed(() => totalCapital.value + floatPnl.value)
+const totalAvailable = computed(() => totalCapital.value - totalCost.value)
+const totalPositionRatio = computed(() => {
+  return totalAsset.value > 0 ? (totalMarketValue.value / totalAsset.value) * 100 : 0
+})
 
 const poolPositionData = computed(() => {
   return poolStore.pools.map((p, i) => {
     const poolHoldings = holdingStore.holdings.filter(h => h.pool_id === p.id)
-    const marketValue = poolHoldings.reduce((s, h) => {
+    const mv = poolHoldings.reduce((s, h) => {
       const price = priceStore.prices[h.stock_code]?.price || 0
       return s + price * h.quantity
     }, 0)
     return {
       ...p,
-      marketValue,
-      percent: totalAsset.value > 0 ? (marketValue / totalAsset.value) * 100 : 0,
+      marketValue: mv,
+      percent: totalAsset.value > 0 ? (mv / totalAsset.value) * 100 : 0,
       color: colorList[i % colorList.length]
     }
   })
-})
-
-const totalMarketValue = computed(() => {
-  return poolPositionData.value.reduce((s, p) => s + p.marketValue, 0)
-})
-
-const totalAsset = computed(() => {
-  // 总资产 ≈ 总市值 + 各池可用资金（当前简化为持仓总市值 / 仓位比例）
-  const mv = totalMarketValue.value
-  return mv > 0 ? mv : 829661.35 // fallback
-})
-
-const totalPositionRatio = computed(() => {
-  const totalMV = poolPositionData.value.reduce((s, p) => s + p.marketValue, 0)
-  return totalAsset.value > 0 ? (totalMV / totalAsset.value) * 100 : 0
 })
 
 const donutSize = 200
@@ -125,13 +129,15 @@ const chartSegments = computed(() => {
 })
 
 const poolFundData = computed(() => {
-  const poolCount = poolStore.pools.length
-  const availableTotal = totalAsset.value * (1 - totalPositionRatio.value / 100)
-  return poolStore.pools.map((p, i) => ({
-    name: p.name,
-    available: poolCount > 0 ? availableTotal / poolCount : 0,
-    color: colorList[i % colorList.length]
-  }))
+  return poolStore.pools.map((p, i) => {
+    const poolData = poolPositionData.value.find(d => d.id === p.id)
+    const percent = poolData?.percent || 0
+    return {
+      name: p.name,
+      available: (percent / 100) * totalAvailable.value,
+      color: colorList[i % colorList.length]
+    }
+  })
 })
 
 const trendData = [
