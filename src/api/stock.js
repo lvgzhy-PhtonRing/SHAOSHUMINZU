@@ -33,8 +33,8 @@ function parseSinaResponse(text) {
       open: parseFloat(fields[1]) || 0,
       prev_close: parseFloat(fields[2]) || 0,
       price: parseFloat(fields[3]) || 0,
-      high: parseFloat(fields[5]) || 0,
-      low: parseFloat(fields[6]) || 0,
+      high: parseFloat(fields[4]) || 0,
+      low: parseFloat(fields[5]) || 0,
       volume: parseInt(fields[8]) || 0,
       amount: parseFloat(fields[9]) || 0,
       change_pct: fields[2] && fields[3]
