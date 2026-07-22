@@ -2,8 +2,7 @@
 <template>
   <div class="page dashboard-page">
     <div class="page-header">
-      <span class="page-title">持仓</span>
-      <span class="update-time" v-if="lastUpdated">更新 {{ lastUpdated }}</span>
+      <span class="page-title">持仓总览</span>
     </div>
 
     <AccountSummary
@@ -11,6 +10,7 @@
       :market-value="summary.totalMarketValue"
       :available="summary.totalAvailable"
       :position-ratio="summary.positionRatio"
+      :price-update-time="lastUpdated"
     />
 
     <ProfitCard
@@ -115,7 +115,9 @@ function onSellStock(stock) {
     query: {
       code: stock.stock_code,
       name: stock.stock_name,
-      price: stock.currentPrice || stock.cost_price
+      price: stock.currentPrice || stock.cost_price,
+      poolId: stock.pool_id,
+      poolName: poolNameMap[stock.pool_id] || ''
     }
   })
 }

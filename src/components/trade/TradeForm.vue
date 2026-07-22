@@ -1,7 +1,7 @@
 <template>
   <div class="trade-form">
     <van-form @submit="onSubmit">
-      <div class="form-section">
+      <div v-if="!hidePool" class="form-section">
         <label class="form-label">所属子池</label>
         <PoolSelector
           :pools="pools"
@@ -71,7 +71,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { formatMoney, formatPrice } from '@/utils/formatters'
 import PoolSelector from '@/components/common/PoolSelector.vue'
 
@@ -79,7 +79,15 @@ const props = defineProps({
   pools: { type: Array, default: () => [] },
   isBuy: { type: Boolean, default: true },
   stockPrice: { type: Number, default: 0 },
-  submitting: { type: Boolean, default: false }
+  submitting: { type: Boolean, default: false },
+  hidePool: { type: Boolean, default: false },
+  presetPoolId: { type: Number, default: null }
+})
+
+onMounted(() => {
+  if (props.hidePool && props.presetPoolId) {
+    selectedPool.value = props.presetPoolId
+  }
 })
 
 const emit = defineEmits(['submit'])

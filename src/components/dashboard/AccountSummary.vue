@@ -2,8 +2,7 @@
 <template>
   <div class="account-section">
     <div class="account-header">
-      <span class="account-label">账号 {{ accountId }}</span>
-      <span class="account-status">{{ statusText }}</span>
+      <span class="account-status" v-if="priceUpdateTime">实时市值更新于 {{ priceUpdateTime }}</span>
     </div>
     <div class="total-asset">{{ formatMoney(totalAsset) }}</div>
     <div class="asset-meta">账户资产（元）</div>
@@ -28,12 +27,11 @@
 import { formatMoney } from '@/utils/formatters'
 
 defineProps({
-  accountId: { type: String, default: '27***87' },
   totalAsset: { type: Number, default: 0 },
   marketValue: { type: Number, default: 0 },
   available: { type: Number, default: 0 },
   positionRatio: { type: Number, default: 0 },
-  statusText: { type: String, default: '清算中' }
+  priceUpdateTime: { type: String, default: '' }
 })
 </script>
 
@@ -55,8 +53,9 @@ defineProps({
   font-size: 11px;
   padding: 2px 8px;
   border-radius: 4px;
-  background: rgba(233,69,96,0.15);
-  color: var(--color-fall);
+  color: var(--text-muted);
+  text-align: right;
+  width: 100%;
 }
 .total-asset {
   font-size: 30px;

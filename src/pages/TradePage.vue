@@ -1,23 +1,29 @@
 <template>
   <div class="page trade-page" style="padding:16px">
     <div class="page-header">
-      <span class="page-title">录入交易</span>
-      <span class="operator-tag">操作人：管理员</span>
+      <span class="page-title">{{ isSell ? '卖出' : '录入买入' }}</span>
     </div>
 
-    <div class="type-switch">
-      <div class="type-tab" :class="{ active: isBuy }" @click="isBuy = true">买入</div>
-      <div class="type-tab" :class="{ active: !isBuy }" @click="isBuy = false">卖出</div>
+    <!-- 卖出模式：显示预填的股票信息 -->
+    <div v-if="isSell" class="preset-card">
+      <div class="preset-name">{{ stockName }} <span class="preset-code">{{ stockCode }}</span></div>
+      <div class="preset-info">
+        <span>现价 {{ formatPrice(currentPrice) }}</span>
+        <span class="preset-pool">子池：{{ sellPoolName }}</span>
+      </div>
     </div>
 
-    <StockSearch ref="searchRef" @stock-selected="onStockSelected" />
+    <!-- 买入模式：搜索股票 -->
+    <StockSearch v-if="!isSell" ref="searchRef" @stock-selected="onStockSelected" />
 
     <TradeForm
       ref="formRef"
       :pools="poolStore.pools"
-      :is-buy="isBuy"
+      :is-buy="!isSell"
       :stock-price="currentPrice"
       :submitting="txStore.submitting"
+      :hide-pool="isSell"
+      :preset-pool-id="sellPoolId"
       @submit="onTradeSubmit"
     />
 
@@ -36,6 +42,7 @@ import { usePoolStore } from '@/stores/pools'
 import { useTransactionStore } from '@/stores/transactions'
 import { useHoldingStore } from '@/stores/holdings'
 import { calcNewCostPrice } from '@/utils/calculators'
+import { formatPrice } from '@/utils/formatters'
 import { upsertHolding, deleteHolding, insertCapitalLog } from '@/api/supabase'
 import StockSearch from '@/components/trade/StockSearch.vue'
 import TradeForm from '@/components/trade/TradeForm.vue'
@@ -45,10 +52,12 @@ const poolStore = usePoolStore()
 const txStore = useTransactionStore()
 const holdingStore = useHoldingStore()
 
-const isBuy = ref(true)
+const isSell = ref(false)
 const currentPrice = ref(0)
 const stockCode = ref('')
 const stockName = ref('')
+const sellPoolId = ref(null)
+const sellPoolName = ref('')
 const lastTransaction = ref(null)
 
 function onStockSelected(stock) {
@@ -61,7 +70,7 @@ async function onTradeSubmit(data) {
   try {
     const tx = {
       ...data,
-      type: isBuy.value ? 'buy' : 'sell',
+      type: isSell.value ? 'sell' : 'buy',
       stock_code: stockCode.value,
       stock_name: stockName.value,
       status: 'pending',
@@ -74,7 +83,7 @@ async function onTradeSubmit(data) {
       h => h.pool_id === data.pool_id && h.stock_code === stockCode.value
     )
 
-    if (isBuy.value) {
+    if (!isSell.value) {
       const newCost = calcNewCostPrice(data.amount, data.quantity, existing?.quantity || 0, existing?.cost_price || 0)
       await upsertHolding({
         pool_id: data.pool_id,
@@ -94,9 +103,9 @@ async function onTradeSubmit(data) {
 
     await insertCapitalLog({
       pool_id: data.pool_id,
-      type: isBuy.value ? 'remove' : 'add',
+      type: isSell.value ? 'add' : 'remove',
       amount: data.amount,
-      note: `${isBuy.value ? '买入' : '卖出'} ${stockCode.value}`,
+      note: `${isSell.value ? '卖出' : '买入'} ${stockCode.value}`,
       created_by: 'admin'
     })
 
@@ -116,41 +125,29 @@ onMounted(() => {
   poolStore.loadPools()
   const route = useRoute()
   if (route.query.code) {
-    // 从持仓页左滑进入：预填股票信息，默认卖出模式
+    // 从持仓页左滑进入：预填股票信息，卖出模式，隐藏子池选择
+    isSell.value = true
     stockCode.value = route.query.code
     stockName.value = route.query.name || ''
     currentPrice.value = parseFloat(route.query.price) || 0
-    isBuy.value = false
+    sellPoolId.value = parseInt(route.query.poolId) || null
+    sellPoolName.value = route.query.poolName || ''
   }
 })
 </script>
 
 <style scoped>
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 4px 0 12px;
-}
+.page-header { padding: 4px 0 12px; }
 .page-title { font-size: 18px; font-weight: 700; }
-.operator-tag { font-size: 12px; padding: 4px 10px; background: var(--bg-hover); border-radius: var(--radius-sm); color: var(--text-secondary); }
-.type-switch {
-  display: flex;
+.preset-card {
   background: var(--bg-card);
   border-radius: var(--radius-md);
-  padding: 3px;
+  padding: 14px;
   margin-bottom: 16px;
+  border-left: 3px solid var(--color-fall);
 }
-.type-tab {
-  flex: 1;
-  text-align: center;
-  padding: 10px;
-  border-radius: 6px;
-  font-weight: 600;
-  font-size: 14px;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.type-tab.active { background: var(--color-fall); color: #fff; }
+.preset-name { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+.preset-code { font-size: 13px; color: var(--text-secondary); font-weight: 400; }
+.preset-info { display: flex; justify-content: space-between; font-size: 13px; color: var(--text-secondary); }
+.preset-pool { color: var(--color-fall); }
 </style>
