@@ -37,7 +37,7 @@
         <div class="group-title">关于</div>
         <div class="settings-item">
           <div class="item-left"><span class="item-icon">ℹ️</span><span>版本</span></div>
-          <span class="item-value">v1.2.2</span>
+          <span class="item-value">v1.3.0</span>
         </div>
         <div class="settings-item">
           <div class="item-left"><span class="item-icon">🏛️</span><span>数据存储</span></div>

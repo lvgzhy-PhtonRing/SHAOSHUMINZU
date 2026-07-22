@@ -1,125 +1,270 @@
 <template>
   <div class="allocation-form">
-    <van-form @submit="onSubmit">
-      <div class="type-switch">
-        <div class="type-tab" :class="{ active: isAdd }" @click="isAdd = true">增资 ➕</div>
-        <div class="type-tab" :class="{ active: !isAdd }" @click="isAdd = false">减资 ➖</div>
+    <!-- ===== 总金额 + 增资/减资 ===== -->
+    <div class="amount-card">
+      <div class="amount-row">
+        <span class="amount-label">总金额</span>
+        <input v-model="totalAmount" type="number" inputmode="decimal" placeholder="0" class="amount-input num-mono" @input="recalcAmounts" />
+        <span class="amount-unit">元</span>
+      </div>
+      <div class="action-row">
+        <button class="action-btn add-btn" :disabled="!canSubmit" @click="confirmAdd">增资 ➕</button>
+        <button class="action-btn remove-btn" :disabled="!canSubmit" @click="confirmRemove">减资 ➖</button>
+      </div>
+    </div>
+
+    <!-- ===== 子池百分比分配 ===== -->
+    <div class="alloc-card">
+      <div class="alloc-header">
+        <span class="alloc-title">子池分配 ({{ totalPercent.toFixed(0) }}%)</span>
+        <button class="link-btn" :class="{ linked: isLinked }" @click="toggleLink">
+          {{ isLinked ? '🔗 已联动' : '🔓 独立' }}
+        </button>
       </div>
 
-      <van-field
-        v-model="totalAmount"
-        label="总金额（元）"
-        type="digit"
-        placeholder="请输入总金额"
-        :rules="[{ required: true, message: '请输入总金额' }]"
-        @update:model-value="calcAutoAllocation"
-      />
-
-      <div class="alloc-section">
-        <div class="alloc-header">
-          <span class="alloc-title">分配到各子池</span>
-          <van-button size="mini" plain @click="equalAllocate">平均</van-button>
+      <!-- 共有 -->
+      <div class="pool-row">
+        <div class="pool-left">
+          <span class="pool-dot" style="background:#0f3460"></span>
+          <span class="pool-name">共有</span>
         </div>
-        <div v-for="(pool, i) in allocations" :key="pool.id" class="alloc-row">
-          <span class="pool-name" :style="{ color: poolColors[i] }">{{ pool.name }}</span>
-          <van-field v-model="pool.amount" type="digit" placeholder="0" :border="false" class="alloc-input" @update:model-value="updatePercent" />
-          <span class="alloc-percent num-mono">{{ pool.percent.toFixed(1) }}%</span>
-        </div>
-        <div class="alloc-total">
-          <span>合计</span>
-          <span class="num-mono" :class="totalDiff ? 'fall' : 'rise'">{{ formatMoney(allocationSum) }}</span>
-          <span class="alloc-status" v-if="!totalDiff">✓</span>
-          <span class="alloc-status fall" v-else>差额 {{ formatMoney(Math.abs(totalDiff)) }}</span>
-        </div>
+        <button class="adj-btn" @click="adjustPool('共有', -1)">−</button>
+        <input type="number" class="pct-input num-mono" :value="pcts['共有'].toFixed(1)" @input="e => onPoolPct('共有', parseFloat(e.target.value)||0)" />
+        <span class="pct-unit">%</span>
+        <button class="adj-btn" @click="adjustPool('共有', 1)">+</button>
+        <span class="pool-amount num-mono">{{ formatMoney(pcts['共有'] * total / 100) }}</span>
       </div>
 
-      <van-field v-model="note" label="备注（可选）" placeholder="例：7月新增资金" />
-
-      <div style="margin: 16px 0">
-        <van-button round block type="primary" native-type="submit" :color="isAdd ? '#00d2a1' : '#e94560'" :disabled="!allocationValid" :loading="submitting">
-          {{ isAdd ? '✅ 确认增资并分配' : '✅ 确认减资并扣除' }}
-        </van-button>
+      <!-- 四人组 -->
+      <div class="user-group" :class="{ linked: isLinked }">
+        <div v-if="isLinked" class="link-hint">四人联动 — 调整一人同步全部</div>
+        <div v-for="p in userPools" :key="p.key" class="pool-row">
+          <div class="pool-left">
+            <span class="pool-dot" :style="{ background: p.color }"></span>
+            <span class="pool-name">{{ p.name }}</span>
+          </div>
+          <button class="adj-btn" @click="adjustPool(p.key, -1)">−</button>
+          <input type="number" class="pct-input num-mono" :value="pcts[p.key].toFixed(1)" @input="e => onPoolPct(p.key, parseFloat(e.target.value)||0)" />
+          <span class="pct-unit">%</span>
+          <button class="adj-btn" @click="adjustPool(p.key, 1)">+</button>
+          <span class="pool-amount num-mono">{{ formatMoney(pcts[p.key] * total / 100) }}</span>
+        </div>
       </div>
-    </van-form>
+    </div>
+
+    <!-- ===== 确认弹窗 ===== -->
+    <teleport to="body">
+      <div v-if="showConfirm" class="overlay" @click.self="showConfirm=false">
+        <div class="confirm-dlg">
+          <div class="dlg-title">{{ isAddMode ? '确认增资' : '确认减资' }}</div>
+          <div class="dlg-amount">{{ isAddMode ? '➕' : '➖' }} <b class="num-mono">{{ formatMoney(total) }}</b> 元</div>
+          <div class="dlg-rows">
+            <div v-for="p in poolList" :key="p.key" class="dlg-row">
+              <span :style="{color:p.color}">● {{ p.name }}</span>
+              <span class="num-mono">{{ pcts[p.key].toFixed(1) }}% → {{ formatMoney(pcts[p.key] * total / 100) }}</span>
+            </div>
+          </div>
+          <van-field v-model="confirmNote" label="备注" placeholder="选填" :border="false" style="background:rgba(255,255,255,0.03);border-radius:6px;margin:8px 0" />
+          <div class="dlg-actions">
+            <button class="dlg-cancel" @click="showConfirm=false">取消</button>
+            <button class="dlg-ok add" v-if="isAddMode" @click="doSubmit('add')">✅ 确认增资</button>
+            <button class="dlg-ok remove" v-else @click="doSubmit('remove')">✅ 确认减资</button>
+          </div>
+        </div>
+      </div>
+    </teleport>
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, reactive, computed, watch } from 'vue'
 import { formatMoney } from '@/utils/formatters'
 
 const props = defineProps({
   pools: { type: Array, default: () => [] },
   submitting: { type: Boolean, default: false }
 })
-
 const emit = defineEmits(['submit'])
-const isAdd = ref(true)
+
 const totalAmount = ref('')
-const note = ref('')
+const isLinked = ref(true)
+const showConfirm = ref(false)
+const isAddMode = ref(true)
+const confirmNote = ref('')
 
-const poolColors = ['#0f3460', '#e94560', '#00d2a1', '#ffc107', '#7c4dff']
+const pcts = reactive({ '共有': 40, '春': 15, '维': 15, '队': 15, '回': 15 })
 
-const allocations = ref([])
+const userPools = [
+  { key: '春', name: '春', color: '#e94560' },
+  { key: '维', name: '维', color: '#00d2a1' },
+  { key: '队', name: '队', color: '#ffc107' },
+  { key: '回', name: '回', color: '#7c4dff' },
+]
+const poolList = [
+  { key: '共有', name: '共有', color: '#0f3460' },
+  ...userPools
+]
 
-function initAllocations() {
-  allocations.value = props.pools.map(p => ({ ...p, amount: '', percent: 0 }))
-}
+const total = computed(() => parseFloat(totalAmount.value) || 0)
+const totalPercent = computed(() => {
+  let s = 0
+  for (const p of poolList) s += pcts[p.key] || 0
+  return s
+})
+const canSubmit = computed(() => total.value > 0 && Math.abs(totalPercent.value - 100) < 0.5)
 
-function equalAllocate() {
-  const total = parseFloat(totalAmount.value) || 0
-  const each = allocations.value.length > 0 ? total / allocations.value.length : 0
-  allocations.value.forEach(a => { a.amount = each.toFixed(2); a.percent = allocations.value.length > 0 ? 100 / allocations.value.length : 0 })
-}
-
-function calcAutoAllocation() {
-  if (allocations.value.every(a => !a.amount)) {
-    equalAllocate()
+// ====== 联动 ======
+function onPoolPct(key, val) {
+  val = Math.max(0, Math.min(100, val))
+  if (isLinked.value) {
+    if (key === '共有') {
+      pcts['共有'] = val
+      const each = (100 - val) / 4
+      for (const p of userPools) pcts[p.key] = each
+    } else {
+      const each = val
+      for (const p of userPools) pcts[p.key] = each
+      pcts['共有'] = Math.max(0, 100 - each * 4)
+    }
+  } else {
+    pcts[key] = val
   }
 }
 
-function updatePercent() {
-  const total = parseFloat(totalAmount.value) || 0
-  allocations.value.forEach(a => {
-    const val = parseFloat(a.amount) || 0
-    a.percent = total > 0 ? (val / total) * 100 : 0
-  })
+function adjustPool(key, d) {
+  const cur = pcts[key] || 0
+  onPoolPct(key, Math.round((cur + d) * 10) / 10)
 }
 
-const allocationSum = computed(() => allocations.value.reduce((s, a) => s + (parseFloat(a.amount) || 0), 0))
-const totalDiff = computed(() => (parseFloat(totalAmount.value) || 0) - allocationSum.value)
-const allocationValid = computed(() => totalAmount.value && parseFloat(totalAmount.value) > 0 && Math.abs(totalDiff.value) < 0.01)
+function toggleLink() {
+  isLinked.value = !isLinked.value
+  if (isLinked.value) {
+    const avg = userPools.reduce((s, p) => s + pcts[p.key], 0) / 4
+    onPoolPct('春', avg)
+  }
+}
 
-function onSubmit() {
-  if (!allocationValid.value) return
+function recalcAmounts() {}
+
+function confirmAdd() { isAddMode.value = true; showConfirm.value = true }
+function confirmRemove() { isAddMode.value = false; showConfirm.value = true }
+
+function doSubmit(type) {
+  const t = total.value
   emit('submit', {
-    type: isAdd.value ? 'add' : 'remove',
-    totalAmount: parseFloat(totalAmount.value),
-    allocations: allocations.value.map(a => ({ pool_id: a.id, amount: parseFloat(a.amount) || 0 })),
-    note: note.value
+    type,
+    totalAmount: t,
+    allocations: poolList.map(p => ({
+      pool_id: props.pools.find(pl => pl.name === p.name)?.id,
+      pool_name: p.name,
+      amount: pcts[p.key] * t / 100,
+      percent: pcts[p.key]
+    })),
+    note: confirmNote.value
   })
+  showConfirm.value = false
+  totalAmount.value = ''
+  confirmNote.value = ''
 }
-
-initAllocations()
 </script>
 
 <style scoped>
-.allocation-form { padding: 0 4px; }
-.type-switch { display: flex; background: var(--bg-card); border-radius: var(--radius-md); padding: 3px; margin-bottom: 16px; }
-.type-tab { flex: 1; text-align: center; padding: 10px; border-radius: 6px; font-weight: 600; font-size: 14px; color: var(--text-secondary); cursor: pointer; }
-.type-tab.active { background: var(--color-rise); color: #1a1a2e; }
-.type-tab:last-child.active { background: var(--color-fall); color: #fff; }
-.alloc-section { background: var(--bg-card); border-radius: var(--radius-md); padding: 12px; margin-bottom: 12px; }
-.alloc-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-.alloc-title { font-size: 13px; font-weight: 600; }
-.alloc-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
-.alloc-row:last-child { border-bottom: none; }
-.pool-name { font-size: 13px; font-weight: 500; width: 36px; }
-.alloc-input { flex: 1; }
-.alloc-percent { font-size: 12px; color: var(--text-secondary); width: 60px; text-align: right; font-family: var(--font-number); }
-.alloc-total { display: flex; align-items: center; gap: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 13px; font-weight: 600; }
-.alloc-total .num-mono { flex: 1; text-align: right; font-family: var(--font-number); }
-.alloc-total .rise { color: var(--color-rise); }
-.alloc-total .fall { color: var(--color-fall); }
-.alloc-status { font-size: 12px; font-weight: 400; }
+/* ===== 总金额 ===== */
+.amount-card {
+  background: var(--bg-card); border-radius: var(--radius-lg); padding: 16px; margin-bottom: 12px;
+}
+.amount-row { display: flex; align-items: center; gap: 8px; }
+.amount-label { font-size: 14px; font-weight: 600; }
+.amount-input {
+  flex: 1; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--radius-md); color: #fff; font-size: 22px; padding: 10px 12px;
+  text-align: right; outline: none; font-family: var(--font-number);
+}
+.amount-input:focus { border-color: var(--bg-accent); }
+.amount-unit { font-size: 13px; color: var(--text-secondary); }
+.action-row { display: flex; gap: 10px; margin-top: 12px; }
+.action-btn {
+  flex: 1; padding: 12px; border: none; border-radius: var(--radius-md);
+  font-size: 15px; font-weight: 600; cursor: pointer;
+}
+.action-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.add-btn { background: #00d2a1; color: #1a1a2e; }
+.remove-btn { background: #e94560; color: #fff; }
+
+/* ===== 子池 ===== */
+.alloc-card {
+  background: var(--bg-card); border-radius: var(--radius-lg); padding: 16px;
+}
+.alloc-header {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;
+}
+.alloc-title { font-size: 14px; font-weight: 600; }
+.link-btn {
+  padding: 4px 10px; border: 1px solid rgba(255,255,255,0.1);
+  border-radius: var(--radius-round); background: transparent;
+  color: var(--text-secondary); font-size: 12px; cursor: pointer;
+}
+.link-btn.linked { color: #00d2a1; border-color: #00d2a1; }
+
+.pool-row {
+  display: flex; align-items: center; gap: 6px; padding: 8px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+.pool-row:last-child { border-bottom: none; }
+.pool-left { display: flex; align-items: center; gap: 8px; min-width: 50px; }
+.pool-dot { width: 8px; height: 8px; border-radius: 50%; }
+.pool-name { font-size: 13px; font-weight: 500; }
+.adj-btn {
+  width: 24px; height: 24px; border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 50%; background: transparent; color: var(--text-secondary);
+  font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  line-height: 1;
+}
+.adj-btn:active { background: var(--bg-accent); color: #fff; }
+.pct-input {
+  width: 52px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 4px; color: #fff; font-size: 14px; padding: 5px 6px;
+  text-align: center; outline: none; font-family: var(--font-number);
+}
+.pct-unit { font-size: 12px; color: var(--text-secondary); }
+.pool-amount {
+  margin-left: auto; font-size: 13px; font-weight: 600; color: var(--text-secondary);
+  font-family: var(--font-number); min-width: 70px; text-align: right;
+}
+
+.user-group { margin-top: 8px; padding: 4px 0; }
+.user-group.linked {
+  border: 1px dashed rgba(0,210,161,0.12); border-radius: var(--radius-md); padding: 6px 8px;
+}
+.link-hint { font-size: 10px; color: var(--text-muted); text-align: center; margin-bottom: 2px; }
+
+/* ===== 弹窗 ===== */
+.overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+  display: flex; align-items: center; justify-content: center; z-index: 9999; padding: 20px;
+}
+.confirm-dlg {
+  background: var(--bg-card); border-radius: var(--radius-lg);
+  padding: 20px; width: 100%; max-width: 360px;
+}
+.dlg-title { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+.dlg-amount { font-size: 14px; color: var(--text-secondary); margin-bottom: 12px; }
+.dlg-amount b { color: #fff; }
+.dlg-rows { margin-bottom: 8px; }
+.dlg-row {
+  display: flex; justify-content: space-between; padding: 5px 0;
+  font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+.dlg-actions { display: flex; gap: 10px; margin-top: 12px; }
+.dlg-cancel {
+  flex: 1; padding: 10px; border: 1px solid rgba(255,255,255,0.1);
+  border-radius: var(--radius-md); background: transparent; color: var(--text-secondary);
+  font-size: 14px; cursor: pointer;
+}
+.dlg-ok {
+  flex: 2; padding: 10px; border: none; border-radius: var(--radius-md);
+  font-size: 14px; font-weight: 600; cursor: pointer; color: #fff;
+}
+.dlg-ok.add { background: #00d2a1; color: #1a1a2e; }
+.dlg-ok.remove { background: #e94560; }
 </style>
