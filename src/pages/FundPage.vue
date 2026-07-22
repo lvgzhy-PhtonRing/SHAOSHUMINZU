@@ -25,7 +25,7 @@
         @alloc-change="onAllocChange"
       />
       <div class="section-card">
-        <CapitalLogList :logs="fundStore.capitalLogs" @delete="onDeleteLog" @edit="onEditLog" />
+        <CapitalLogList :logs="capitalLogs" @delete="onDeleteLog" @edit="onEditLog" />
       </div>
     </template>
   </div>
@@ -69,6 +69,8 @@ const totalMarketValue = computed(() => {
 const floatPnl = computed(() => totalMarketValue.value - totalCost.value)
 const totalAsset = computed(() => totalCapital.value + floatPnl.value)
 const totalAvailable = computed(() => totalCapital.value - totalCost.value)
+// 资金变动记录（仅外部资金，不含股票买卖）
+const capitalLogs = computed(() => fundStore.capitalLogs.filter(l => l.pool_id === null))
 
 async function onCapitalChange({ type, amount, note }) {
   try {

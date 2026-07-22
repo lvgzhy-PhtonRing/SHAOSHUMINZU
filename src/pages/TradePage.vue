@@ -35,6 +35,26 @@
       </div>
     </template>
 
+    <!-- 历史买卖记录 -->
+    <div class="section-card" v-if="tradeLogs.length">
+      <div class="section-title">买卖记录</div>
+      <div class="trade-log-list">
+        <div v-for="log in tradeLogs" :key="log.id" class="trade-log-item">
+          <div class="tli-header">
+            <span class="tli-action" :class="log.type === 'add' ? 'rise' : 'fall'">
+              {{ log.type === 'add' ? '卖出' : '买入' }} {{ log.stock_code }}
+            </span>
+            <span class="tli-name">{{ log.stock_name }}</span>
+          </div>
+          <div class="tli-meta">
+            <span>{{ formatMoney(log.amount) }}</span>
+            <span> · {{ log.pool_name }}</span>
+            <span> · {{ formatDateString(log.created_at) }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- step 2: 校对（必须） -->
     <template v-if="pendingTrade">
       <div class="verify-required">
@@ -80,6 +100,7 @@ import { useRoute } from 'vue-router'
 import { usePoolStore } from '@/stores/pools'
 import { useTransactionStore } from '@/stores/transactions'
 import { useHoldingStore } from '@/stores/holdings'
+import { useFundStore } from '@/stores/funds'
 import { calcNewCostPrice } from '@/utils/calculators'
 import { formatMoney, formatPrice } from '@/utils/formatters'
 import { upsertHolding, deleteHolding, insertCapitalLog } from '@/api/supabase'
@@ -90,6 +111,7 @@ const route = useRoute()
 const poolStore = usePoolStore()
 const txStore = useTransactionStore()
 const holdingStore = useHoldingStore()
+const fundStore = useFundStore()
 
 const isSell = ref(false)
 const currentPrice = ref(0)
@@ -105,6 +127,34 @@ const diff = computed(() => {
   if (!actualAmount.value || !pendingTrade.value) return 0
   return parseFloat(actualAmount.value) - pendingTrade.value.amount
 })
+
+// 历史买卖记录（从资金记录中过滤，匹配交易获取股票名称）
+const tradeLogs = computed(() => {
+  return fundStore.capitalLogs
+    .filter(l => l.pool_id !== null)
+    .map(l => {
+      const note = l.note || ''
+      const parts = note.split(' ')
+      const code = parts.length > 1 && /^\d{6}$/.test(parts[parts.length - 1]) ? parts[parts.length - 1] : ''
+      const tx = txStore.transactions.find(t =>
+        t.pool_id === l.pool_id && code &&
+        (t.stock_code === code) && Math.abs(t.amount - l.amount) < 0.01
+      )
+      return {
+        ...l,
+        stock_code: code,
+        stock_name: tx?.stock_name || '',
+        pool_name: poolStore.pools.find(p => p.id === l.pool_id)?.name || ''
+      }
+    })
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+})
+
+function formatDateString(isoStr) {
+  if (!isoStr) return ''
+  const d = new Date(isoStr)
+  return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
+}
 
 function onStockSelected(stock) {
   currentPrice.value = stock.price
@@ -168,8 +218,10 @@ async function confirmTrade() {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   poolStore.loadPools()
+  fundStore.loadCapitalLogs()
+  txStore.loadTransactions()
   if (route.query.code) {
     isSell.value = true
     stockCode.value = route.query.code
@@ -220,4 +272,17 @@ onMounted(() => {
 .v-btn.cancel { background: rgba(255,255,255,0.06); color: var(--text-secondary); }
 .v-btn.confirm { background: #00d2a1; color: #1a1a2e; }
 .v-btn.confirm:disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* 买卖记录 */
+.section-title { font-size: 13px; font-weight: 600; padding: 0 0 8px; }
+.trade-log-list { display: flex; flex-direction: column; gap: 6px; }
+.trade-log-item {
+  padding: 10px 12px; background: rgba(255,255,255,0.03); border-radius: var(--radius-md);
+}
+.tli-header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; }
+.tli-action { font-size: 14px; font-weight: 600; font-family: var(--font-number); }
+.tli-action.rise { color: var(--color-rise); }
+.tli-action.fall { color: var(--color-fall); }
+.tli-name { font-size: 12px; color: var(--text-secondary); }
+.tli-meta { font-size: 11px; color: var(--text-muted); display: flex; gap: 4px; flex-wrap: wrap; }
 </style>
