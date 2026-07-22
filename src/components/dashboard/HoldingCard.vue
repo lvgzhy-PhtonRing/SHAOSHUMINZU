@@ -53,7 +53,8 @@ import { formatMoney, formatPrice, formatQuantity, formatChange } from '@/utils/
 const props = defineProps({
   stock: { type: Object, required: true },
   poolName: { type: String, default: '' },
-  poolColor: { type: String, default: '#0f3460' })
+  poolColor: { type: String, default: '#0f3460' }
+})
 
 defineEmits(['sell', 'tap'])
 
