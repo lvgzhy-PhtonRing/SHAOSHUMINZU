@@ -16,6 +16,7 @@
         label="成交总金额（元）"
         type="number"
         placeholder="输入成交总金额（含手续费）"
+        class="trade-form-field"
         :rules="[{ required: true, message: '请输入成交总金额' }]"
       />
 
@@ -24,6 +25,7 @@
         label="成交数量（股）"
         type="digit"
         placeholder="100的整数倍"
+        class="trade-form-field"
         :rules="[
           { required: true, message: '请输入成交数量' },
           { validator: v => /^\d+$/.test(v) && parseInt(v) % 100 === 0, message: 'A股需为100的整数倍' }
@@ -49,10 +51,11 @@
         v-model="form.date"
         label="成交日期"
         type="date"
+        class="trade-form-field"
         :rules="[{ required: true, message: '请选择日期' }]"
       />
 
-      <van-field v-model="form.note" label="备注（可选）" placeholder="如：盘中买入" />
+      <van-field v-model="form.note" label="备注（可选）" placeholder="如：盘中买入" class="trade-form-field" />
 
       <div style="margin: 16px 0">
         <van-button
@@ -156,4 +159,33 @@ function onSubmit() {
 .calc-label { font-size: 11px; color: var(--text-secondary); }
 .calc-value { font-size: 16px; font-weight: 600; font-family: var(--font-number); }
 .calc-value.rise { color: var(--color-rise); }
+</style>
+
+<style>
+/* Vant 表单域暗色主题覆写 */
+.van-cell.trade-form-field {
+  background: rgba(255,255,255,0.04) !important;
+  border-radius: var(--radius-md) !important;
+  margin-bottom: 8px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.van-cell.trade-form-field .van-field__label {
+  color: var(--text-secondary);
+  font-size: 12px;
+  width: auto;
+  margin-right: 8px;
+}
+.van-cell.trade-form-field .van-field__control {
+  color: #fff;
+  font-size: 15px;
+  text-align: right;
+  font-family: var(--font-number);
+}
+.van-cell.trade-form-field .van-field__control::placeholder {
+  color: rgba(255,255,255,0.25);
+}
+.van-cell.trade-form-field .van-field__body {
+  background: transparent;
+}
 </style>

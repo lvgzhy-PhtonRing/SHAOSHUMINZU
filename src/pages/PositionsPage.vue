@@ -14,7 +14,10 @@
           :segments="chartSegments"
           :total-percent="totalPositionRatio"
         />
-        <div class="total-slogan">{{ positionSlogan }}</div>
+        <div class="total-slogan">
+          <span class="slogan-emoji">{{ positionSlogan.emoji }}</span>
+          <span class="slogan-text">{{ positionSlogan.text }}</span>
+        </div>
         <div class="legend">
           <div v-for="item in poolPositionData" :key="item.name" class="legend-item">
             <span class="legend-dot" :style="{ background: item.color }"></span>
@@ -122,16 +125,16 @@ const totalPositionRatio = computed(() => {
 
 const positionSlogan = computed(() => {
   const r = totalPositionRatio.value
-  if (r >= 90) return '命就一条'
-  if (r >= 80) return '准备装死'
-  if (r >= 70) return '股神出没'
-  if (r >= 60) return '稳健老登'
-  if (r >= 50) return '涨跌随缘'
-  if (r >= 40) return '真的不硬'
-  if (r >= 30) return '维族是ED'
-  if (r >= 20) return '反弹就干'
-  if (r >= 10) return '一群老GAY'
-  return '纯看热闹'
+  if (r >= 90) return { text: '命就一条', emoji: '🆘' }
+  if (r >= 80) return { text: '准备装死', emoji: '🐻' }
+  if (r >= 70) return { text: '股神出没', emoji: '🦸' }
+  if (r >= 60) return { text: '稳健老登', emoji: '👴' }
+  if (r >= 50) return { text: '涨跌随缘', emoji: '🧘' }
+  if (r >= 40) return { text: '真的不硬', emoji: '🤏' }
+  if (r >= 30) return { text: '维族是ED', emoji: '💊' }
+  if (r >= 20) return { text: '反弹就干', emoji: '🚀' }
+  if (r >= 10) return { text: '一群老GAY', emoji: '🌈' }
+  return { text: '纯看热闹', emoji: '🍿' }
 })
 
 const poolPositionData = computed(() => {
@@ -255,10 +258,30 @@ onMounted(async () => {
 .bar-label { font-size: 10px; color: var(--text-muted); }
 .total-slogan {
   text-align: center;
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--color-warn);
-  padding: 2px 0 8px;
-  letter-spacing: 2px;
+  padding: 6px 0 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+.slogan-emoji {
+  font-size: 28px;
+  line-height: 1;
+  animation: slogan-bounce 2s ease-in-out infinite;
+}
+.slogan-text {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 4px;
+  background: linear-gradient(135deg, var(--color-warn), #ff6b35);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: none;
+  position: relative;
+}
+@keyframes slogan-bounce {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
 }
 </style>
