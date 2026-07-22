@@ -151,7 +151,7 @@ const summary = computed(() => {
   const totalCost = holdings.reduce((s, h) => s + h.cost_price * h.quantity, 0)
   const floatPnl = totalMarketValue - totalCost
   const totalAsset = 816935.51
-  const totalAvailable = 604250.51
+  const totalAvailable = totalAsset - totalMarketValue
   return {
     totalAsset,
     totalMarketValue,

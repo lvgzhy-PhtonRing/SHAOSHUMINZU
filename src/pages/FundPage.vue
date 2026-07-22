@@ -51,13 +51,16 @@ const priceStore = usePriceStore()
 
 const loading = ref(true)
 const totalAsset = ref(816935.51)
-const totalAvailable = ref(604250.51)
 
 const totalMarketValue = computed(() => {
   return holdingStore.holdings.reduce((s, h) => {
     const price = priceStore.prices[h.stock_code]?.price || 0
     return s + price * h.quantity
   }, 0)
+})
+
+const totalAvailable = computed(() => {
+  return totalAsset.value - totalMarketValue.value
 })
 
 async function onCapitalChange({ type, amount, note }) {
