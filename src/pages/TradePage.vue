@@ -48,6 +48,7 @@ import StockSearch from '@/components/trade/StockSearch.vue'
 import TradeForm from '@/components/trade/TradeForm.vue'
 import VerificationCard from '@/components/trade/VerificationCard.vue'
 
+const route = useRoute()
 const poolStore = usePoolStore()
 const txStore = useTransactionStore()
 const holdingStore = useHoldingStore()
@@ -123,7 +124,6 @@ function onVerified(actualAmount) {
 
 onMounted(() => {
   poolStore.loadPools()
-  const route = useRoute()
   if (route.query.code) {
     // 从持仓页左滑进入：预填股票信息，卖出模式，隐藏子池选择
     isSell.value = true
