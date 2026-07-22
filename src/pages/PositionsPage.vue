@@ -29,7 +29,6 @@
           <div v-for="item in poolShares" :key="item.name" class="lh-item">
             <span class="lh-dot" :style="{ background: item.color }"></span>
             <span class="lh-label">{{ item.name }}</span>
-            <span class="lh-value num-mono">{{ item.share.toFixed(1) }}%</span>
           </div>
         </div>
       </div>
@@ -181,12 +180,11 @@ const poolPositionData = computed(() => {
 const donutSize = 200
 const chartRadius = donutSize / 2 - 20
 
-// 各子池占总资产比例（用于环形分段和图例）
+// 各子池持股市值占总市值比例（环形分段用）
 const poolShares = computed(() => {
   return poolPositionData.value.map(p => ({
-    name: p.name,
-    color: p.color,
-    share: totalAsset.value > 0 ? (p.totalPoolAsset / totalAsset.value) * 100 : 0
+    name: p.name, color: p.color,
+    share: totalMarketValue.value > 0 ? (p.marketValue / totalMarketValue.value) * 100 : 0
   }))
 })
 
