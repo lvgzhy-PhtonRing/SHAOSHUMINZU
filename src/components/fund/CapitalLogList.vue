@@ -29,6 +29,7 @@
 
 <script setup>
 import { formatMoney } from '@/utils/formatters'
+import EmptyState from '@/components/common/EmptyState.vue'
 
 defineProps({
   logs: { type: Array, default: () => [] }

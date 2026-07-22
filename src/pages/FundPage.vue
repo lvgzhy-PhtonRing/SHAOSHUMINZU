@@ -36,6 +36,7 @@ import { usePriceStore } from '@/stores/prices'
 import { formatMoney } from '@/utils/formatters'
 import FundAllocationForm from '@/components/fund/FundAllocationForm.vue'
 import CapitalLogList from '@/components/fund/CapitalLogList.vue'
+import LoadingSkeleton from '@/components/common/LoadingSkeleton.vue'
 
 const poolStore = usePoolStore()
 const fundStore = useFundStore()
