@@ -3,6 +3,7 @@
   <div class="page dashboard-page">
     <div class="page-header">
       <span class="page-title">持仓总览</span>
+      <span class="price-time" v-if="lastUpdated">非实时市值，更新于 {{ lastUpdated }}</span>
     </div>
 
     <AccountSummary
@@ -10,7 +11,6 @@
       :market-value="summary.totalMarketValue"
       :available="summary.totalAvailable"
       :position-ratio="summary.positionRatio"
-      :price-update-time="lastUpdated"
     />
 
     <ProfitCard
@@ -178,8 +178,8 @@ const summary = computed(() => {
   font-size: 18px;
   font-weight: 700;
 }
-.update-time {
-  font-size: 11px;
+.price-time {
+  font-size: 10px;
   color: var(--text-muted);
 }
 .section-title {

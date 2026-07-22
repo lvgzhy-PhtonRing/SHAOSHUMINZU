@@ -1,9 +1,6 @@
 <!-- src/components/dashboard/AccountSummary.vue -->
 <template>
   <div class="account-section">
-    <div class="account-header">
-      <span class="account-status" v-if="priceUpdateTime">实时市值更新于 {{ priceUpdateTime }}</span>
-    </div>
     <div class="total-asset">{{ formatMoney(totalAsset) }}</div>
     <div class="asset-meta">账户资产（元）</div>
     <div class="asset-grid">
