@@ -100,11 +100,11 @@ export async function insertCapitalLog(log) {
   return data[0]
 }
 
-/* 更新资金记录 */
+/* 更新资金记录（capital_log 表无 updated_at 列） */
 export async function updateCapitalLog(id, updates) {
   const { error } = await supabase
     .from('capital_log')
-    .update({ ...updates, updated_at: new Date().toISOString() })
+    .update(updates)
     .eq('id', id)
   if (error) throw new Error(error.message)
 }
