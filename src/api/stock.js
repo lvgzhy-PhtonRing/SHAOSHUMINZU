@@ -15,7 +15,9 @@ function isStale(code) {
 const EDGE_FN = 'https://mqdxmbsaddebxlallgos.supabase.co/functions/v1/stock-proxy'
 
 async function fetchViaEdge(codes) {
-  const resp = await fetch(`${EDGE_FN}?codes=${codes.join(',')}`)
+  const resp = await fetch(`${EDGE_FN}?codes=${codes.join(',')}`, {
+    headers: { 'Authorization': 'Bearer ' + (import.meta.env.VITE_SUPABASE_ANON_KEY || '') }
+  })
   if (!resp.ok) return {}
   const json = await resp.json()
   const prices = json.data || {}
