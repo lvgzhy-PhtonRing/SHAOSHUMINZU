@@ -58,6 +58,9 @@ import { calcProfit, calcPositionRatio } from '@/utils/calculators'
 import AccountSummary from '@/components/dashboard/AccountSummary.vue'
 import ProfitCard from '@/components/dashboard/ProfitCard.vue'
 import HoldingCard from '@/components/dashboard/HoldingCard.vue'
+import PoolSelector from '@/components/common/PoolSelector.vue'
+import LoadingSkeleton from '@/components/common/LoadingSkeleton.vue'
+import EmptyState from '@/components/common/EmptyState.vue'
 
 const poolStore = usePoolStore()
 const holdingStore = useHoldingStore()
@@ -132,7 +135,11 @@ const summary = computed(() => {
     totalAvailable,
     positionRatio: calcPositionRatio(totalMarketValue, totalAsset),
     floatPnl,
-    dailyPnl: holdings.reduce((s, h) => s + ((h.currentPrice / (1 + Math.abs(h.changePct) / 100)) - h.currentPrice) * h.quantity, 0)
+    dailyPnl: holdings.reduce((s, h) => {
+      const changePct = parseFloat(h.changePct) || 0
+      const prevClose = changePct !== 0 ? h.currentPrice / (1 + changePct / 100) : h.currentPrice
+      return s + (h.currentPrice - prevClose) * h.quantity
+    }, 0)
   }
 })
 </script>
