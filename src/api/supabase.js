@@ -60,6 +60,17 @@ export async function fetchCapitalLogs() {
   return error ? [] : data
 }
 
+/* 查询子池+股票的完整交易记录（用于重算持仓） */
+export async function fetchTransactionsByPoolStock(poolId, stockCode) {
+  const { data, error } = await supabase
+    .from('transactions')
+    .select('*')
+    .eq('pool_id', poolId)
+    .eq('stock_code', stockCode)
+    .order('created_at', { ascending: false })
+  return error ? [] : data
+}
+
 /* 录入交易 */
 export async function insertTransaction(tx) {
   const { data, error } = await supabase
@@ -68,6 +79,15 @@ export async function insertTransaction(tx) {
     .select()
   if (error) throw new Error(error.message)
   return data[0]
+}
+
+/* 更新交易 */
+export async function updateTransaction(id, updates) {
+  const { error } = await supabase
+    .from('transactions')
+    .update({ ...updates, updated_at: new Date().toISOString() })
+    .eq('id', id)
+  if (error) throw new Error(error.message)
 }
 
 /* 插入资金变动 */

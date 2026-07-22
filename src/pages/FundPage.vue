@@ -41,8 +41,10 @@ import { usePoolStore } from '@/stores/pools'
 import { useFundStore } from '@/stores/funds'
 import { useHoldingStore } from '@/stores/holdings'
 import { usePriceStore } from '@/stores/prices'
+import { useTransactionStore } from '@/stores/transactions'
 import { formatMoney } from '@/utils/formatters'
-import { deleteCapitalLog } from '@/api/supabase'
+import { deleteCapitalLog, updateCapitalLog, updateTransaction, fetchTransactionsByPoolStock } from '@/api/supabase'
+import { calcNewCostPrice } from '@/utils/calculators'
 import FundAllocationForm from '@/components/fund/FundAllocationForm.vue'
 import CapitalLogList from '@/components/fund/CapitalLogList.vue'
 import LoadingSkeleton from '@/components/common/LoadingSkeleton.vue'
@@ -51,6 +53,7 @@ const poolStore = usePoolStore()
 const fundStore = useFundStore()
 const holdingStore = useHoldingStore()
 const priceStore = usePriceStore()
+const txStore = useTransactionStore()
 
 const loading = ref(true)
 const totalCapital = computed(() => fundStore.totalCapital)
@@ -88,11 +91,72 @@ function onAllocChange({ pools: allocs }) {
   console.log('Allocation saved:', allocs)
 }
 
-async function onEditLog({ id, amount, note }) {
+async function onEditLog(payload) {
   try {
+    const { id, amount, note } = payload
+    // 普通资金变动直接改
+    if (!payload.pool_id) {
+      await fundStore.editCapitalLog(id, { amount, note })
+      return
+    }
+    // 买入/卖出：需要联动交易 + 持仓
+    const { stock_code, quantity: newQty, pool_id, type: capType } = payload
+    if (!stock_code || !newQty) {
+      await fundStore.editCapitalLog(id, { amount, note })
+      return
+    }
+
+    // 1. 找对应交易记录
+    const allTxs = await fetchTransactionsByPoolStock(pool_id, stock_code)
+    const matchedTx = allTxs.find(t => Math.abs(t.amount - amount) < 0.01)
+    if (!matchedTx) {
+      await fundStore.editCapitalLog(id, { amount, note })
+      return
+    }
+
+    // 2. 更新交易记录（数量 + 金额）
+    const newPrice = newQty > 0 ? amount / newQty : 0
+    await updateTransaction(matchedTx.id, { quantity: newQty, amount, price: newPrice, note })
+    txStore.transactions = txStore.transactions.map(t =>
+      t.id === matchedTx.id ? { ...t, quantity: newQty, amount, price: newPrice, note } : t
+    )
+
+    // 3. 用所有交易重算该子池+该股票的持仓
+    const isBuy = capType === 'remove'  // capital_log.remove = 买入
+    const otherTxs = allTxs.filter(t => t.id !== matchedTx.id)
+    // 重算：把所有其他交易 + 新的交易汇总
+    const allCalculated = [
+      ...otherTxs,
+      { ...matchedTx, quantity: newQty, amount, price: newPrice, type: isBuy ? 'buy' : 'sell' }
+    ]
+    // 汇总买入
+    let totalBuyQty = 0, totalBuyAmt = 0
+    for (const tx of allCalculated) {
+      if (tx.type === 'buy') { totalBuyQty += tx.quantity; totalBuyAmt += tx.amount }
+    }
+    const newCostPrice = totalBuyQty > 0 ? totalBuyAmt / totalBuyQty : 0
+    const netQty = allCalculated.reduce((s, tx) => s + (tx.type === 'buy' ? tx.quantity : -tx.quantity), 0)
+
+    if (netQty <= 0) {
+      // 清仓
+      const { deleteHolding } = await import('@/api/supabase')
+      await deleteHolding(pool_id, stock_code)
+    } else {
+      // 更新持仓
+      const { upsertHolding } = await import('@/api/supabase')
+      await upsertHolding({
+        pool_id, stock_code,
+        stock_name: matchedTx.stock_name || '',
+        quantity: netQty,
+        cost_price: newCostPrice
+      })
+    }
+    await holdingStore.loadHoldings()
+
+    // 4. 更新资金记录
     await fundStore.editCapitalLog(id, { amount, note })
   } catch (e) {
-    console.error('Edit log error:', e)
+    console.error('Edit trade log error:', e)
   }
 }
 

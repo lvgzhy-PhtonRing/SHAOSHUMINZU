@@ -38,6 +38,17 @@
             <label class="dlg-label">类型</label>
             <span class="dlg-value">{{ editing.pool_id ? (editing.type === 'add' ? '卖出' : '买入') : (editing.type === 'add' ? '增资' : '减资') }}</span>
           </div>
+          <!-- 买入/卖出：显示股票代码 + 数量 -->
+          <template v-if="editing.pool_id">
+            <div class="dlg-field">
+              <label class="dlg-label">股票</label>
+              <span class="dlg-value">{{ editStockCode || '—' }}</span>
+            </div>
+            <div class="dlg-field">
+              <label class="dlg-label">成交数量（股）</label>
+              <input v-model="editQuantity" type="number" inputmode="numeric" class="dlg-input num-mono" placeholder="0" />
+            </div>
+          </template>
           <div class="dlg-field">
             <label class="dlg-label">金额（元）</label>
             <input v-model="editAmount" type="number" inputmode="decimal" class="dlg-input num-mono" />
@@ -59,6 +70,7 @@
 <script setup>
 import { ref } from 'vue'
 import { formatMoney } from '@/utils/formatters'
+import { fetchTransactionsByPoolStock } from '@/api/supabase'
 import EmptyState from '@/components/common/EmptyState.vue'
 
 defineProps({ logs: { type: Array, default: () => [] } })
@@ -67,6 +79,8 @@ const emit = defineEmits(['delete', 'edit'])
 const editing = ref(null)
 const editAmount = ref('')
 const editNote = ref('')
+const editQuantity = ref('')
+const editStockCode = ref('')
 
 function formatDateString(isoStr) {
   if (!isoStr) return ''
@@ -74,17 +88,48 @@ function formatDateString(isoStr) {
   return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
 }
 
-function startEdit(log) {
+function parseStockCode(note) {
+  if (!note) return ''
+  const parts = note.split(' ')
+  return parts.length > 1 && /^\d{6}$/.test(parts[parts.length - 1]) ? parts[parts.length - 1] : ''
+}
+
+async function startEdit(log) {
   editing.value = log
   editAmount.value = String(log.amount)
   editNote.value = log.note || ''
+  editQuantity.value = ''
+  editStockCode.value = ''
+
+  if (log.pool_id) {
+    const code = parseStockCode(log.note || '')
+    editStockCode.value = code
+    if (code) {
+      try {
+        const txs = await fetchTransactionsByPoolStock(log.pool_id, code)
+        // 找金额匹配的那条
+        const match = txs.find(t => Math.abs(t.amount - log.amount) < 0.01)
+        if (match) editQuantity.value = String(match.quantity)
+      } catch (e) {
+        console.error('Fetch tx for edit:', e)
+      }
+    }
+  }
 }
 
 function saveEdit() {
   if (!editing.value) return
   const amount = parseFloat(editAmount.value)
   if (!amount || amount <= 0) return
-  emit('edit', { id: editing.value.id, amount, note: editNote.value })
+  const payload = { id: editing.value.id, amount, note: editNote.value }
+  // 买入/卖出附带数量 + 股票代码
+  if (editing.value.pool_id) {
+    payload.quantity = parseInt(editQuantity.value) || 0
+    payload.stock_code = editStockCode.value
+    payload.pool_id = editing.value.pool_id
+    payload.type = editing.value.type
+  }
+  emit('edit', payload)
   editing.value = null
 }
 </script>
