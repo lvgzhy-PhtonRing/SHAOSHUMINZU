@@ -176,6 +176,11 @@ function toggleLink() {
 function confirmAlloc() { showAllocConfirm.value = true }
 
 function submitAlloc() {
+  // 保存到 localStorage 供仓位页读取
+  const rec = {}
+  for (const k of Object.keys(pcts)) rec[k] = pcts[k]
+  localStorage.setItem('poolPercents', JSON.stringify(rec))
+
   emit('alloc-change', {
     total: props.totalAvailable,
     pools: allPools.map(p => ({
@@ -187,9 +192,6 @@ function submitAlloc() {
   })
   showAllocConfirm.value = false
 }
-
-// 同步外部 pools
-computed(() => { /* placeholder for external sync */ })
 </script>
 
 <style scoped>
