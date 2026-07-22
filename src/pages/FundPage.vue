@@ -29,7 +29,7 @@
         @alloc-change="onAllocChange"
       />
       <div class="section-card">
-        <CapitalLogList :logs="fundStore.capitalLogs" @delete="onDeleteLog" />
+        <CapitalLogList :logs="fundStore.capitalLogs" @delete="onDeleteLog" @edit="onEditLog" />
       </div>
     </template>
   </div>
@@ -89,6 +89,14 @@ async function onCapitalChange({ type, amount, note }) {
 
 function onAllocChange({ pools: allocs }) {
   console.log('Allocation saved:', allocs)
+}
+
+async function onEditLog({ id, amount, note }) {
+  try {
+    await fundStore.editCapitalLog(id, { amount, note })
+  } catch (e) {
+    console.error('Edit log error:', e)
+  }
 }
 
 async function onDeleteLog(id) {

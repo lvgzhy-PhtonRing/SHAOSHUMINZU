@@ -1,6 +1,6 @@
 // src/stores/funds.js
 import { defineStore } from 'pinia'
-import { fetchCapitalLogs, insertCapitalLog } from '@/api/supabase'
+import { fetchCapitalLogs, insertCapitalLog, updateCapitalLog } from '@/api/supabase'
 
 export const useFundStore = defineStore('funds', {
   state: () => ({
@@ -29,6 +29,20 @@ export const useFundStore = defineStore('funds', {
         const result = await insertCapitalLog(log)
         this.capitalLogs.unshift(result)
         return result
+      } catch (e) {
+        this.error = e.message
+        throw e
+      } finally {
+        this.submitting = false
+      }
+    },
+    async editCapitalLog(id, updates) {
+      this.submitting = true
+      this.error = null
+      try {
+        await updateCapitalLog(id, updates)
+        const idx = this.capitalLogs.findIndex(l => l.id === id)
+        if (idx !== -1) Object.assign(this.capitalLogs[idx], updates)
       } catch (e) {
         this.error = e.message
         throw e

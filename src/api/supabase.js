@@ -81,6 +81,15 @@ export async function insertCapitalLog(log) {
   return data[0]
 }
 
+/* 更新资金记录 */
+export async function updateCapitalLog(id, updates) {
+  const { error } = await supabase
+    .from('capital_log')
+    .update({ ...updates, updated_at: new Date().toISOString() })
+    .eq('id', id)
+  if (error) throw new Error(error.message)
+}
+
 /* 删除资金记录 */
 export async function deleteCapitalLog(id) {
   const { error } = await supabase.from('capital_log').delete().eq('id', id)
