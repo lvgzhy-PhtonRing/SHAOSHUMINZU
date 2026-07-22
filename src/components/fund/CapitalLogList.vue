@@ -10,7 +10,9 @@
         <div class="log-icon">{{ log.type === 'add' ? '➕' : '➖' }}</div>
         <div class="log-info">
           <div class="log-detail">
-            <span class="log-action">{{ log.type === 'add' ? '增资' : '减资' }}</span>
+            <span class="log-action" :class="log.pool_id ? 'trade' : ''">
+              {{ log.pool_id ? (log.type === 'add' ? '卖出' : '买入') : (log.type === 'add' ? '增资' : '减资') }}
+            </span>
             <span class="log-amount num-mono" :class="log.type === 'add' ? 'rise' : 'fall'">
               {{ log.type === 'add' ? '+' : '-' }}{{ formatMoney(log.amount) }}
             </span>
@@ -50,6 +52,7 @@ function formatDateString(isoStr) {
 .log-info { flex: 1; min-width: 0; }
 .log-detail { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
 .log-action { font-size: 13px; font-weight: 500; }
+.log-action.trade { color: var(--color-warn); }
 .log-amount { font-size: 14px; font-weight: 600; font-family: var(--font-number); }
 .log-amount.rise { color: var(--color-rise); }
 .log-amount.fall { color: var(--color-fall); }

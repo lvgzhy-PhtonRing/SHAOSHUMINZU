@@ -214,7 +214,7 @@ function submitAlloc() {
 .big-input {
   flex: 1; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
   border-radius: var(--radius-md); color: #fff; font-size: 22px; padding: 12px;
-  text-align: right; outline: none; font-family: var(--font-number);
+  text-align: center; outline: none; font-family: var(--font-number);
 }
 .big-input:focus { border-color: var(--bg-accent); }
 .amount-unit-text { font-size: 13px; color: var(--text-secondary); margin-left: 6px; }
