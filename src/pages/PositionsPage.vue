@@ -117,9 +117,26 @@ const totalMarketValue = computed(() => {
 const floatPnl = computed(() => totalMarketValue.value - totalCost.value)
 const totalAsset = computed(() => totalCapital.value + floatPnl.value)
 const totalAvailable = computed(() => totalCapital.value - totalCost.value)
-// 从 localStorage 恢复各池分配比例
-const saved = localStorage.getItem('poolPercents')
-const poolPercents = saved ? JSON.parse(saved) : { '共有': 40, '春': 15, '维': 15, '队': 15, '回': 15 }
+// 从 localStorage 恢复各池分配金额（元），优先 poolAmounts，兼容旧 poolPercents
+function loadPoolAlloc() {
+  const raw = localStorage.getItem('poolAmounts')
+  if (raw) {
+    const parsed = JSON.parse(raw)
+    const vals = Object.values(parsed)
+    const sum = vals.reduce((s, v) => s + v, 0)
+    // 旧百分比（值≤100且合计≈100）→ 转金额
+    if (vals.every(v => v <= 100) && Math.abs(sum - 100) < 1) {
+      const amt = {}
+      for (const k of Object.keys(parsed)) amt[k] = totalCapital.value * parsed[k] / 100
+      return amt
+    }
+    return parsed
+  }
+  // 无保存值：平分
+  const each = Math.floor(totalCapital.value / 5 / 10000) * 10000
+  return { '共有': each, '春': each, '维': each, '队': each, '回': each }
+}
+const poolAmounts = loadPoolAlloc()
 
 const totalPositionRatio = computed(() => {
   return totalAsset.value > 0 ? (totalMarketValue.value / totalAsset.value) * 100 : 0
@@ -147,9 +164,8 @@ const poolPositionData = computed(() => {
       return s + price * h.quantity
     }, 0)
     const cost = poolHoldings.reduce((s, h) => s + h.cost_price * h.quantity, 0)
-    // 该池分配资金 = 总资金池 × 分配百分比
-    const allocPct = poolPercents[p.name] || 20
-    const poolCapital = totalCapital.value * allocPct / 100
+    // 该池分配资金 = 保存的金额（元）
+    const poolCapital = poolAmounts[p.name] || 0
     // 该池仓位 = 该池持股市值 / 该池分配资金
     const positionRatio = poolCapital > 0 ? (mv / poolCapital) * 100 : 0
     return {

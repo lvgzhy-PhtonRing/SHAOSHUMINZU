@@ -1,10 +1,11 @@
 <template>
   <div class="allocation-form">
-    <!-- ===== 1. 子池资金分配 ===== -->
+    <!-- ===== 1. 子池资金分配（万元） ===== -->
     <div class="card">
       <div class="card-title">子池资金分配</div>
       <div class="card-desc">
-        总可用资金 <b class="num-mono">{{ formatMoney(totalAvailable) }}</b> · 按百分比分配
+        总可用资金 <b class="num-mono">{{ formatMoney(totalAvailable) }}</b>
+        <span class="unit-hint">单位：万元</span>
         <button class="link-btn" :class="{ linked: isLinked }" @click="toggleLink">
           {{ isLinked ? '🔗' : '🔓' }}
         </button>
@@ -13,30 +14,39 @@
       <!-- 共有 -->
       <div class="pool-row">
         <div class="pool-left"><span class="dot" style="background:#0f3460"></span>共有</div>
-        <button class="adj" @click="adjust('共有',-1)">−</button>
-        <input type="number" class="pct" :value="pcts['共有'].toFixed(1)" @input="e => onPct('共有', parseFloat(e.target.value)||0)" />
-        <span class="pc">%</span>
-        <button class="adj" @click="adjust('共有',1)">+</button>
-        <span class="money num-mono">{{ formatMoney(pcts['共有'] / 100 * totalAvailable) }}</span>
+        <button class="adj" @click="adjust('共有', -0.5)">−</button>
+        <input type="number" class="pct" :value="wanAmts['共有']" @input="e => onAmt('共有', parseFloat(e.target.value)||0)" step="0.01" />
+        <span class="pc">万</span>
+        <button class="adj" @click="adjust('共有', 0.5)">+</button>
+        <span class="money num-mono">{{ formatMoney(amts['共有']) }}</span>
       </div>
 
       <!-- 四人 -->
       <div class="user-group" :class="{ linked: isLinked }">
-        <div v-if="isLinked" class="hint">四人联动</div>
+        <div v-if="isLinked" class="hint">四人联动 · 平分剩余资金</div>
         <div v-for="p in users" :key="p.key" class="pool-row">
           <div class="pool-left"><span class="dot" :style="{ background: p.color }"></span>{{ p.name }}</div>
-          <button class="adj" @click="adjust(p.key,-1)">−</button>
-          <input type="number" class="pct" :value="pcts[p.key].toFixed(1)" @input="e => onPct(p.key, parseFloat(e.target.value)||0)" />
-          <span class="pc">%</span>
-          <button class="adj" @click="adjust(p.key,1)">+</button>
-          <span class="money num-mono">{{ formatMoney(pcts[p.key] / 100 * totalAvailable) }}</span>
+          <button class="adj" @click="adjust(p.key, -0.5)">−</button>
+          <input type="number" class="pct" :value="wanAmts[p.key]" @input="e => onAmt(p.key, parseFloat(e.target.value)||0)" step="0.01" />
+          <span class="pc">万</span>
+          <button class="adj" @click="adjust(p.key, 0.5)">+</button>
+          <span class="money num-mono">{{ formatMoney(amts[p.key]) }}</span>
         </div>
       </div>
 
-      <button class="apply-btn" :disabled="Math.abs(pctTotal - 100) > 0.5" @click="confirmAlloc">
-        确认分配 ({{ pctTotal.toFixed(0) }}%)
+      <!-- 合计与未分配 -->
+      <div class="total-row">
+        <span>已分配</span>
+        <span class="num-mono">{{ formatMoney(allocTotal) }}</span>
+        <span class="sep">/</span>
+        <span>未分配</span>
+        <span class="num-mono" :class="unalloc >= 0 ? '' : 'fall'">{{ formatMoney(unalloc) }}</span>
+      </div>
+
+      <button class="apply-btn" :disabled="unalloc < 0" @click="confirmAlloc">
+        确认分配
       </button>
-      <div v-if="Math.abs(pctTotal - 100) > 0.5" class="err">百分比合计需为100%，当前{{ pctTotal.toFixed(1) }}%</div>
+      <div v-if="unalloc < 0" class="err">已分配金额超过总可用资金 {{ formatMoney(unalloc) }}</div>
     </div>
 
     <!-- ===== 2. 增减资金池 ===== -->
@@ -74,7 +84,7 @@
           <div class="dlg-rows">
             <div v-for="p in allPools" :key="p.key" class="dlg-row">
               <span :style="{color:p.color}">● {{ p.name }}</span>
-              <span class="num-mono">{{ pcts[p.key].toFixed(1) }}% → {{ formatMoney(pcts[p.key]/100*totalAvailable) }}</span>
+              <span class="num-mono">{{ wanAmts[p.key] }} 万 → {{ formatMoney(amts[p.key]) }}</span>
             </div>
           </div>
           <div class="dlg-btns">
@@ -124,20 +134,8 @@ function submitCapital() {
   capNote.value = ''
 }
 
-// ====== 子池分配 ======
+// ====== 子池分配（金额·万元制） ======
 const isLinked = ref(true)
-const DEFAULT_PCTS = { '共有': 40, '春': 15, '维': 15, '队': 15, '回': 15 }
-const savedPcts = JSON.parse(localStorage.getItem('poolPercents') || 'null')
-const pcts = reactive(savedPcts || { ...DEFAULT_PCTS })
-const showAllocConfirm = ref(false)
-
-onMounted(() => {
-  // 页面重访时从 localStorage 恢复保存的值
-  const restored = JSON.parse(localStorage.getItem('poolPercents') || 'null')
-  if (restored) {
-    for (const k of Object.keys(restored)) pcts[k] = restored[k]
-  }
-})
 
 const users = [
   { key: '春', name: '春', color: '#e94560' },
@@ -150,54 +148,116 @@ const allPools = [
   ...users
 ]
 
-const pctTotal = computed(() => {
-  let s = 0; for (const p of allPools) s += pcts[p.key]; return s
+// 加载保存值：优先 poolAmounts（元），兼容旧 poolPercents（百分比）
+function loadSavedAmts() {
+  const raw = localStorage.getItem('poolAmounts')
+  if (raw) {
+    const parsed = JSON.parse(raw)
+    // 检查是否为百分比旧数据（值在0-100之间且合计≈100）
+    const vals = Object.values(parsed)
+    const sum = vals.reduce((s, v) => s + v, 0)
+    if (vals.every(v => v <= 100) && Math.abs(sum - 100) < 1) {
+      // 旧百分比 → 按当前总可用换算为金额
+      const amt = {}
+      for (const k of Object.keys(parsed)) {
+        amt[k] = Math.round(props.totalAvailable * parsed[k] / 100)
+      }
+      return amt
+    }
+    return parsed  // 已经是金额
+  }
+  // 无保存值：默认平分
+  const each = Math.floor(props.totalAvailable / allPools.length / 10000) * 10000
+  const amt = {}
+  for (const p of allPools) amt[p.key] = each
+  return amt
+}
+
+const amts = reactive(loadSavedAmts())
+
+onMounted(() => {
+  // 页面重访时恢复
+  const raw = localStorage.getItem('poolAmounts')
+  if (raw) {
+    try {
+      const saved = JSON.parse(raw)
+      for (const k of Object.keys(saved)) {
+        if (allPools.some(p => p.key === k)) amts[k] = saved[k]
+      }
+    } catch (e) {}
+  }
 })
 
-function onPct(key, val) {
-  val = Math.max(0, Math.min(100, val))
+// 万元显示值（取整到2位小数）
+const wanAmts = computed(() => {
+  const w = {}
+  for (const p of allPools) w[p.key] = (amts[p.key] / 10000).toFixed(2)
+  return w
+})
+
+// 已分配总额（元）
+const allocTotal = computed(() => allPools.reduce((s, p) => s + amts[p.key], 0))
+
+// 未分配（元），可为负数（超分配）
+const unalloc = computed(() => props.totalAvailable - allocTotal.value)
+
+// 联动：平分剩余资金
+function splitRemaining() {
+  const gongyou = amts['共有']
+  const remaining = Math.max(0, props.totalAvailable - gongyou)
+  const each = Math.floor(remaining / 4 / 100) * 100  // 取整到100元
+  for (const p of users) amts[p.key] = each
+}
+
+// 用户输入金额（万元 → 元）
+function onAmt(key, wanVal) {
+  const yuan = Math.round(wanVal * 10000)
+  amts[key] = Math.max(0, yuan)
   if (isLinked.value) {
     if (key === '共有') {
-      pcts['共有'] = val
-      const each = (100 - val) / 4
-      for (const p of users) pcts[p.key] = each
+      splitRemaining()
     } else {
-      const each = val
-      for (const p of users) pcts[p.key] = each
-      pcts['共有'] = Math.max(0, 100 - each * 4)
+      // 四人等额
+      const each = amts[key]
+      for (const p of users) amts[p.key] = each
+      amts['共有'] = Math.max(0, props.totalAvailable - each * 4)
     }
-  } else {
-    pcts[key] = val
   }
 }
 
-function adjust(key, d) {
-  onPct(key, Math.round((pcts[key] + d) * 10) / 10)
+// +/- 按钮（以万元为单位步进）
+function adjust(key, stepWan) {
+  const curWan = amts[key] / 10000
+  const newWan = Math.max(0, curWan + stepWan)
+  onAmt(key, Math.round(newWan * 100) / 100)  // 保留2位小数
 }
 
 function toggleLink() {
   isLinked.value = !isLinked.value
   if (isLinked.value) {
-    const avg = users.reduce((s, p) => s + pcts[p.key], 0) / 4
-    onPct('春', Math.round(avg * 10) / 10)
+    splitRemaining()
   }
 }
 
+// ====== 提交 ======
+const showAllocConfirm = ref(false)
 function confirmAlloc() { showAllocConfirm.value = true }
 
 function submitAlloc() {
-  // 保存到 localStorage 供仓位页读取
+  // 保存为金额（元）
   const rec = {}
-  for (const k of Object.keys(pcts)) rec[k] = pcts[k]
-  localStorage.setItem('poolPercents', JSON.stringify(rec))
+  for (const p of allPools) rec[p.key] = amts[p.key]
+  localStorage.setItem('poolAmounts', JSON.stringify(rec))
+  // 同时清理旧百分比数据
+  localStorage.removeItem('poolPercents')
 
   emit('alloc-change', {
     total: props.totalAvailable,
     pools: allPools.map(p => ({
       key: p.key,
       pool_id: props.pools.find(pl => pl.name === p.name)?.id,
-      percent: pcts[p.key],
-      amount: pcts[p.key] / 100 * props.totalAvailable
+      amount: amts[p.key],
+      percent: props.totalAvailable > 0 ? (amts[p.key] / props.totalAvailable) * 100 : 0
     }))
   })
   showAllocConfirm.value = false
@@ -209,6 +269,7 @@ function submitAlloc() {
 .card-title { font-size: 15px; font-weight: 700; margin-bottom: 2px; }
 .card-desc { font-size: 12px; color: var(--text-secondary); margin-bottom: 12px; }
 .card-desc b { color: #fff; }
+.unit-hint { font-size: 10px; color: var(--text-muted); margin-left: 6px; }
 
 /* 增资/减资 */
 .big-input {
@@ -217,7 +278,6 @@ function submitAlloc() {
   text-align: center; outline: none; font-family: var(--font-number);
 }
 .big-input:focus { border-color: var(--bg-accent); }
-.amount-unit-text { font-size: 13px; color: var(--text-secondary); margin-left: 6px; }
 .amount-row { display: flex; align-items: center; margin-bottom: 12px; }
 .action-row { display: flex; gap: 10px; }
 .act-btn {
@@ -246,22 +306,31 @@ function submitAlloc() {
   display: flex; align-items: center; justify-content: center; line-height: 1;
 }
 .pct {
-  width: 50px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06);
+  width: 72px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06);
   border-radius: 4px; color: #fff; font-size: 13px; padding: 4px; text-align: center;
   outline: none; font-family: var(--font-number);
 }
 .pc { font-size: 11px; color: var(--text-secondary); }
 .money {
   margin-left: auto; font-size: 13px; font-weight: 600; color: var(--text-secondary);
-  font-family: var(--font-number); min-width: 64px; text-align: right;
+  font-family: var(--font-number); min-width: 72px; text-align: right;
 }
 
-.user-group { margin-top: 6px; padding: 4px; }
-.user-group.linked { border: 1px dashed rgba(0,210,161,0.1); border-radius: var(--radius-md); padding: 4px 6px; }
-.hint { font-size: 10px; color: var(--text-muted); text-align: center; margin-bottom: 2px; }
+.user-group { margin-top: 6px; }
+.user-group.linked { border: 1px dashed rgba(0,210,161,0.15); border-radius: var(--radius-md); padding: 4px 8px; }
+.hint { font-size: 10px; color: var(--text-muted); text-align: center; margin-bottom: 4px; }
+
+/* 合计行 */
+.total-row {
+  display: flex; align-items: center; gap: 6px; justify-content: center;
+  padding: 8px 0 4px; font-size: 12px; color: var(--text-secondary);
+}
+.total-row .num-mono { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+.total-row .num-mono.fall { color: var(--color-fall); }
+.total-row .sep { color: var(--text-muted); }
 
 .apply-btn {
-  width: 100%; margin-top: 12px; padding: 12px; border: none; border-radius: var(--radius-md);
+  width: 100%; margin-top: 8px; padding: 12px; border: none; border-radius: var(--radius-md);
   background: var(--bg-accent); color: #fff; font-size: 15px; font-weight: 600; cursor: pointer;
 }
 .apply-btn:disabled { opacity: 0.3; }
