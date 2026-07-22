@@ -9,6 +9,11 @@ export const useFundStore = defineStore('funds', {
     submitting: false,
     error: null
   }),
+  getters: {
+    totalCapital: (state) => {
+      return state.capitalLogs.reduce((sum, l) => sum + (l.type === 'add' ? l.amount : -l.amount), 0)
+    }
+  },
   actions: {
     async loadCapitalLogs() {
       this.loading = true

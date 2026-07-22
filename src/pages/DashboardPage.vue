@@ -62,6 +62,7 @@ import { useRouter } from 'vue-router'
 import { usePoolStore } from '@/stores/pools'
 import { useHoldingStore } from '@/stores/holdings'
 import { usePriceStore } from '@/stores/prices'
+import { useFundStore } from '@/stores/funds'
 import { calcProfit, calcPositionRatio } from '@/utils/calculators'
 import AccountSummary from '@/components/dashboard/AccountSummary.vue'
 import ProfitCard from '@/components/dashboard/ProfitCard.vue'
@@ -73,6 +74,7 @@ import EmptyState from '@/components/common/EmptyState.vue'
 const poolStore = usePoolStore()
 const holdingStore = useHoldingStore()
 const priceStore = usePriceStore()
+const fundStore = useFundStore()
 
 const loading = ref(true)
 const lastUpdated = ref('')
@@ -88,7 +90,8 @@ onMounted(async () => {
   try {
     await Promise.all([
       poolStore.loadPools(),
-      holdingStore.loadHoldings()
+      holdingStore.loadHoldings(),
+      fundStore.loadCapitalLogs()
     ])
 
     poolStore.pools.forEach((p, i) => {
@@ -151,7 +154,7 @@ const displayHoldings = computed(() => {
   }).sort((a, b) => b.marketValue - a.marketValue)
 })
 
-const totalCapital = ref(829661.35)
+const totalCapital = computed(() => fundStore.totalCapital)
 
 const summary = computed(() => {
   const holdings = displayHoldings.value

@@ -89,6 +89,7 @@ import { usePoolStore } from '@/stores/pools'
 import { useHoldingStore } from '@/stores/holdings'
 import { usePriceStore } from '@/stores/prices'
 import { formatMoney } from '@/utils/formatters'
+import { useFundStore } from '@/stores/funds'
 import DonutChart from '@/components/positions/DonutChart.vue'
 import PoolPositionCard from '@/components/positions/PoolPositionCard.vue'
 
@@ -96,8 +97,9 @@ const poolStore = usePoolStore()
 const holdingStore = useHoldingStore()
 const priceStore = usePriceStore()
 
+const fundStore = useFundStore()
 const loading = ref(true)
-const totalCapital = ref(829661.35)
+const totalCapital = computed(() => fundStore.totalCapital)
 
 const colorList = ['#0f3460', '#e94560', '#00d2a1', '#ffc107', '#7c4dff']
 
@@ -199,7 +201,8 @@ onMounted(async () => {
   try {
     await Promise.all([
       poolStore.loadPools(),
-      holdingStore.loadHoldings()
+      holdingStore.loadHoldings(),
+      fundStore.loadCapitalLogs()
     ])
     const codes = holdingStore.stockCodes
     if (codes.length) await priceStore.loadPrices(codes)

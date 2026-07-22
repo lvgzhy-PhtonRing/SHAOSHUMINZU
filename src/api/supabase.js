@@ -52,12 +52,11 @@ export async function fetchTransactions(limit = 50) {
 }
 
 /* 获取资金变动记录 */
-export async function fetchCapitalLogs(limit = 50) {
+export async function fetchCapitalLogs() {
   const { data, error } = await supabase
     .from('capital_log')
     .select('*, pools(name)')
     .order('created_at', { ascending: false })
-    .limit(limit)
   return error ? [] : data
 }
 

@@ -53,7 +53,7 @@ const holdingStore = useHoldingStore()
 const priceStore = usePriceStore()
 
 const loading = ref(true)
-const totalCapital = ref(829661.35)
+const totalCapital = computed(() => fundStore.totalCapital)
 
 const totalCost = computed(() => {
   return holdingStore.holdings.reduce((s, h) => {
@@ -79,9 +79,6 @@ async function onCapitalChange({ type, amount, note }) {
       note: note || '',
       created_by: 'admin'
     })
-    if (type === 'add') totalCapital.value += amount
-    else totalCapital.value -= amount
-    await fundStore.loadCapitalLogs()
   } catch (e) {
     console.error('Capital change error:', e)
   }
