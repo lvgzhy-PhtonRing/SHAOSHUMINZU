@@ -2,11 +2,7 @@
 <template>
   <div class="main-layout">
     <div class="main-content">
-      <router-view v-slot="{ Component }">
-        <keep-alive :include="['DashboardPage','PositionsPage','FundPage']">
-          <component :is="Component" />
-        </keep-alive>
-      </router-view>
+      <router-view />
     </div>
     <van-tabbar v-model="active" active-color="#0f3460" inactive-color="#888" border>
       <van-tabbar-item icon="chart-trending-o" @click="go('dashboard')">持仓</van-tabbar-item>
