@@ -142,13 +142,18 @@ const trendData = [
 ]
 
 onMounted(async () => {
-  await Promise.all([
-    poolStore.loadPools(),
-    holdingStore.loadHoldings()
-  ])
-  const codes = holdingStore.stockCodes
-  if (codes.length) await priceStore.loadPrices(codes)
-  loading.value = false
+  try {
+    await Promise.all([
+      poolStore.loadPools(),
+      holdingStore.loadHoldings()
+    ])
+    const codes = holdingStore.stockCodes
+    if (codes.length) await priceStore.loadPrices(codes)
+  } catch (e) {
+    console.error('Positions page load error:', e)
+  } finally {
+    loading.value = false
+  }
 })
 </script>
 
