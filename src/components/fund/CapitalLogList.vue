@@ -24,7 +24,7 @@
         </div>
         <div class="log-actions">
           <button class="edit-btn" @click="startEdit(log)">✏️</button>
-          <button class="del-btn" @click="$emit('delete', log.id)">✕</button>
+          <button class="del-btn" @click="confirmDelete(log)">✕</button>
         </div>
       </div>
     </div>
@@ -38,7 +38,6 @@
             <label class="dlg-label">类型</label>
             <span class="dlg-value">{{ editing.pool_id ? (editing.type === 'add' ? '卖出' : '买入') : (editing.type === 'add' ? '增资' : '减资') }}</span>
           </div>
-          <!-- 买入/卖出：显示股票代码 + 数量 -->
           <template v-if="editing.pool_id">
             <div class="dlg-field">
               <label class="dlg-label">股票</label>
@@ -63,6 +62,31 @@
           </div>
         </div>
       </div>
+
+      <!-- 删除确认弹窗 -->
+      <div v-if="deleting" class="overlay" @click.self="deleting = null">
+        <div class="dialog">
+          <div class="dlg-title">确认删除</div>
+          <div class="dlg-info">确定删除此条记录？</div>
+          <div class="dlg-rows">
+            <div class="dlg-row">
+              <span>{{ deleting.pool_id ? (deleting.type === 'add' ? '卖出' : '买入') : (deleting.type === 'add' ? '增资' : '减资') }}</span>
+              <span class="num-mono">{{ formatMoney(deleting.amount) }}</span>
+            </div>
+            <div v-if="deleting.note" class="dlg-row">
+              <span>备注</span>
+              <span>{{ deleting.note }}</span>
+            </div>
+            <div class="dlg-warn">
+              ⚠️ 删除后将联动更新持仓和资产数据
+            </div>
+          </div>
+          <div class="dlg-btns">
+            <button class="d-cancel" @click="deleting = null">取消</button>
+            <button class="d-ok del" @click="doDelete">🗑️ 确认删除</button>
+          </div>
+        </div>
+      </div>
     </teleport>
   </div>
 </template>
@@ -76,11 +100,15 @@ import EmptyState from '@/components/common/EmptyState.vue'
 defineProps({ logs: { type: Array, default: () => [] } })
 const emit = defineEmits(['delete', 'edit'])
 
+// 编辑
 const editing = ref(null)
 const editAmount = ref('')
 const editNote = ref('')
 const editQuantity = ref('')
 const editStockCode = ref('')
+
+// 删除
+const deleting = ref(null)
 
 function formatDateString(isoStr) {
   if (!isoStr) return ''
@@ -94,6 +122,7 @@ function parseStockCode(note) {
   return parts.length > 1 && /^\d{6}$/.test(parts[parts.length - 1]) ? parts[parts.length - 1] : ''
 }
 
+// ===== 编辑 =====
 async function startEdit(log) {
   editing.value = log
   editAmount.value = String(log.amount)
@@ -107,12 +136,9 @@ async function startEdit(log) {
     if (code) {
       try {
         const txs = await fetchTransactionsByPoolStock(log.pool_id, code)
-        // 找金额匹配的那条
         const match = txs.find(t => Math.abs(t.amount - log.amount) < 0.01)
         if (match) editQuantity.value = String(match.quantity)
-      } catch (e) {
-        console.error('Fetch tx for edit:', e)
-      }
+      } catch (e) { console.error('Fetch tx for edit:', e) }
     }
   }
 }
@@ -122,7 +148,6 @@ function saveEdit() {
   const amount = parseFloat(editAmount.value)
   if (!amount || amount <= 0) return
   const payload = { id: editing.value.id, amount, note: editNote.value }
-  // 买入/卖出附带数量 + 股票代码
   if (editing.value.pool_id) {
     payload.quantity = parseInt(editQuantity.value) || 0
     payload.stock_code = editStockCode.value
@@ -131,6 +156,17 @@ function saveEdit() {
   }
   emit('edit', payload)
   editing.value = null
+}
+
+// ===== 删除 =====
+function confirmDelete(log) {
+  deleting.value = log
+}
+
+function doDelete() {
+  if (!deleting.value) return
+  emit('delete', deleting.value)  // 传完整 log 对象
+  deleting.value = null
 }
 </script>
 
@@ -161,7 +197,7 @@ function saveEdit() {
 }
 .del-btn:active { color: var(--color-fall); }
 
-/* 编辑弹窗 */
+/* 弹窗共用 */
 .overlay {
   position: fixed; inset: 0; background: rgba(0,0,0,0.6);
   display: flex; align-items: center; justify-content: center; z-index: 9999; padding: 20px;
@@ -191,4 +227,13 @@ function saveEdit() {
   flex: 2; padding: 10px; border: none; border-radius: var(--radius-md);
   background: var(--bg-accent); color: #fff; font-size: 14px; font-weight: 600; cursor: pointer;
 }
+.d-ok.del { background: var(--color-fall); }
+
+.dlg-info { font-size: 14px; color: var(--text-secondary); margin-bottom: 12px; }
+.dlg-rows { margin-bottom: 8px; }
+.dlg-row {
+  display: flex; justify-content: space-between; padding: 5px 0;
+  font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+.dlg-warn { font-size: 11px; color: var(--color-warn); padding: 6px 0; text-align: center; }
 </style>

@@ -1,7 +1,7 @@
-<!-- src/components/common/PoolSelector.vue -->
 <template>
   <div class="scroll-x pool-selector">
     <div
+      v-if="showAll"
       class="pool-tab"
       :class="{ active: current === null }"
       @click="$emit('select', null)"
@@ -24,7 +24,8 @@
 <script setup>
 defineProps({
   pools: { type: Array, default: () => [] },
-  current: { type: Number, default: null }
+  current: { type: Number, default: null },
+  showAll: { type: Boolean, default: true }
 })
 defineEmits(['select'])
 

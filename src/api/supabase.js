@@ -90,6 +90,12 @@ export async function updateTransaction(id, updates) {
   if (error) throw new Error(error.message)
 }
 
+/* 删除交易 */
+export async function deleteTransaction(id) {
+  const { error } = await supabase.from('transactions').delete().eq('id', id)
+  if (error) throw new Error(error.message)
+}
+
 /* 插入资金变动 */
 export async function insertCapitalLog(log) {
   const { data, error } = await supabase

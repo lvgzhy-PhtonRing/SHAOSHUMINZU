@@ -14,6 +14,13 @@
           :segments="chartSegments"
           :total-percent="totalPositionRatio"
         />
+        <div class="total-ratio-detail">
+          <span class="trd-label">总市值</span>
+          <span class="trd-value num-mono">{{ formatMoney(totalMarketValue) }}</span>
+          <span class="trd-sep">/</span>
+          <span class="trd-label">总资产</span>
+          <span class="trd-value num-mono">{{ formatMoney(totalAsset) }}</span>
+        </div>
         <div class="total-slogan">
           <span class="slogan-emoji">{{ positionSlogan.emoji }}</span>
           <span class="slogan-text">{{ positionSlogan.text }}</span>
@@ -275,6 +282,18 @@ onMounted(async () => {
   min-height: 4px;
 }
 .bar-label { font-size: 10px; color: var(--text-muted); }
+.total-ratio-detail {
+  text-align: center;
+  padding: 0 0 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.trd-label { font-size: 11px; color: var(--text-muted); }
+.trd-value { font-size: 13px; font-weight: 600; font-family: var(--font-number); }
+.trd-sep { font-size: 11px; color: var(--text-muted); }
+
 .total-slogan {
   text-align: center;
   padding: 6px 0 10px;

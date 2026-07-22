@@ -6,6 +6,7 @@
         <PoolSelector
           :pools="pools"
           :current="selectedPool"
+          :show-all="false"
           @select="selectedPool = $event"
         />
         <div v-if="!selectedPool && submitted" class="form-error">请选择子池</div>

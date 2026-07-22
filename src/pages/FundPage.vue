@@ -39,8 +39,7 @@ import { useHoldingStore } from '@/stores/holdings'
 import { usePriceStore } from '@/stores/prices'
 import { useTransactionStore } from '@/stores/transactions'
 import { formatMoney } from '@/utils/formatters'
-import { deleteCapitalLog, updateCapitalLog, updateTransaction, fetchTransactionsByPoolStock } from '@/api/supabase'
-import { calcNewCostPrice } from '@/utils/calculators'
+import { deleteCapitalLog, updateCapitalLog, updateTransaction, deleteTransaction, fetchTransactionsByPoolStock, deleteHolding, upsertHolding } from '@/api/supabase'
 import FundAllocationForm from '@/components/fund/FundAllocationForm.vue'
 import CapitalLogList from '@/components/fund/CapitalLogList.vue'
 import LoadingSkeleton from '@/components/common/LoadingSkeleton.vue'
@@ -156,13 +155,67 @@ async function onEditLog(payload) {
   }
 }
 
-async function onDeleteLog(id) {
+async function onDeleteLog(log) {
   try {
+    // 普通资金变动（增资/减资）：只删记录
+    if (!log.pool_id) {
+      await deleteCapitalLog(log.id)
+      await fundStore.loadCapitalLogs()
+      return
+    }
+
+    // 买入/卖出：需要级联交易 + 持仓
+    const { id, pool_id, type: capType, amount, note } = log
+    const code = parseStockCode2(note)
+    if (!code) {
+      await deleteCapitalLog(id)
+      await fundStore.loadCapitalLogs()
+      return
+    }
+
+    // 找到对应交易记录
+    const allTxs = await fetchTransactionsByPoolStock(pool_id, code)
+    const matchedTx = allTxs.find(t => Math.abs(t.amount - amount) < 0.01)
+    if (matchedTx) {
+      await deleteTransaction(matchedTx.id)
+      txStore.transactions = txStore.transactions.filter(t => t.id !== matchedTx.id)
+    }
+
+    // 用剩余交易重算持仓
+    const remaining = allTxs.filter(t => t.id !== (matchedTx?.id))
+    if (remaining.length === 0) {
+      await deleteHolding(pool_id, code)
+    } else {
+      let totalBuyQty = 0, totalBuyAmt = 0
+      for (const tx of remaining) {
+        if (tx.type === 'buy') { totalBuyQty += tx.quantity; totalBuyAmt += tx.amount }
+      }
+      const netQty = remaining.reduce((s, tx) => s + (tx.type === 'buy' ? tx.quantity : -tx.quantity), 0)
+      const costPrice = totalBuyQty > 0 ? totalBuyAmt / totalBuyQty : 0
+      if (netQty <= 0) {
+        await deleteHolding(pool_id, code)
+      } else {
+        await upsertHolding({
+          pool_id, stock_code: code,
+          stock_name: matchedTx?.stock_name || '',
+          quantity: netQty, cost_price: costPrice
+        })
+      }
+    }
+    await holdingStore.loadHoldings()
+
+    // 最后删资金记录 + 刷新
     await deleteCapitalLog(id)
     await fundStore.loadCapitalLogs()
   } catch (e) {
-    console.error('Delete log error:', e)
+    console.error('Delete cascade error:', e)
   }
+}
+
+function parseStockCode2(note) {
+  if (!note) return ''
+  const parts = note.split(' ')
+  return parts.length > 1 && /^\d{6}$/.test(parts[parts.length - 1]) ? parts[parts.length - 1] : ''
 }
 
 onMounted(async () => {

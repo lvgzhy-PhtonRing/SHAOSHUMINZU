@@ -7,8 +7,8 @@
           <span class="stock-name">{{ stock.stock_name }}</span>
           <span class="stock-code">{{ stock.stock_code }}</span>
         </div>
-        <span class="stock-change" :class="change >= 0 ? 'rise' : 'fall'">
-          {{ change >= 0 ? '+' : '' }}{{ change.toFixed(2) }}%
+        <span class="stock-change" :class="costReturn >= 0 ? 'rise' : 'fall'">
+          {{ costReturn >= 0 ? '+' : '' }}{{ costReturn.toFixed(2) }}%
         </span>
       </div>
       <div class="holding-details">
@@ -58,7 +58,11 @@ const props = defineProps({
 
 defineEmits(['sell', 'tap'])
 
-const change = computed(() => parseFloat(props.stock.changePct) || 0)
+const costReturn = computed(() => {
+  const cp = parseFloat(props.stock.cost_price) || 0
+  const np = parseFloat(props.stock.currentPrice) || 0
+  return cp > 0 ? ((np - cp) / cp) * 100 : 0
+})
 </script>
 
 <style scoped>
