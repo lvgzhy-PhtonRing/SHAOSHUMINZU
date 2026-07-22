@@ -85,6 +85,7 @@ import { useHoldingStore } from '@/stores/holdings'
 import { usePriceStore } from '@/stores/prices'
 import { formatMoney } from '@/utils/formatters'
 import { useFundStore } from '@/stores/funds'
+import { loadPoolAllocation } from '@/api/supabase'
 import DonutChart from '@/components/positions/DonutChart.vue'
 import PoolPositionCard from '@/components/positions/PoolPositionCard.vue'
 
@@ -112,26 +113,25 @@ const totalMarketValue = computed(() => {
 const floatPnl = computed(() => totalMarketValue.value - totalCost.value)
 const totalAsset = computed(() => totalCapital.value + floatPnl.value)
 const totalAvailable = computed(() => totalCapital.value - totalCost.value)
-// 从 localStorage 恢复各池分配金额（元），优先 poolAmounts，兼容旧 poolPercents
-function loadPoolAlloc() {
+// 从 localStorage/Supabase 恢复各池分配金额（元）
+function loadLocalAlloc() {
   const raw = localStorage.getItem('poolAmounts')
-  if (raw) {
-    const parsed = JSON.parse(raw)
-    const vals = Object.values(parsed)
-    const sum = vals.reduce((s, v) => s + v, 0)
-    // 旧百分比（值≤100且合计≈100）→ 转金额
-    if (vals.every(v => v <= 100) && Math.abs(sum - 100) < 1) {
-      const amt = {}
-      for (const k of Object.keys(parsed)) amt[k] = totalCapital.value * parsed[k] / 100
-      return amt
-    }
-    return parsed
+  if (!raw) return null
+  const parsed = JSON.parse(raw)
+  const vals = Object.values(parsed)
+  const sum = vals.reduce((s, v) => s + v, 0)
+  if (vals.every(v => v <= 100) && Math.abs(sum - 100) < 1) {
+    const amt = {}
+    for (const k of Object.keys(parsed)) amt[k] = totalCapital.value * parsed[k] / 100
+    return amt
   }
-  // 无保存值：平分
+  return parsed
+}
+function defaultAlloc() {
   const each = Math.floor(totalCapital.value / 5 / 10000) * 10000
   return { '共有': each, '春': each, '维': each, '队': each, '回': each }
 }
-const poolAmounts = loadPoolAlloc()
+const poolAmounts = reactive(loadLocalAlloc() || defaultAlloc())
 
 const totalPositionRatio = computed(() => {
   return totalAsset.value > 0 ? (totalMarketValue.value / totalAsset.value) * 100 : 0
@@ -201,6 +201,14 @@ const trendData = [
 
 onMounted(async () => {
   try {
+    // 优先从 Supabase 加载分配金额（跨设备同步）
+    const server = await loadPoolAllocation()
+    if (server) {
+      for (const k of Object.keys(server)) {
+        if (poolAmounts[k] !== undefined) poolAmounts[k] = server[k]
+      }
+    }
+
     await Promise.all([
       poolStore.loadPools(),
       holdingStore.loadHoldings(),

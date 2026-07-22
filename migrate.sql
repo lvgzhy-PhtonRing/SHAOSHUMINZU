@@ -1,0 +1,1 @@
+ALTER TABLE holdings ALTER COLUMN cost_price TYPE DECIMAL(15,6);

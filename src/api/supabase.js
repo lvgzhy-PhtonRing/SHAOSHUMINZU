@@ -155,6 +155,25 @@ export async function upsertStockCache(cache) {
   if (error) console.error('Cache update error:', error)
 }
 
+/* 保存子池分配金额到服务器（跨设备同步） */
+export async function savePoolAllocation(amounts) {
+  const { error } = await supabase
+    .from('app_config')
+    .upsert({ key: 'pool_amounts', value: JSON.stringify(amounts) })
+  if (error) throw new Error(error.message)
+}
+
+/* 加载子池分配金额 */
+export async function loadPoolAllocation() {
+  const { data, error } = await supabase
+    .from('app_config')
+    .select('value')
+    .eq('key', 'pool_amounts')
+    .single()
+  if (error || !data) return null
+  try { return JSON.parse(data.value) } catch { return null }
+}
+
 /* 更新密码 */
 export async function updatePassword(newHash) {
   const { error } = await supabase

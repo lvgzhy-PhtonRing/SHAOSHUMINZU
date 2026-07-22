@@ -104,6 +104,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { formatMoney } from '@/utils/formatters'
+import { savePoolAllocation } from '@/api/supabase'
 
 const props = defineProps({
   pools: { type: Array, default: () => [] },
@@ -151,11 +152,10 @@ const users = [
 const userKeys = users.map(u => u.key)
 
 // 只保存四个人的金额（元），共有=剩余
-function loadUserAmts() {
+function fallbackAmts() {
   const raw = localStorage.getItem('poolAmounts')
   if (raw) {
     const parsed = JSON.parse(raw)
-    // 检测旧百分比格式 → 转为金额
     const vals = Object.values(parsed)
     const sum = vals.reduce((s, v) => s + v, 0)
     if (vals.every(v => v <= 100) && Math.abs(sum - 100) < 1) {
@@ -163,21 +163,30 @@ function loadUserAmts() {
       for (const k of userKeys) amt[k] = Math.round(props.totalAvailable * (parsed[k] || 15) / 100)
       return amt
     }
-    // 取四个人的
     const amt = {}
     for (const k of userKeys) amt[k] = parsed[k] || 0
     return amt
   }
-  // 无保存：默认各分20%（按当前总可用）
   const each = Math.floor(props.totalAvailable * 0.2 / 10000) * 10000
   const amt = {}
   for (const k of userKeys) amt[k] = each
   return amt
 }
 
-const amts = reactive(loadUserAmts())
+const amts = reactive(fallbackAmts())
 
-onMounted(() => {
+onMounted(async () => {
+  try {
+    const { loadPoolAllocation } = await import('@/api/supabase')
+    const server = await loadPoolAllocation()
+    if (server) {
+      for (const k of userKeys) {
+        if (server[k] !== undefined) amts[k] = server[k]
+      }
+      return
+    }
+  } catch (e) {}
+  // fallback localStorage
   const raw = localStorage.getItem('poolAmounts')
   if (raw) {
     try {
@@ -242,6 +251,8 @@ function submitAlloc() {
   for (const k of userKeys) rec[k] = amts[k]
   localStorage.setItem('poolAmounts', JSON.stringify(rec))
   localStorage.removeItem('poolPercents')
+  // 同步到 Supabase（跨设备）
+  savePoolAllocation(rec).catch(e => console.error('Save allocation to server:', e))
 
   emit('alloc-change', {
     total: props.totalAvailable,
