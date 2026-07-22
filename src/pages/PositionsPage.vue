@@ -180,11 +180,11 @@ const poolPositionData = computed(() => {
 const donutSize = 200
 const chartRadius = donutSize / 2 - 20
 
-// 各子池持股市值占总市值比例（环形分段用）
+// 各子池持股市值占总资产比例（环形分段 = 有色段，灰底 = 现金比例）
 const poolShares = computed(() => {
   return poolPositionData.value.map(p => ({
     name: p.name, color: p.color,
-    share: totalMarketValue.value > 0 ? (p.marketValue / totalMarketValue.value) * 100 : 0
+    share: totalAsset.value > 0 ? (p.marketValue / totalAsset.value) * 100 : 0
   }))
 })
 
