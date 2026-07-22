@@ -1,0 +1,27 @@
+# .github/workflows/backup.yml
+# 每日 03:00 自动备份数据，保留最近 3 天
+name: Daily Database Backup
+
+on:
+  schedule:
+    - cron: '0 3 * * *'   # 每天 03:00 UTC = 11:00 北京时间
+  workflow_dispatch:       # 也可手动触发
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run backup script
+        run: node .github/scripts/backup.mjs
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+
+      - name: Upload backup as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: supabase-backup
+          path: backups/
+          retention-days: 3   # 保留 3 天，自动过期
