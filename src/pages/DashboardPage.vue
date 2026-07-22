@@ -75,25 +75,29 @@ const poolColorMap = {}
 const colorList = ['#0f3460', '#e94560', '#00d2a1', '#ffc107', '#7c4dff']
 
 onMounted(async () => {
-  await Promise.all([
-    poolStore.loadPools(),
-    holdingStore.loadHoldings()
-  ])
+  try {
+    await Promise.all([
+      poolStore.loadPools(),
+      holdingStore.loadHoldings()
+    ])
 
-  poolStore.pools.forEach((p, i) => {
-    poolNameMap[p.id] = p.name
-    poolColorMap[p.id] = colorList[i % colorList.length]
-  })
+    poolStore.pools.forEach((p, i) => {
+      poolNameMap[p.id] = p.name
+      poolColorMap[p.id] = colorList[i % colorList.length]
+    })
 
-  const codes = holdingStore.stockCodes
-  if (codes.length) {
-    await priceStore.loadPrices(codes)
-  } else {
-    await priceStore.loadFromCache()
+    const codes = holdingStore.stockCodes
+    if (codes.length) {
+      await priceStore.loadPrices(codes)
+    } else {
+      await priceStore.loadFromCache()
+    }
+  } catch (e) {
+    console.error('Dashboard load error:', e)
+  } finally {
+    updateTime()
+    loading.value = false
   }
-
-  updateTime()
-  loading.value = false
 })
 
 function updateTime() {
