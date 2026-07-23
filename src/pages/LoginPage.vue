@@ -4,7 +4,7 @@
     <div class="login-header">
       <div class="app-logo">📊</div>
       <h1 class="app-title">结构化动态仓位<br>配置亏损计划</h1>
-      <p class="app-subtitle">合伙股票账户管理系统</p>
+      <p class="app-subtitle">我和少数民族们</p>
     </div>
 
     <div class="login-form">

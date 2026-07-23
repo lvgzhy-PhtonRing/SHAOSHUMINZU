@@ -18,7 +18,7 @@
           <span class="trd-label">总市值</span>
           <span class="trd-value num-mono">{{ formatMoney(totalMarketValue) }}</span>
           <span class="trd-sep">/</span>
-          <span class="trd-label">子池资产</span>
+          <span class="trd-label">总资产</span>
           <span class="trd-value num-mono">{{ formatMoney(totalAsset) }}</span>
         </div>
         <div class="total-slogan">
