@@ -43,6 +43,8 @@
             :percent="poolPositionData[0].percent"
             :market-value="poolPositionData[0].marketValue"
             :total-pool-asset="poolPositionData[0].totalPoolAsset"
+            :capital-alloc="poolPositionData[0].poolCapital"
+            :pool-cost="poolPositionData[0].cost"
             :color="poolPositionData[0].color"
             wide
           />
@@ -56,6 +58,8 @@
             :percent="item.percent"
             :market-value="item.marketValue"
             :total-pool-asset="item.totalPoolAsset"
+            :capital-alloc="item.poolCapital"
+            :pool-cost="item.cost"
             :color="item.color"
           />
         </div>
