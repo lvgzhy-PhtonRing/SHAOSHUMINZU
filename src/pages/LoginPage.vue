@@ -52,32 +52,45 @@ function deleteChar() {
 
 async function doLogin() {
   if (input.value.length !== 4) return
-  const storedPwd = localStorage.getItem('pwd') || '1111'
-  // 1. 验证本地缓存
-  const localValid = isHashed(storedPwd)
-    ? await hashPassword(input.value) === storedPwd
-    : input.value === storedPwd
-  if (localValid) {
-    // 旧版明文密码 → 升级为哈希存储
-    if (!isHashed(storedPwd)) {
-      localStorage.setItem('pwd', await hashPassword(input.value))
-    }
+  const pwd = input.value
+
+  // 1. 先验证服务器（权威来源，确保跨设备密码一致）
+  let serverOk = false, serverReachable = true
+  try {
+    const { verifyPassword } = await import('@/api/supabase')
+    serverOk = await verifyPassword(pwd)
+  } catch {
+    serverReachable = false // 网络不可用，回退本地
+  }
+
+  if (serverOk) {
+    // 服务器认 → 更新本地缓存，放行
+    localStorage.setItem('pwd', await hashPassword(pwd))
     localStorage.setItem('auth', 'true')
     router.replace({ name: 'dashboard' })
     return
   }
-  // 2. 本地失败，尝试服务器验证（跨设备同步的密码）
-  const { verifyPassword } = await import('@/api/supabase')
-  const serverValid = await verifyPassword(input.value)
-  if (serverValid) {
-    localStorage.setItem('pwd', await hashPassword(input.value))
-    localStorage.setItem('auth', 'true')
-    router.replace({ name: 'dashboard' })
-  } else {
-    error.value = true
-    input.value = ''
-    setTimeout(() => { error.value = false }, 1500)
+
+  // 2. 服务器不可达时，回退本地缓存
+  if (!serverReachable) {
+    const storedPwd = localStorage.getItem('pwd') || '1111'
+    const localValid = isHashed(storedPwd)
+      ? await hashPassword(pwd) === storedPwd
+      : pwd === storedPwd
+    if (localValid) {
+      if (!isHashed(storedPwd)) {
+        localStorage.setItem('pwd', await hashPassword(pwd))
+      }
+      localStorage.setItem('auth', 'true')
+      router.replace({ name: 'dashboard' })
+      return
+    }
   }
+
+  // 3. 都不通过 → 拒绝
+  error.value = true
+  input.value = ''
+  setTimeout(() => { error.value = false }, 1500)
 }
 </script>
 
