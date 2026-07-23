@@ -248,6 +248,34 @@ function onFormSubmit(data) {
     formError.value = '请先搜索并选择股票代码'
     return
   }
+
+  // 买入时检查子池可用资金是否足够
+  if (!isSell.value) {
+    const pool = poolStore.pools.find(p => p.id === data.pool_id)
+    if (pool) {
+      const raw = localStorage.getItem('poolAmounts')
+      let poolAmounts = {}
+      if (raw) {
+        poolAmounts = JSON.parse(raw)
+        // 迁移旧 '共有' 键
+        if (poolAmounts['共有'] !== undefined && poolAmounts['公共池'] === undefined) {
+          poolAmounts['公共池'] = poolAmounts['共有']
+          delete poolAmounts['共有']
+        }
+      }
+      const alloc = poolAmounts[pool.name] || 0
+      const poolCost = holdingStore.holdings
+        .filter(h => h.pool_id === data.pool_id)
+        .reduce((s, h) => s + h.cost_price * h.quantity, 0)
+      const available = alloc - poolCost
+      const need = parseFloat(data.amount) || 0
+      if (need > available) {
+        formError.value = `子池「${pool.name}」可用资金不足！分配 ${formatMoney(alloc)}，已用 ${formatMoney(poolCost)}，剩余 ${formatMoney(available)}，本次需 ${formatMoney(need)}`
+        return
+      }
+    }
+  }
+
   // 暂存交易，进入校对步骤
   pendingTrade.value = {
     ...data,
