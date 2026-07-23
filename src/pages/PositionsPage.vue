@@ -67,14 +67,31 @@
 
       <!-- 总仓位变化模块 -->
       <div class="section-card">
-        <div class="section-title">总仓位变化 <span class="subtitle">近7天</span></div>
+        <div class="section-title">总仓位变化 <span class="subtitle">近10天</span></div>
         <div class="trend-chart">
-          <div class="bars">
-            <div v-for="(day, i) in trendData" :key="i" class="bar-wrapper">
-              <div class="bar" :style="{ height: day.ratio * 2 + 'px' }"></div>
-              <div class="bar-label">{{ day.label }}</div>
-            </div>
-          </div>
+          <svg :viewBox="`0 0 ${SVG_W} ${SVG_H}`" class="trend-svg" preserveAspectRatio="xMidYMid meet">
+            <defs>
+              <linearGradient id="trendGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="var(--bg-accent)" stop-opacity="0.25" />
+                <stop offset="100%" stop-color="var(--bg-accent)" stop-opacity="0.02" />
+              </linearGradient>
+            </defs>
+            <!-- 参考线 -->
+            <line v-for="pct in [20, 30]" :key="pct"
+              :x1="PAD_L" :x2="SVG_W - PAD_R"
+              :y1="yPos(pct)" :y2="yPos(pct)"
+              stroke="rgba(255,255,255,0.05)" stroke-dasharray="3,3" />
+            <!-- 面积填充 -->
+            <path :d="areaPath" fill="url(#trendGrad)" />
+            <!-- 折线 -->
+            <polyline :points="linePoints" fill="none" stroke="var(--bg-accent)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" />
+            <!-- 数据点 + 标签 -->
+            <g v-for="(d, i) in trendData" :key="i">
+              <circle :cx="xPos(i)" :cy="yPos(d.ratio)" r="3.5" fill="var(--bg-accent)" stroke="var(--bg-card)" stroke-width="1.5" />
+              <text :x="xPos(i)" :y="yPos(d.ratio) - 10" text-anchor="middle" class="trend-pct">{{ d.ratio }}%</text>
+              <text :x="xPos(i)" :y="SVG_H - 4" text-anchor="middle" class="trend-day">{{ d.label }}</text>
+            </g>
+          </svg>
         </div>
       </div>
     </template>
@@ -229,8 +246,31 @@ const trendData = [
   { label: '一', ratio: 24 }, { label: '二', ratio: 28 },
   { label: '三', ratio: 32 }, { label: '四', ratio: 26 },
   { label: '五', ratio: 22 }, { label: '六', ratio: 26 },
-  { label: '日', ratio: 26 }
+  { label: '日', ratio: 25 }, { label: '一', ratio: 29 },
+  { label: '二', ratio: 31 }, { label: '三', ratio: 27 },
 ]
+
+// SVG 折线图参数
+const SVG_W = 800, SVG_H = 200
+const PAD_L = 20, PAD_R = 20, PAD_T = 28, PAD_B = 22
+const CHART_W = SVG_W - PAD_L - PAD_R
+const CHART_H = SVG_H - PAD_T - PAD_B
+
+function xPos(i) {
+  return PAD_L + (i / (trendData.length - 1)) * CHART_W
+}
+function yPos(r) {
+  return PAD_T + CHART_H * (1 - r / 40)
+}
+const linePoints = computed(() =>
+  trendData.map((d, i) => `${xPos(i)},${yPos(d.ratio)}`).join(' ')
+)
+const areaPath = computed(() => {
+  const pts = trendData.map((d, i) => `${xPos(i)},${yPos(d.ratio)}`).join(' L ')
+  const lastX = xPos(trendData.length - 1)
+  const bottomY = SVG_H - PAD_B
+  return `M ${xPos(0)},${yPos(trendData[0].ratio)} L ${pts} L ${lastX},${bottomY} L ${xPos(0)},${bottomY} Z`
+})
 
 onMounted(async () => {
   try {
@@ -274,28 +314,10 @@ onMounted(async () => {
 .section-title .subtitle { font-size: 11px; color: var(--text-secondary); font-weight: 400; }
 .pos-gongyou { margin-bottom: 8px; }
 .pos-users-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.bars {
-  display: flex;
-  align-items: flex-end;
-  gap: 4px;
-  height: 60px;
-  padding: 4px 0;
-}
-.bar-wrapper {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-.bar {
-  width: 100%;
-  max-width: 24px;
-  background: var(--bg-accent);
-  border-radius: 4px 4px 0 0;
-  min-height: 4px;
-}
-.bar-label { font-size: 10px; color: var(--text-muted); }
+.trend-chart { padding: 4px 0 6px; }
+.trend-svg { width: 100%; height: auto; display: block; }
+.trend-pct { font-size: 10px; fill: var(--text-secondary); font-family: var(--font-number); }
+.trend-day { font-size: 10px; fill: var(--text-muted); }
 .legend-horizontal {
   display: flex; flex-wrap: wrap; gap: 10px 16px; justify-content: center; padding: 4px 0 0;
 }

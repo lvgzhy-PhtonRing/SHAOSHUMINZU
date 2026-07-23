@@ -42,13 +42,13 @@
         </span>
       </div>
 
-      <!-- 合计 -->
+      <!-- 合计（初始值） -->
       <div class="total-row">
-        <span>四人合计</span>
-        <span class="num-mono">{{ formatMoney(usersTotal) }}</span>
+        <span>初始四人合计</span>
+        <span class="num-mono">{{ formatMoney(initialUsersTotal) }}</span>
         <span class="sep">|</span>
-        <span>公共池</span>
-        <span class="num-mono" :class="gongyouAmt >= 0 ? '' : 'fall'">{{ formatMoney(gongyouAmt) }}</span>
+        <span>初始公共池</span>
+        <span class="num-mono">{{ formatMoney(initialPublicAlloc) }}</span>
       </div>
 
       <div v-if="overdrawnPools.length" class="err">
@@ -191,6 +191,14 @@ function fallbackAmts() {
 
 const amts = reactive(fallbackAmts())
 
+// 初始值快照（底部合计行显示用）
+const initialUsersTotal = ref(0)
+const initialPublicAlloc = ref(0)
+function snapshotInitialValues() {
+  initialUsersTotal.value = userKeys.reduce((s, k) => s + amts[k], 0)
+  initialPublicAlloc.value = publicInitAlloc.value
+}
+
 onMounted(async () => {
   try {
     const { loadPoolAllocation } = await import('@/api/supabase')
@@ -199,6 +207,7 @@ onMounted(async () => {
       for (const k of userKeys) {
         if (server[k] !== undefined) amts[k] = server[k]
       }
+      snapshotInitialValues()
       return
     }
   } catch (e) {}
@@ -212,6 +221,7 @@ onMounted(async () => {
       }
     } catch (e) {}
   }
+  snapshotInitialValues()
 })
 
 // 四人合计（元）
