@@ -46,10 +46,10 @@
     <template v-else>
       <HoldingCard
         v-for="h in displayHoldings"
-        :key="`${h.pool_id}-${h.stock_code}`"
+        :key="h.merged ? 'merged-' + h.stock_code : `${h.pool_id}-${h.stock_code}`"
         :stock="h"
-        :pool-name="poolNameMap[h.pool_id] || ''"
-        :pool-color="poolColorMap[h.pool_id] || '#0f3460'"
+        :pool-name="h.merged ? `共 ${h.poolCount} 个池` : (poolNameMap[h.pool_id] || '')"
+        :pool-color="h.merged ? '#888888' : (poolColorMap[h.pool_id] || '#0f3460')"
         @sell="onSellStock"
       />
     </template>
@@ -119,14 +119,28 @@ function updateTime() {
 }
 
 function onSellStock(stock) {
+  // 合并持仓：选择该股票持仓量最大的子池作为卖出池
+  let poolId = stock.pool_id
+  let poolName = poolNameMap[poolId] || ''
+
+  if (stock.merged) {
+    const best = holdingStore.holdings
+      .filter(h => h.stock_code === stock.stock_code)
+      .sort((a, b) => b.quantity - a.quantity)[0]
+    if (best) {
+      poolId = best.pool_id
+      poolName = poolNameMap[poolId] || ''
+    }
+  }
+
   router.push({
     name: 'trade',
     query: {
       code: stock.stock_code,
       name: stock.stock_name,
       price: stock.currentPrice || stock.cost_price,
-      poolId: stock.pool_id,
-      poolName: poolNameMap[stock.pool_id] || ''
+      poolId,
+      poolName
     }
   })
 }
@@ -137,19 +151,49 @@ const displayHoldings = computed(() => {
 
   if (poolId !== null) {
     filtered = filtered.filter(h => h.pool_id === poolId)
+    return filtered.map(h => {
+      const priceData = priceStore.prices[h.stock_code] || {}
+      const currentPrice = priceData.price || h.cost_price || 0
+      const stockName = priceData.stock_name || h.stock_name || ''
+      return {
+        ...h,
+        merged: false,
+        stock_name: stockName,
+        currentPrice,
+        changePct: priceData.change_pct || 0,
+        marketValue: currentPrice * h.quantity,
+        profit: calcProfit(currentPrice, h.cost_price, h.quantity)
+      }
+    }).sort((a, b) => b.marketValue - a.marketValue)
   }
 
-  return filtered.map(h => {
-    const priceData = priceStore.prices[h.stock_code] || {}
-    const currentPrice = priceData.price || h.cost_price || 0
-    const stockName = priceData.stock_name || h.stock_name || ''
+  // 总账户模式：相同股票跨子池合并
+  const merged = {}
+  for (const h of filtered) {
+    if (!merged[h.stock_code]) {
+      merged[h.stock_code] = { ...h, totalQty: 0, totalCost: 0, poolCount: 0 }
+    }
+    merged[h.stock_code].totalQty += h.quantity
+    merged[h.stock_code].totalCost += h.cost_price * h.quantity
+    merged[h.stock_code].poolCount++
+  }
+
+  return Object.values(merged).map(m => {
+    const priceData = priceStore.prices[m.stock_code] || {}
+    const currentPrice = priceData.price || m.cost_price || 0
+    const stockName = priceData.stock_name || m.stock_name || ''
+    const avgCost = m.totalQty > 0 ? m.totalCost / m.totalQty : 0
     return {
-      ...h,
+      ...m,
+      merged: true,
       stock_name: stockName,
       currentPrice,
       changePct: priceData.change_pct || 0,
-      marketValue: currentPrice * h.quantity,
-      profit: calcProfit(currentPrice, h.cost_price, h.quantity)
+      quantity: m.totalQty,
+      cost_price: avgCost,
+      marketValue: currentPrice * m.totalQty,
+      profit: calcProfit(currentPrice, avgCost, m.totalQty),
+      pool_id: null  // 无对应单子池
     }
   }).sort((a, b) => b.marketValue - a.marketValue)
 })

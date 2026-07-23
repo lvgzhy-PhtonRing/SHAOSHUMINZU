@@ -40,16 +40,22 @@
       <div class="section-title">股票交易记录</div>
       <div class="trade-log-list">
         <div v-for="log in tradeLogs" :key="log.id" class="trade-log-item">
-          <div class="tli-header">
-            <span class="tli-action" :class="log.type === 'add' ? 'rise' : 'fall'">
-              {{ log.type === 'add' ? '卖出' : '买入' }} {{ log.stock_code }}
-            </span>
-            <span class="tli-name">{{ log.stock_name }}</span>
+          <div class="tli-body">
+            <div class="tli-header">
+              <span class="tli-action" :class="log.type === 'add' ? 'rise' : 'fall'">
+                {{ log.type === 'add' ? '卖出' : '买入' }} {{ log.stock_code }}
+              </span>
+              <span class="tli-name">{{ log.stock_name }}</span>
+            </div>
+            <div class="tli-meta">
+              <span>{{ formatMoney(log.amount) }}</span>
+              <span> · {{ log.pool_name }}</span>
+              <span> · {{ formatDateString(log.created_at) }}</span>
+            </div>
           </div>
-          <div class="tli-meta">
-            <span>{{ formatMoney(log.amount) }}</span>
-            <span> · {{ log.pool_name }}</span>
-            <span> · {{ formatDateString(log.created_at) }}</span>
+          <div class="tli-actions">
+            <button class="tli-edit-btn" @click="startEditTrade(log)">✏️</button>
+            <button class="tli-del-btn" @click="confirmDeleteTrade(log)">✕</button>
           </div>
         </div>
       </div>
@@ -91,6 +97,72 @@
         </div>
       </div>
     </template>
+
+    <!-- 编辑交易弹窗 -->
+    <teleport to="body">
+      <div v-if="editingTrade" class="overlay" @click.self="editingTrade = null">
+        <div class="dialog">
+          <div class="dlg-title">编辑交易记录</div>
+          <div class="dlg-field">
+            <label class="dlg-label">类型</label>
+            <span class="dlg-value">{{ editingTrade.type === 'add' ? '卖出' : '买入' }}</span>
+          </div>
+          <div class="dlg-field">
+            <label class="dlg-label">股票代码</label>
+            <span class="dlg-value">{{ editStockCode }}</span>
+          </div>
+          <div class="dlg-field">
+            <label class="dlg-label">成交数量（股）</label>
+            <input v-model="editQuantity" type="number" inputmode="numeric" class="dlg-input num-mono" placeholder="0" />
+          </div>
+          <div class="dlg-field">
+            <label class="dlg-label">金额（元）</label>
+            <input v-model="editAmount" type="number" inputmode="decimal" class="dlg-input num-mono" />
+          </div>
+          <div class="dlg-field">
+            <label class="dlg-label">备注</label>
+            <input v-model="editNote" type="text" class="dlg-input" placeholder="备注" />
+          </div>
+          <div class="dlg-btns">
+            <button class="d-cancel" @click="editingTrade = null">取消</button>
+            <button class="d-ok" @click="saveEditTrade">✅ 保存</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 删除确认弹窗 -->
+      <div v-if="deletingTrade" class="overlay" @click.self="deletingTrade = null">
+        <div class="dialog">
+          <div class="dlg-title">⚠️ 确认删除交易</div>
+          <div class="dlg-info">此操作不可撤销！</div>
+          <div class="dlg-rows">
+            <div class="dlg-row">
+              <span>{{ deletingTrade.type === 'add' ? '卖出' : '买入' }}</span>
+              <span class="num-mono">{{ formatMoney(deletingTrade.amount) }}</span>
+            </div>
+            <div v-if="deletingTrade.stock_code" class="dlg-row">
+              <span>股票</span>
+              <span>{{ deletingTrade.stock_code }} {{ deletingTrade.stock_name }}</span>
+            </div>
+            <div v-if="deletingTrade.pool_name" class="dlg-row">
+              <span>子池</span>
+              <span>{{ deletingTrade.pool_name }}</span>
+            </div>
+            <div v-if="deletingTrade.note" class="dlg-row">
+              <span>备注</span>
+              <span>{{ deletingTrade.note }}</span>
+            </div>
+          </div>
+          <div class="dlg-warn">
+            ⚠️ 删除后将同步删除关联交易、更新持仓和可用资金，不可恢复！
+          </div>
+          <div class="dlg-btns">
+            <button class="d-cancel" @click="deletingTrade = null">取消</button>
+            <button class="d-ok del" @click="doDeleteTrade">🗑️ 确认删除</button>
+          </div>
+        </div>
+      </div>
+    </teleport>
   </div>
 </template>
 
@@ -103,7 +175,7 @@ import { useHoldingStore } from '@/stores/holdings'
 import { useFundStore } from '@/stores/funds'
 import { calcNewCostPrice } from '@/utils/calculators'
 import { formatMoney, formatPrice } from '@/utils/formatters'
-import { upsertHolding, deleteHolding, insertCapitalLog } from '@/api/supabase'
+import { upsertHolding, deleteHolding, insertCapitalLog, deleteCapitalLog, updateCapitalLog, updateTransaction, deleteTransaction, fetchTransactionsByPoolStock } from '@/api/supabase'
 import StockSearch from '@/components/trade/StockSearch.vue'
 import TradeForm from '@/components/trade/TradeForm.vue'
 
@@ -122,6 +194,14 @@ const sellPoolName = ref('')
 const formError = ref('')
 const pendingTrade = ref(null)
 const actualAmount = ref('')
+
+// 交易记录编辑/删除
+const editingTrade = ref(null)
+const editAmount = ref('')
+const editNote = ref('')
+const editQuantity = ref('')
+const editStockCode = ref('')
+const deletingTrade = ref(null)
 
 const diff = computed(() => {
   if (!actualAmount.value || !pendingTrade.value) return 0
@@ -218,6 +298,141 @@ async function confirmTrade() {
   }
 }
 
+// ===== 交易记录编辑/删除 =====
+
+async function startEditTrade(log) {
+  editingTrade.value = log
+  editAmount.value = String(log.amount)
+  editNote.value = log.note || ''
+  editQuantity.value = ''
+  editStockCode.value = log.stock_code || ''
+
+  if (log.stock_code) {
+    try {
+      const txs = await fetchTransactionsByPoolStock(log.pool_id, log.stock_code)
+      const match = txs.find(t => Math.abs(t.amount - log.amount) < 0.01)
+      if (match) editQuantity.value = String(match.quantity)
+    } catch (e) { console.error('Fetch tx for edit:', e) }
+  }
+}
+
+async function saveEditTrade() {
+  if (!editingTrade.value) return
+  const amount = parseFloat(editAmount.value)
+  if (!amount || amount <= 0) return
+
+  const log = editingTrade.value
+  const stockCode = editStockCode.value
+  const newQty = parseInt(editQuantity.value) || 0
+
+  try {
+    // 1. 找对应交易记录
+    if (stockCode) {
+      const allTxs = await fetchTransactionsByPoolStock(log.pool_id, stockCode)
+      const matchedTx = allTxs.find(t => Math.abs(t.amount - log.amount) < 0.01)
+
+      if (matchedTx && newQty > 0) {
+        // 2. 更新交易记录（数量+金额）
+        const newPrice = amount / newQty
+        await updateTransaction(matchedTx.id, { quantity: newQty, amount, price: newPrice })
+        txStore.transactions = txStore.transactions.map(t =>
+          t.id === matchedTx.id ? { ...t, quantity: newQty, amount, price: newPrice } : t
+        )
+
+        // 3. 用所有交易重算该子池+该股票的持仓
+        const isBuy = log.type === 'remove'  // capital_log.remove = 买入
+        const otherTxs = allTxs.filter(t => t.id !== matchedTx.id)
+        const allCalculated = [
+          ...otherTxs,
+          { ...matchedTx, quantity: newQty, amount, price: newPrice, type: isBuy ? 'buy' : 'sell' }
+        ]
+        let totalBuyQty = 0, totalBuyAmt = 0
+        for (const tx of allCalculated) {
+          if (tx.type === 'buy') { totalBuyQty += tx.quantity; totalBuyAmt += tx.amount }
+        }
+        const newCostPrice = totalBuyQty > 0 ? totalBuyAmt / totalBuyQty : 0
+        const netQty = allCalculated.reduce((s, tx) => s + (tx.type === 'buy' ? tx.quantity : -tx.quantity), 0)
+
+        if (netQty <= 0) {
+          await deleteHolding(log.pool_id, stockCode)
+        } else {
+          await upsertHolding({
+            pool_id: log.pool_id, stock_code: stockCode,
+            stock_name: matchedTx.stock_name || '',
+            quantity: netQty, cost_price: newCostPrice
+          })
+        }
+        await holdingStore.loadHoldings()
+      }
+    }
+
+    // 4. 更新资金记录 + 全量刷新
+    await updateCapitalLog(log.id, { amount, note: editNote.value || '' })
+    await fundStore.loadCapitalLogs()
+    await txStore.loadTransactions()
+
+    editingTrade.value = null
+  } catch (e) {
+    console.error('Save edit trade error:', e)
+  }
+}
+
+function confirmDeleteTrade(log) {
+  deletingTrade.value = log
+}
+
+async function doDeleteTrade() {
+  if (!deletingTrade.value) return
+  const log = deletingTrade.value
+
+  try {
+    const { id, pool_id, amount } = log
+    const code = log.stock_code
+
+    if (code) {
+      // 找到对应交易记录并删除
+      const allTxs = await fetchTransactionsByPoolStock(pool_id, code)
+      const matchedTx = allTxs.find(t => Math.abs(t.amount - amount) < 0.01)
+      if (matchedTx) {
+        await deleteTransaction(matchedTx.id)
+        txStore.transactions = txStore.transactions.filter(t => t.id !== matchedTx.id)
+      }
+
+      // 用剩余交易重算持仓
+      const remaining = allTxs.filter(t => t.id !== (matchedTx?.id))
+      if (remaining.length === 0) {
+        await deleteHolding(pool_id, code)
+      } else {
+        let totalBuyQty = 0, totalBuyAmt = 0
+        for (const tx of remaining) {
+          if (tx.type === 'buy') { totalBuyQty += tx.quantity; totalBuyAmt += tx.amount }
+        }
+        const netQty = remaining.reduce((s, tx) => s + (tx.type === 'buy' ? tx.quantity : -tx.quantity), 0)
+        const costPrice = totalBuyQty > 0 ? totalBuyAmt / totalBuyQty : 0
+        if (netQty <= 0) {
+          await deleteHolding(pool_id, code)
+        } else {
+          await upsertHolding({
+            pool_id, stock_code: code,
+            stock_name: matchedTx?.stock_name || '',
+            quantity: netQty, cost_price: costPrice
+          })
+        }
+      }
+      await holdingStore.loadHoldings()
+    }
+
+    // 删除资金记录 + 刷新
+    await deleteCapitalLog(id)
+    await fundStore.loadCapitalLogs()
+    await txStore.loadTransactions()
+
+    deletingTrade.value = null
+  } catch (e) {
+    console.error('Delete trade error:', e)
+  }
+}
+
 onMounted(async () => {
   poolStore.loadPools()
   fundStore.loadCapitalLogs()
@@ -285,4 +500,52 @@ onMounted(async () => {
 .tli-action.fall { color: var(--color-fall); }
 .tli-name { font-size: 12px; color: var(--text-secondary); }
 .tli-meta { font-size: 11px; color: var(--text-muted); display: flex; gap: 4px; flex-wrap: wrap; }
+.trade-log-item { display: flex; gap: 8px; align-items: center; }
+.tli-body { flex: 1; min-width: 0; }
+.tli-actions { display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; }
+.tli-edit-btn, .tli-del-btn {
+  background: none; border: none; font-size: 13px; cursor: pointer; padding: 2px 4px; line-height: 1;
+  opacity: 0.5; transition: opacity 0.15s; color: var(--text-muted);
+}
+.tli-edit-btn:hover, .tli-del-btn:hover { opacity: 1; }
+.tli-del-btn:active { color: var(--color-fall); }
+
+/* 弹窗共用（与CapitalLogList一致） */
+.overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+  display: flex; align-items: center; justify-content: center; z-index: 9999; padding: 20px;
+}
+.dialog {
+  background: var(--bg-card); border-radius: var(--radius-lg); padding: 20px;
+  width: 100%; max-width: 360px;
+}
+.dlg-title { font-size: 17px; font-weight: 700; margin-bottom: 16px; }
+.dlg-field { margin-bottom: 12px; }
+.dlg-label { display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; }
+.dlg-value { font-size: 14px; color: var(--text-primary); }
+.dlg-input {
+  width: 100%; padding: 10px 12px; border: 1px solid rgba(255,255,255,0.1);
+  border-radius: var(--radius-md); background: rgba(255,255,255,0.04); color: #fff;
+  font-size: 15px; outline: none; box-sizing: border-box;
+}
+.dlg-input:focus { border-color: var(--bg-accent); }
+.dlg-input.num-mono { font-family: var(--font-number); }
+.dlg-btns { display: flex; gap: 10px; margin-top: 16px; }
+.d-cancel {
+  flex: 1; padding: 10px; border: 1px solid rgba(255,255,255,0.1);
+  border-radius: var(--radius-md); background: transparent; color: var(--text-secondary);
+  font-size: 14px; cursor: pointer;
+}
+.d-ok {
+  flex: 2; padding: 10px; border: none; border-radius: var(--radius-md);
+  background: var(--bg-accent); color: #fff; font-size: 14px; font-weight: 600; cursor: pointer;
+}
+.d-ok.del { background: var(--color-fall); }
+.dlg-info { font-size: 14px; color: var(--text-secondary); margin-bottom: 12px; }
+.dlg-rows { margin-bottom: 8px; }
+.dlg-row {
+  display: flex; justify-content: space-between; padding: 5px 0;
+  font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+.dlg-warn { font-size: 11px; color: var(--color-warn); padding: 6px 0; text-align: center; }
 </style>

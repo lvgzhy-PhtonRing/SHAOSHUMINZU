@@ -6,9 +6,9 @@
   --bg-accent: #0f3460;
   --bg-hover: rgba(255,255,255,0.06);
 
-  /* 涨跌色 */
-  --color-rise: #00d2a1;
-  --color-fall: #e94560;
+  /* 涨跌色（A股习惯：涨=红，跌=绿） */
+  --color-rise: #e94560;
+  --color-fall: #00d2a1;
   --color-warn: #ffc107;
 
   /* 子池颜色 */
