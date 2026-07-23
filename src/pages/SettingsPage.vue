@@ -167,7 +167,11 @@ async function changePassword() {
     ? await hashPassword(oldPwd.value) === currentPwd
     : oldPwd.value === currentPwd
   if (!isValid) return false
-  localStorage.setItem('pwd', await hashPassword(newPwd.value))
+  const hashed = await hashPassword(newPwd.value)
+  localStorage.setItem('pwd', hashed)
+  // 同步到服务器（跨设备）
+  const { updatePassword } = await import('@/api/supabase')
+  updatePassword(newPwd.value).catch(e => console.error('Sync password to server:', e))
   return true
 }
 

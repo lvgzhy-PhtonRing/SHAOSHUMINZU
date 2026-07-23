@@ -66,12 +66,10 @@ CREATE TABLE IF NOT EXISTS app_config (
   value TEXT NOT NULL
 );
 
--- 密码不在此处初始化。应用使用客户端 localStorage 存储密码哈希。
--- 若需服务端密码验证，请使用 bcrypt/scrypt 并通过 settings 页面设置初始密码。
---
--- ⚠️ 安全提醒：
---   Base64 编码不是加密，不能用于保护密码。
---   如需正式部署，应将认证迁移至 Supabase Auth（JWT + RLS）。
+-- 初始密码哈希（SHA-256 of '1111'），首次修改密码后会自动更新
+INSERT INTO app_config (key, value) VALUES
+  ('password_hash', '0ffe1abd1a08215353c233d6e009613e95eec4253832a761af28ff37ac5a150c')
+ON CONFLICT (key) DO NOTHING;
 
 CREATE INDEX IF NOT EXISTS idx_capital_log_pool ON capital_log(pool_id);
 CREATE INDEX IF NOT EXISTS idx_transactions_pool ON transactions(pool_id);

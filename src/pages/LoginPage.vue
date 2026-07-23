@@ -53,14 +53,24 @@ function deleteChar() {
 async function doLogin() {
   if (input.value.length !== 4) return
   const storedPwd = localStorage.getItem('pwd') || '1111'
-  const isValid = isHashed(storedPwd)
+  // 1. 验证本地缓存
+  const localValid = isHashed(storedPwd)
     ? await hashPassword(input.value) === storedPwd
     : input.value === storedPwd
-  if (isValid) {
+  if (localValid) {
     // 旧版明文密码 → 升级为哈希存储
     if (!isHashed(storedPwd)) {
       localStorage.setItem('pwd', await hashPassword(input.value))
     }
+    localStorage.setItem('auth', 'true')
+    router.replace({ name: 'dashboard' })
+    return
+  }
+  // 2. 本地失败，尝试服务器验证（跨设备同步的密码）
+  const { verifyPassword } = await import('@/api/supabase')
+  const serverValid = await verifyPassword(input.value)
+  if (serverValid) {
+    localStorage.setItem('pwd', await hashPassword(input.value))
     localStorage.setItem('auth', 'true')
     router.replace({ name: 'dashboard' })
   } else {

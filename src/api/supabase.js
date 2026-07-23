@@ -1,5 +1,6 @@
 // src/api/supabase.js
 import { createClient } from '@supabase/supabase-js'
+import { hashPassword } from '@/utils/crypto'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
@@ -13,7 +14,7 @@ export const supabase = createClient(
   supabaseAnonKey || 'placeholder-key'
 )
 
-/* 密码验证 */
+/* 密码验证（兼容旧版 Base64，优先 SHA-256） */
 export async function verifyPassword(input) {
   const { data, error } = await supabase
     .from('app_config')
@@ -21,7 +22,11 @@ export async function verifyPassword(input) {
     .eq('key', 'password_hash')
     .single()
   if (error) return false
-  return data.value === btoa(input)
+  const stored = data.value
+  // 新版：SHA-256 哈希
+  if (/^[0-9a-f]{64}$/.test(stored)) return stored === await hashPassword(input)
+  // 旧版兼容：Base64
+  return stored === btoa(input)
 }
 
 /* 获取所有子池 */
@@ -174,11 +179,12 @@ export async function loadPoolAllocation() {
   try { return JSON.parse(data.value) } catch { return null }
 }
 
-/* 更新密码 */
-export async function updatePassword(newHash) {
+/* 更新密码（自动 SHA-256 哈希后存入服务器） */
+export async function updatePassword(plainPwd) {
+  const hashed = await hashPassword(plainPwd)
   const { error } = await supabase
     .from('app_config')
-    .upsert({ key: 'password_hash', value: newHash })
+    .upsert({ key: 'password_hash', value: hashed })
   return !error
 }
 
