@@ -17,7 +17,6 @@
         <span class="remainder-tag">初始分配</span>
         <span class="pct readonly">{{ wanPublicInit }}</span>
         <span class="pc">万</span>
-        <span class="money num-mono">{{ formatMoney(publicInitAlloc) }}</span>
         <span class="avl-funds num-mono" :class="{ negative: gongyouAvailable < 0 }">
           <template v-if="gongyouAvailable < 0">⚠️ </template>
           可用 {{ formatMoney(gongyouAvailable) }}
@@ -35,7 +34,6 @@
         <input type="number" class="pct" :value="wanAmts[p.key]" @input="e => onAmt(p.key, parseFloat(e.target.value)||0)" step="0.01" />
         <span class="pc">万</span>
         <button class="adj" @click="adjust(p.key, 0.5)">+</button>
-        <span class="money num-mono">{{ formatMoney(amts[p.key]) }}</span>
         <span class="avl-funds num-mono" :class="{ negative: amts[p.key] - (poolCosts[p.key] || 0) < 0 }">
           <template v-if="amts[p.key] - (poolCosts[p.key] || 0) < 0">⚠️ </template>
           可用 {{ formatMoney(amts[p.key] - (poolCosts[p.key] || 0)) }}
