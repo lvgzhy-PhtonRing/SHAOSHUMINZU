@@ -85,7 +85,7 @@ const router = useRouter()
 
 const poolNameMap = {}
 const poolColorMap = {}
-const colorList = ['#0f3460', '#e94560', '#00d2a1', '#ffc107', '#7c4dff']
+const colorList = ['#5b8def', '#e94560', '#00d2a1', '#ffc107', '#7c4dff']
 
 onMounted(async () => {
   try {

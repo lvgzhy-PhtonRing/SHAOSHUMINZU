@@ -2,11 +2,11 @@
 <template>
   <div class="profit-grid">
     <div class="profit-item" :class="floatPnl >= 0 ? 'rise' : 'fall'">
-      <div class="profit-label">浮动盈亏</div>
+      <div class="profit-label">浮动盈亏 <span class="profit-unit">（市值-成本）</span></div>
       <div class="profit-value num-mono">{{ formatChange(floatPnl) }}</div>
     </div>
     <div class="profit-item" :class="dailyPnl >= 0 ? 'rise' : 'fall'">
-      <div class="profit-label">当日盈亏</div>
+      <div class="profit-label">当日盈亏 <span class="profit-unit">（市值-前收）</span></div>
       <div class="profit-value num-mono">{{ formatChange(dailyPnl) }}</div>
     </div>
   </div>
@@ -32,11 +32,12 @@ defineProps({
   border-radius: var(--radius-md);
 }
 .profit-item.fall {
-  background: rgba(233,69,96,0.08);
-}
-.profit-item.rise {
   background: rgba(0,210,161,0.08);
 }
+.profit-item.rise {
+  background: rgba(233,69,96,0.08);
+}
+.profit-unit { font-size: 10px; color: var(--text-muted); font-weight: 400; }
 .profit-label {
   font-size: 11px;
   color: var(--text-secondary);
