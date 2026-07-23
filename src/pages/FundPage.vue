@@ -90,6 +90,8 @@ async function onCapitalChange({ type, amount, note }) {
       note: note || '',
       created_by: 'admin'
     })
+    const { saveCurrentPositionSnapshot } = await import('@/utils/positionSnapshot')
+    saveCurrentPositionSnapshot().catch(e => console.error('Position snapshot:', e))
   } catch (e) {
     console.error('Capital change error:', e)
   }
@@ -167,6 +169,8 @@ async function onEditLog(payload) {
   } catch (e) {
     console.error('Edit log error:', e)
   }
+  const { saveCurrentPositionSnapshot } = await import('@/utils/positionSnapshot')
+  saveCurrentPositionSnapshot().catch(e => console.error('Position snapshot:', e))
 }
 
 async function onDeleteLog(log) {
@@ -224,6 +228,8 @@ async function onDeleteLog(log) {
   } catch (e) {
     console.error('Delete cascade error:', e)
   }
+  const { saveCurrentPositionSnapshot } = await import('@/utils/positionSnapshot')
+  saveCurrentPositionSnapshot().catch(e => console.error('Position snapshot:', e))
 }
 
 function parseStockCode2(note) {

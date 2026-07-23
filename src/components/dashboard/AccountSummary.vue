@@ -9,11 +9,11 @@
         <div class="asset-value num-mono">{{ formatMoney(marketValue) }}</div>
       </div>
       <div class="asset-item">
-        <div class="asset-label">可用资金</div>
+        <div class="asset-label">总可用资金</div>
         <div class="asset-value num-mono">{{ formatMoney(available) }}</div>
       </div>
       <div class="asset-item">
-        <div class="asset-label">仓位</div>
+        <div class="asset-label">总仓位</div>
         <div class="asset-value num-mono">{{ positionRatio.toFixed(1) }}%</div>
       </div>
     </div>

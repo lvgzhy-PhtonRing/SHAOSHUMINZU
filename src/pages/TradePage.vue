@@ -316,6 +316,10 @@ async function confirmTrade() {
     await insertCapitalLog({ pool_id, type: type === 'buy' ? 'remove' : 'add', amount, note: `${type === 'buy' ? '买入' : '卖出'} ${stock_code}`, created_by: 'admin' })
     await holdingStore.loadHoldings()
 
+    // 快照当前仓位
+    const { saveCurrentPositionSnapshot } = await import('@/utils/positionSnapshot')
+    saveCurrentPositionSnapshot().catch(e => console.error('Position snapshot:', e))
+
     // 重置
     pendingTrade.value = null
     actualAmount.value = ''

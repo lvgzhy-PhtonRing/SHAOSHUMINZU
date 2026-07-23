@@ -182,6 +182,28 @@ export async function updatePassword(newHash) {
   return !error
 }
 
+/* 保存仓位快照（日期去重） */
+export async function savePositionSnapshot(date, ratio) {
+  const { error } = await supabase
+    .from('app_config')
+    .upsert({ key: `pos_snap:${date}`, value: JSON.stringify({ ratio }) }, { onConflict: 'key' })
+  if (error) throw new Error(error.message)
+}
+
+/* 读取最近 N 条仓位快照 */
+export async function fetchPositionSnapshots(limit = 10) {
+  const { data, error } = await supabase
+    .from('app_config')
+    .select('key, value')
+    .like('key', 'pos_snap:%')
+    .order('key', { ascending: false })
+    .limit(limit)
+  if (error) return []
+  return data
+    .map(d => ({ date: d.key.replace('pos_snap:', ''), ratio: JSON.parse(d.value).ratio }))
+    .reverse()
+}
+
 /* 校对交易 */
 export async function verifyTransaction(id, actualAmount) {
   const { error } = await supabase

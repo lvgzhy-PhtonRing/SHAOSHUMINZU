@@ -69,7 +69,8 @@
       <div class="section-card">
         <div class="section-title">总仓位变化 <span class="subtitle">近10天</span></div>
         <div class="trend-chart">
-          <svg :viewBox="`0 0 ${SVG_W} ${SVG_H}`" class="trend-svg" preserveAspectRatio="xMidYMid meet">
+          <div v-if="!trendData.length" class="trend-empty">暂无数据</div>
+          <svg v-else :viewBox="`0 0 ${SVG_W} ${SVG_H}`" class="trend-svg" preserveAspectRatio="xMidYMid meet">
             <defs>
               <linearGradient id="trendGrad" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stop-color="var(--bg-accent)" stop-opacity="0.25" />
@@ -77,7 +78,7 @@
               </linearGradient>
             </defs>
             <!-- 参考线 -->
-            <line v-for="pct in [20, 30]" :key="pct"
+            <line v-for="pct in refLines" :key="pct"
               :x1="PAD_L" :x2="SVG_W - PAD_R"
               :y1="yPos(pct)" :y2="yPos(pct)"
               stroke="rgba(255,255,255,0.05)" stroke-dasharray="3,3" />
@@ -105,7 +106,7 @@ import { useHoldingStore } from '@/stores/holdings'
 import { usePriceStore } from '@/stores/prices'
 import { formatMoney } from '@/utils/formatters'
 import { useFundStore } from '@/stores/funds'
-import { loadPoolAllocation } from '@/api/supabase'
+import { loadPoolAllocation, fetchPositionSnapshots } from '@/api/supabase'
 import DonutChart from '@/components/positions/DonutChart.vue'
 import PoolPositionCard from '@/components/positions/PoolPositionCard.vue'
 
@@ -242,13 +243,9 @@ const chartSegments = computed(() => {
   })
 })
 
-const trendData = [
-  { label: '一', ratio: 24 }, { label: '二', ratio: 28 },
-  { label: '三', ratio: 32 }, { label: '四', ratio: 26 },
-  { label: '五', ratio: 22 }, { label: '六', ratio: 26 },
-  { label: '日', ratio: 25 }, { label: '一', ratio: 29 },
-  { label: '二', ratio: 31 }, { label: '三', ratio: 27 },
-]
+const WEEKDAY = ['日', '一', '二', '三', '四', '五', '六']
+
+const trendData = ref([])
 
 // SVG 折线图参数
 const SVG_W = 800, SVG_H = 200
@@ -256,20 +253,31 @@ const PAD_L = 20, PAD_R = 20, PAD_T = 28, PAD_B = 22
 const CHART_W = SVG_W - PAD_L - PAD_R
 const CHART_H = SVG_H - PAD_T - PAD_B
 
+const trendRatioMax = computed(() => {
+  if (!trendData.value.length) return 100
+  const max = Math.max(...trendData.value.map(d => d.ratio))
+  return Math.ceil((max + 10) / 10) * 10 || 100
+})
+const refLines = computed(() => {
+  const m = trendRatioMax.value
+  return [m * 0.25, m * 0.5, m * 0.75].filter(p => p > 0).map(p => Math.round(p))
+})
+
 function xPos(i) {
-  return PAD_L + (i / (trendData.length - 1)) * CHART_W
+  return PAD_L + (i / Math.max(trendData.value.length - 1, 1)) * CHART_W
 }
 function yPos(r) {
-  return PAD_T + CHART_H * (1 - r / 40)
+  return PAD_T + CHART_H * (1 - r / trendRatioMax.value)
 }
 const linePoints = computed(() =>
-  trendData.map((d, i) => `${xPos(i)},${yPos(d.ratio)}`).join(' ')
+  trendData.value.map((d, i) => `${xPos(i)},${yPos(d.ratio)}`).join(' ')
 )
 const areaPath = computed(() => {
-  const pts = trendData.map((d, i) => `${xPos(i)},${yPos(d.ratio)}`).join(' L ')
-  const lastX = xPos(trendData.length - 1)
+  if (!trendData.value.length) return ''
+  const pts = trendData.value.map((d, i) => `${xPos(i)},${yPos(d.ratio)}`).join(' L ')
+  const lastX = xPos(trendData.value.length - 1)
   const bottomY = SVG_H - PAD_B
-  return `M ${xPos(0)},${yPos(trendData[0].ratio)} L ${pts} L ${lastX},${bottomY} L ${xPos(0)},${bottomY} Z`
+  return `M ${xPos(0)},${yPos(trendData.value[0].ratio)} L ${pts} L ${lastX},${bottomY} L ${xPos(0)},${bottomY} Z`
 })
 
 onMounted(async () => {
@@ -293,6 +301,13 @@ onMounted(async () => {
     ])
     const codes = holdingStore.stockCodes
     if (codes.length) await priceStore.loadPrices(codes)
+
+    // 加载仓位快照
+    const snaps = await fetchPositionSnapshots(10)
+    trendData.value = snaps.map(s => ({
+      label: WEEKDAY[new Date(s.date + 'T00:00:00').getDay()],
+      ratio: s.ratio
+    }))
   } catch (e) {
     console.error('Positions page load error:', e)
   } finally {
@@ -315,6 +330,7 @@ onMounted(async () => {
 .pos-gongyou { margin-bottom: 8px; }
 .pos-users-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .trend-chart { padding: 4px 0 6px; }
+.trend-empty { height: 80px; display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--text-muted); }
 .trend-svg { width: 100%; height: auto; display: block; }
 .trend-pct { font-size: 10px; fill: var(--text-secondary); font-family: var(--font-number); }
 .trend-day { font-size: 10px; fill: var(--text-muted); }
