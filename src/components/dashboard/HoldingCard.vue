@@ -33,9 +33,16 @@
       </div>
       <div class="holding-footer">
         <span class="market-value">市值 {{ formatMoney(stock.marketValue) }}</span>
-        <span class="pool-tag" :style="{ background: poolColor + '22', color: poolColor }">
-          {{ poolName }}
-        </span>
+        <div class="pool-tags">
+          <template v-if="poolTags.length">
+            <span v-for="t in poolTags" :key="t.name" class="pool-tag" :style="{ background: t.color + '22', color: t.color }">
+              {{ t.name }}
+            </span>
+          </template>
+          <span v-else class="pool-tag" :style="{ background: poolColor + '22', color: poolColor }">
+            {{ poolName }}
+          </span>
+        </div>
       </div>
     </div>
     <template #right>
@@ -53,7 +60,8 @@ import { formatMoney, formatPrice, formatQuantity, formatChange } from '@/utils/
 const props = defineProps({
   stock: { type: Object, required: true },
   poolName: { type: String, default: '' },
-  poolColor: { type: String, default: '#0f3460' }
+  poolColor: { type: String, default: '#0f3460' },
+  poolTags: { type: Array, default: () => [] }
 })
 
 defineEmits(['sell', 'tap'])
@@ -108,7 +116,8 @@ const costReturn = computed(() => {
   border-top: 1px solid rgba(255,255,255,0.04);
 }
 .market-value { font-size: 12px; color: var(--text-secondary); font-family: var(--font-number); }
-.pool-tag { font-size: 11px; padding: 2px 8px; border-radius: 4px; font-weight: 500; }
+.pool-tags { display: flex; gap: 4px; flex-wrap: wrap; }
+.pool-tag { font-size: 10px; padding: 1px 6px; border-radius: 3px; font-weight: 500; }
 .swipe-sell-btn {
   height: 100%;
   width: 80px;

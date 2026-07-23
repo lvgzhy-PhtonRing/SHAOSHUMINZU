@@ -48,8 +48,9 @@
         v-for="h in displayHoldings"
         :key="h.merged ? 'merged-' + h.stock_code : `${h.pool_id}-${h.stock_code}`"
         :stock="h"
-        :pool-name="h.merged ? `共 ${h.poolCount} 个池` : (poolNameMap[h.pool_id] || '')"
+        :pool-name="h.merged ? '' : (poolNameMap[h.pool_id] || '')"
         :pool-color="h.merged ? '#888888' : (poolColorMap[h.pool_id] || '#0f3460')"
+        :pool-tags="h.merged ? h.poolNames : []"
         @sell="onSellStock"
       />
     </template>
@@ -171,11 +172,16 @@ const displayHoldings = computed(() => {
   const merged = {}
   for (const h of filtered) {
     if (!merged[h.stock_code]) {
-      merged[h.stock_code] = { ...h, totalQty: 0, totalCost: 0, poolCount: 0 }
+      merged[h.stock_code] = { ...h, totalQty: 0, totalCost: 0, poolCount: 0, poolNames: [] }
     }
     merged[h.stock_code].totalQty += h.quantity
     merged[h.stock_code].totalCost += h.cost_price * h.quantity
     merged[h.stock_code].poolCount++
+    const pn = poolNameMap[h.pool_id]
+    const pc = poolColorMap[h.pool_id]
+    if (pn && !merged[h.stock_code].poolNames.some(t => t.name === pn)) {
+      merged[h.stock_code].poolNames.push({ name: pn, color: pc || '#888' })
+    }
   }
 
   return Object.values(merged).map(m => {

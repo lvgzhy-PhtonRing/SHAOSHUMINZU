@@ -91,8 +91,8 @@
         </div>
         <div class="verify-btns">
           <button class="v-btn cancel" @click="cancelTrade">取消</button>
-          <button class="v-btn confirm" :disabled="!actualAmount" @click="confirmTrade">
-            ✅ 确认并记录
+          <button class="v-btn confirm" :disabled="!actualAmount || submitting" @click="confirmTrade">
+            ✅ {{ submitting ? '提交中…' : '确认并记录' }}
           </button>
         </div>
       </div>
@@ -196,6 +196,7 @@ const pendingTrade = ref(null)
 const actualAmount = ref('')
 
 // 交易记录编辑/删除
+const submitting = ref(false)
 const editingTrade = ref(null)
 const editAmount = ref('')
 const editNote = ref('')
@@ -292,7 +293,9 @@ function cancelTrade() {
 }
 
 async function confirmTrade() {
-  if (!actualAmount.value || !pendingTrade.value) return
+  if (!actualAmount.value || !pendingTrade.value || submitting.value) return
+  submitting.value = true
+  formError.value = ''
   const act = parseFloat(actualAmount.value)
   const tx = { ...pendingTrade.value, status: 'verified', actual_amount: act }
   try {
@@ -323,6 +326,8 @@ async function confirmTrade() {
   } catch (e) {
     console.error('Trade submit error:', e)
     formError.value = '提交失败：' + e.message
+  } finally {
+    submitting.value = false
   }
 }
 

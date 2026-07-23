@@ -14,11 +14,12 @@
       <!-- 共有 = 剩余（只读） -->
       <div class="pool-row remainder">
         <div class="pool-left"><span class="dot" style="background:#0f3460"></span>公共池</div>
-        <span class="remainder-tag">剩余</span>
-        <span class="pct readonly">{{ wanGongyou }}</span>
+        <span class="remainder-tag">初始分配</span>
+        <span class="pct readonly">{{ wanPublicInit }}</span>
         <span class="pc">万</span>
-        <span class="money num-mono">{{ formatMoney(gongyouAmt) }}</span>
+        <span class="money num-mono">{{ formatMoney(publicInitAlloc) }}</span>
         <span class="avl-funds num-mono" :class="{ negative: gongyouAvailable < 0 }">
+          <template v-if="gongyouAvailable < 0">⚠️ </template>
           可用 {{ formatMoney(gongyouAvailable) }}
         </span>
       </div>
@@ -36,6 +37,7 @@
         <button class="adj" @click="adjust(p.key, 0.5)">+</button>
         <span class="money num-mono">{{ formatMoney(amts[p.key]) }}</span>
         <span class="avl-funds num-mono" :class="{ negative: amts[p.key] - (poolCosts[p.key] || 0) < 0 }">
+          <template v-if="amts[p.key] - (poolCosts[p.key] || 0) < 0">⚠️ </template>
           可用 {{ formatMoney(amts[p.key] - (poolCosts[p.key] || 0)) }}
         </span>
       </div>
@@ -49,6 +51,9 @@
         <span class="num-mono" :class="gongyouAmt >= 0 ? '' : 'fall'">{{ formatMoney(gongyouAmt) }}</span>
       </div>
 
+      <div v-if="overdrawnPools.length" class="err">
+        ⚠️ {{ overdrawnPools.join('、') }} 可用资金为负（分配低于持仓成本），超额部分已自动计入公共池
+      </div>
       <button class="apply-btn" :disabled="gongyouAmt < 0" @click="confirmAlloc">
         确认分配
       </button>
@@ -93,8 +98,8 @@
               <span class="num-mono">{{ wanAmts[p.key] }} 万 → {{ formatMoney(amts[p.key]) }}</span>
             </div>
             <div class="dlg-row dlg-gy">
-              <span style="color:#0f3460">● 公共池（剩余）</span>
-              <span class="num-mono">{{ wanGongyou }} 万 → {{ formatMoney(gongyouAmt) }}</span>
+              <span style="color:#0f3460">● 公共池（初始分配）</span>
+              <span class="num-mono">{{ wanPublicInit }} 万 → {{ formatMoney(publicInitAlloc) }}</span>
             </div>
           </div>
           <div class="dlg-btns">
@@ -215,11 +220,19 @@ const usersTotal = computed(() => userKeys.reduce((s, k) => s + amts[k], 0))
 // 共有 = 剩余（元）
 const gongyouAmt = computed(() => props.totalAvailable - usersTotal.value)
 
+// 可用为负的子池列表
+const overdrawnPools = computed(() => {
+  return userKeys.filter(k => amts[k] - (props.poolCosts[k] || 0) < 0)
+})
+
 // 公共池可用资金 = 总可用 − 四子池可用之和
 const gongyouAvailable = computed(() => {
   const subSum = userKeys.reduce((s, k) => s + (amts[k] - (props.poolCosts[k] || 0)), 0)
   return props.totalAvailable - subSum
 })
+// 公共池初始分配 = 可用资金 + 持仓成本
+const publicInitAlloc = computed(() => gongyouAvailable.value + (props.poolCosts['公共池'] || 0))
+const wanPublicInit = computed(() => (publicInitAlloc.value / 10000).toFixed(2))
 
 // 四人万元显示
 const wanAmts = computed(() => {
@@ -363,7 +376,7 @@ function submitAlloc() {
   background: var(--bg-accent); color: #fff; font-size: 15px; font-weight: 600; cursor: pointer;
 }
 .apply-btn:disabled { opacity: 0.3; }
-.err { font-size: 11px; color: var(--color-fall); text-align: center; margin-top: 4px; }
+.err { font-size: 11px; color: var(--color-warn); text-align: center; margin-top: 6px; }
 
 /* 弹窗 */
 .overlay {
