@@ -68,6 +68,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { supabase } from '@/api/supabase'
+import { hashPassword, isHashed } from '@/utils/crypto'
 
 const router = useRouter()
 const showPwdDialog = ref(false)
@@ -162,8 +163,11 @@ async function doImport() {
 // ========== 密码 ==========
 async function changePassword() {
   const currentPwd = localStorage.getItem('pwd') || '1111'
-  if (oldPwd.value !== currentPwd) return false
-  localStorage.setItem('pwd', newPwd.value)
+  const isValid = isHashed(currentPwd)
+    ? await hashPassword(oldPwd.value) === currentPwd
+    : oldPwd.value === currentPwd
+  if (!isValid) return false
+  localStorage.setItem('pwd', await hashPassword(newPwd.value))
   return true
 }
 

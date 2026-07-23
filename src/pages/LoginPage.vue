@@ -33,6 +33,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { hashPassword, isHashed } from '@/utils/crypto'
 
 const router = useRouter()
 const input = ref('')
@@ -52,7 +53,14 @@ function deleteChar() {
 async function doLogin() {
   if (input.value.length !== 4) return
   const storedPwd = localStorage.getItem('pwd') || '1111'
-  if (input.value === storedPwd) {
+  const isValid = isHashed(storedPwd)
+    ? await hashPassword(input.value) === storedPwd
+    : input.value === storedPwd
+  if (isValid) {
+    // 旧版明文密码 → 升级为哈希存储
+    if (!isHashed(storedPwd)) {
+      localStorage.setItem('pwd', await hashPassword(input.value))
+    }
     localStorage.setItem('auth', 'true')
     router.replace({ name: 'dashboard' })
   } else {

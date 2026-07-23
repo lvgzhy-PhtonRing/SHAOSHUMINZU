@@ -12,9 +12,11 @@ function isStale(code) {
 }
 
 // ========== 方法1: Supabase Edge Function ==========
-const EDGE_FN = 'https://mqdxmbsaddebxlallgos.supabase.co/functions/v1/stock-proxy'
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
+const EDGE_FN = SUPABASE_URL ? `${SUPABASE_URL}/functions/v1/stock-proxy` : null
 
 async function fetchViaEdge(codes) {
+  if (!EDGE_FN) return {}
   const resp = await fetch(`${EDGE_FN}?codes=${codes.join(',')}`, {
     headers: { 'Authorization': 'Bearer ' + (import.meta.env.VITE_SUPABASE_ANON_KEY || '') }
   })
