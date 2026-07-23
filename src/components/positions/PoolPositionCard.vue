@@ -16,7 +16,7 @@
       <span class="pf-value num-mono">{{ formatMoney(capitalAlloc) }}</span>
       <span class="pf-sep">|</span>
       <span class="pf-label">可用资金</span>
-      <span class="pf-value num-mono" :class="availableFunds >= 0 ? '' : 'negative'">{{ formatMoney(availableFunds) }}</span>
+      <span class="pf-value num-mono" :class="poolAvailable >= 0 ? '' : 'negative'">{{ formatMoney(poolAvailable) }}</span>
     </div>
   </div>
 </template>
@@ -30,11 +30,10 @@ const props = defineProps({
   marketValue: { type: Number, default: 0 },
   totalPoolAsset: { type: Number, default: 0 },
   capitalAlloc: { type: Number, default: 0 },
-  poolCost: { type: Number, default: 0 },
+  poolAvailable: { type: Number, default: 0 },
   color: { type: String, default: '#0f3460' },
   wide: { type: Boolean, default: false }
 })
-const availableFunds = computed(() => props.capitalAlloc - props.poolCost)
 </script>
 
 <style scoped>

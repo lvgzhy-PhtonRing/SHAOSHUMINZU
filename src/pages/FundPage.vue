@@ -20,6 +20,7 @@
       <FundAllocationForm
         :pools="poolStore.pools"
         :total-available="totalAvailable"
+        :pool-costs="poolCosts"
         :submitting="fundStore.submitting"
         @capital-change="onCapitalChange"
         @alloc-change="onAllocChange"
@@ -52,6 +53,16 @@ const txStore = useTransactionStore()
 
 const loading = ref(true)
 const totalCapital = computed(() => fundStore.totalCapital)
+
+// 各子池持仓成本（用于计算可用资金）
+const poolCosts = computed(() => {
+  const map = {}
+  for (const h of holdingStore.holdings) {
+    const pool = poolStore.pools.find(p => p.id === h.pool_id)
+    if (pool) map[pool.name] = (map[pool.name] || 0) + h.cost_price * h.quantity
+  }
+  return map
+})
 
 const totalCost = computed(() => {
   return holdingStore.holdings.reduce((s, h) => {

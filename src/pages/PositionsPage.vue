@@ -44,7 +44,7 @@
             :market-value="poolPositionData[0].marketValue"
             :total-pool-asset="poolPositionData[0].totalPoolAsset"
             :capital-alloc="poolPositionData[0].poolCapital"
-            :pool-cost="poolPositionData[0].cost"
+            :pool-available="poolPositionData[0].poolAvailable"
             :color="poolPositionData[0].color"
             wide
           />
@@ -59,7 +59,7 @@
             :market-value="item.marketValue"
             :total-pool-asset="item.totalPoolAsset"
             :capital-alloc="item.poolCapital"
-            :pool-cost="item.cost"
+            :pool-available="item.poolAvailable"
             :color="item.color"
           />
         </div>
@@ -159,6 +159,20 @@ const positionSlogan = computed(() => {
 })
 
 const poolPositionData = computed(() => {
+  // 先算四个子池的可用资金
+  const subAvailable = {}
+  for (const p of poolStore.pools) {
+    if (p.name === '公共池') continue
+    const alloc = poolAmounts[p.name] || 0
+    const pcost = holdingStore.holdings
+      .filter(h => h.pool_id === p.id)
+      .reduce((s, h) => s + h.cost_price * h.quantity, 0)
+    subAvailable[p.name] = alloc - pcost
+  }
+  const subSum = Object.values(subAvailable).reduce((s, v) => s + v, 0)
+  // 公共池可用资金 = 总可用 − 四子池可用之和
+  const publicAvailable = totalAvailable.value - subSum
+
   return poolStore.pools.map((p, i) => {
     const poolHoldings = holdingStore.holdings.filter(h => h.pool_id === p.id)
     const mv = poolHoldings.reduce((s, h) => {
@@ -166,15 +180,23 @@ const poolPositionData = computed(() => {
       return s + price * h.quantity
     }, 0)
     const cost = poolHoldings.reduce((s, h) => s + h.cost_price * h.quantity, 0)
-    // 该池分配资金 = 保存的金额（元）
-    const poolCapital = poolAmounts[p.name] || 0
-    // 子池资产 = 原始分配资金 + 持仓盈亏（剩余现金 + 当前市值）
+
+    let poolCapital = poolAmounts[p.name] || 0
+    let poolAvailable = poolCapital - cost
+
+    if (p.name === '公共池') {
+      poolAvailable = publicAvailable
+      poolCapital = poolAvailable + cost  // 倒推出初始分配
+    }
+
+    // 子池资产 = 初始分配 + 持仓盈亏
     const totalPoolAsset = poolCapital + (mv - cost)
-    // 该池仓位 = 该池持股市值 / 该池总资产
+    // 仓位 = 持股市值 / 子池资产
     const positionRatio = totalPoolAsset > 0 ? (mv / totalPoolAsset) * 100 : 0
     return {
       ...p, marketValue: mv, cost, poolCapital,
       totalPoolAsset, positionRatio,
+      poolAvailable,
       percent: positionRatio,
       color: colorList[i % colorList.length]
     }

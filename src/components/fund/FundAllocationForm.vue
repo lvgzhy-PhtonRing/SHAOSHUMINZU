@@ -18,6 +18,9 @@
         <span class="pct readonly">{{ wanGongyou }}</span>
         <span class="pc">万</span>
         <span class="money num-mono">{{ formatMoney(gongyouAmt) }}</span>
+        <span class="avl-funds num-mono" :class="{ negative: gongyouAvailable < 0 }">
+          可用 {{ formatMoney(gongyouAvailable) }}
+        </span>
       </div>
 
       <div class="partition-line"></div>
@@ -32,6 +35,9 @@
         <span class="pc">万</span>
         <button class="adj" @click="adjust(p.key, 0.5)">+</button>
         <span class="money num-mono">{{ formatMoney(amts[p.key]) }}</span>
+        <span class="avl-funds num-mono" :class="{ negative: amts[p.key] - (poolCosts[p.key] || 0) < 0 }">
+          可用 {{ formatMoney(amts[p.key] - (poolCosts[p.key] || 0)) }}
+        </span>
       </div>
 
       <!-- 合计 -->
@@ -109,6 +115,7 @@ import { savePoolAllocation } from '@/api/supabase'
 const props = defineProps({
   pools: { type: Array, default: () => [] },
   totalAvailable: { type: Number, default: 0 },
+  poolCosts: { type: Object, default: () => ({}) },
   submitting: { type: Boolean, default: false }
 })
 const emit = defineEmits(['capital-change', 'alloc-change'])
@@ -207,6 +214,12 @@ const usersTotal = computed(() => userKeys.reduce((s, k) => s + amts[k], 0))
 
 // 共有 = 剩余（元）
 const gongyouAmt = computed(() => props.totalAvailable - usersTotal.value)
+
+// 公共池可用资金 = 总可用 − 四子池可用之和
+const gongyouAvailable = computed(() => {
+  const subSum = userKeys.reduce((s, k) => s + (amts[k] - (props.poolCosts[k] || 0)), 0)
+  return props.totalAvailable - subSum
+})
 
 // 四人万元显示
 const wanAmts = computed(() => {
@@ -323,9 +336,14 @@ function submitAlloc() {
 }
 .pc { font-size: 11px; color: var(--text-secondary); }
 .money {
-  margin-left: auto; font-size: 13px; font-weight: 600; color: var(--text-secondary);
+  font-size: 13px; font-weight: 600; color: var(--text-secondary);
   font-family: var(--font-number); min-width: 72px; text-align: right;
 }
+.avl-funds {
+  font-size: 10px; font-weight: 500; color: var(--text-muted);
+  font-family: var(--font-number); min-width: 80px; text-align: right;
+}
+.avl-funds.negative { color: var(--color-fall); }
 
 .user-group { margin-top: 6px; }
 .user-group.linked { border: 1px dashed rgba(0,210,161,0.15); border-radius: var(--radius-md); padding: 4px 8px; }
