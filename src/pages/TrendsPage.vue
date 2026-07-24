@@ -87,17 +87,85 @@
           </svg>
         </div>
       </div>
+
+      <!-- 谁最HARD -->
+      <div class="section-card hard-card">
+        <div class="section-title hard-title">🔥 谁最HARD</div>
+        <div class="hard-subtitle">子池资产 / 初始分配</div>
+
+        <LoadingSkeleton v-if="!hardData.length" :count="4" mode="paragraph" />
+
+        <div v-else class="hard-list">
+          <div v-for="(item, idx) in sortedHard" :key="item.name"
+            class="hard-row"
+            :class="{ 'hard-row--top': idx === 0 }">
+            <div class="hard-rank" :class="`hard-rank--${idx + 1}`">{{ idx + 1 }}</div>
+            <div class="hard-body">
+              <div class="hard-meta">
+                <span class="hard-name" :style="{ color: item.color }">{{ item.name }}</span>
+                <span class="hard-asset">{{ formatCompactAsset(item.totalAsset) }}</span>
+                <span class="hard-pct" :class="item.ratio >= 100 ? 'pct-up' : 'pct-down'">
+                  {{ (item.ratio - 100).toFixed(1) }}%
+                </span>
+              </div>
+              <div class="hard-bar-track">
+                <div class="hard-bar-fill"
+                  :style="{
+                    width: Math.min((item.ratio / maxRatio) * 100, 100) + '%',
+                    background: item.color
+                  }">
+                </div>
+                <span class="hard-bar-label">{{ item.ratio.toFixed(1) }}%</span>
+              </div>
+            </div>
+            <div v-if="idx === 0" class="hard-crown">👑</div>
+          </div>
+        </div>
+      </div>
     </template>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { fetchPositionSnapshots } from '@/api/supabase'
+import { ref, computed, reactive, onMounted } from 'vue'
+import { usePoolStore } from '@/stores/pools'
+import { useHoldingStore } from '@/stores/holdings'
+import { usePriceStore } from '@/stores/prices'
+import { useFundStore } from '@/stores/funds'
+import { fetchPositionSnapshots, loadPoolAllocation } from '@/api/supabase'
 
 const loading = ref(true)
 const WEEKDAY = ['日', '一', '二', '三', '四', '五', '六']
 const trendData = ref([])
+
+const poolStore = usePoolStore()
+const holdingStore = useHoldingStore()
+const priceStore = usePriceStore()
+const fundStore = useFundStore()
+const totalCapital = computed(() => fundStore.totalCapital)
+
+// ===== 子池分配金额（用于"谁最HARD"计算） =====
+function loadLocalAlloc() {
+  const raw = localStorage.getItem('poolAmounts')
+  if (!raw) return null
+  let parsed = JSON.parse(raw)
+  if (parsed['共有'] !== undefined && parsed['公共池'] === undefined) {
+    parsed = { ...parsed }; parsed['公共池'] = parsed['共有']; delete parsed['共有']
+  }
+  const vals = Object.values(parsed)
+  const sum = vals.reduce((s, v) => s + v, 0)
+  if (vals.every(v => v <= 100) && Math.abs(sum - 100) < 1) {
+    const amt = {}
+    for (const k of Object.keys(parsed)) amt[k] = totalCapital.value * parsed[k] / 100
+    return amt
+  }
+  return parsed
+}
+function defaultAlloc() {
+  const each = Math.floor((totalCapital.value || 1000000) / 5 / 10000) * 10000
+  return { '公共池': each, '春': each, '维': each, '队': each, '回': each }
+}
+const poolAmounts = reactive(loadLocalAlloc() || defaultAlloc())
 
 // SVG 参数（仓位图）
 const SVG_W = 800, SVG_H = 260
@@ -184,6 +252,36 @@ function formatCapitalChange(v) {
   return prefix + v.toLocaleString('zh-CN')
 }
 
+// ===== 谁最HARD =====
+const POOL_COLORS = { '春': '#e94560', '维': '#00d2a1', '队': '#ffc107', '回': '#7c4dff' }
+const POOL_ORDER = ['春', '维', '队', '回']
+
+const hardData = computed(() => {
+  return POOL_ORDER.map(name => {
+    const pool = poolStore.pools.find(p => p.name === name)
+    if (!pool) return null
+    const alloc = poolAmounts[name] || 0
+    if (alloc <= 0) return null
+    const holdings = holdingStore.holdings.filter(h => h.pool_id === pool.id)
+    const cost = holdings.reduce((s, h) => s + h.cost_price * h.quantity, 0)
+    const mv = holdings.reduce((s, h) => {
+      return s + (priceStore.prices[h.stock_code]?.price || 0) * h.quantity
+    }, 0)
+    const totalAsset = alloc + (mv - cost)
+    const ratio = (totalAsset / alloc) * 100
+    return { name, alloc, cost, mv, totalAsset, ratio, color: POOL_COLORS[name] }
+  }).filter(Boolean)
+})
+
+const sortedHard = computed(() =>
+  [...hardData.value].sort((a, b) => b.ratio - a.ratio)
+)
+
+const maxRatio = computed(() => {
+  const m = Math.max(...hardData.value.map(d => d.ratio), 100)
+  return Math.max(m, 100)
+})
+
 // ===== 加载 =====
 function isWeekend(dateStr) {
   const d = new Date(dateStr + 'T00:00:00')
@@ -192,7 +290,28 @@ function isWeekend(dateStr) {
 
 onMounted(async () => {
   try {
-    // 多取一些，过滤周末，取最后10个交易日
+    // 加载池数据（给"谁最HARD"用）
+    await Promise.all([
+      poolStore.loadPools(),
+      holdingStore.loadHoldings(),
+      fundStore.loadCapitalLogs()
+    ])
+
+    // 从 Supabase 同步分配金额（跨设备）
+    let server = await loadPoolAllocation()
+    if (server) {
+      if (server['共有'] !== undefined && server['公共池'] === undefined) {
+        server = { ...server }; server['公共池'] = server['共有']; delete server['共有']
+      }
+      for (const k of Object.keys(server)) {
+        if (poolAmounts[k] !== undefined) poolAmounts[k] = server[k]
+      }
+    }
+
+    const codes = holdingStore.stockCodes
+    if (codes.length) await priceStore.loadPrices(codes)
+
+    // 多取一些快照，过滤周末，取最后10个交易日
     const snaps = await fetchPositionSnapshots(20)
     const tradingDays = snaps.filter(s => !isWeekend(s.date))
     const last10 = tradingDays.slice(-10)
@@ -222,4 +341,62 @@ onMounted(async () => {
 .trend-day { font-size: 10px; fill: var(--text-muted); }
 .trend-asset { font-size: 10px; font-family: var(--font-number); }
 .cap-chg-label { font-size: 10px; font-weight: 600; font-family: var(--font-number); }
+
+/* ===== 谁最HARD ===== */
+.hard-card { padding-bottom: 20px; }
+.hard-title { font-size: 15px; }
+.hard-subtitle { font-size: 11px; color: var(--text-muted); margin: -6px 0 14px; }
+.hard-list { display: flex; flex-direction: column; gap: 14px; }
+.hard-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border-radius: 10px;
+  background: var(--bg-card);
+  position: relative;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.hard-row--top {
+  background: linear-gradient(135deg, rgba(255,215,0,0.08), rgba(255,193,7,0.03));
+  box-shadow: 0 0 0 1px rgba(255,193,7,0.15);
+}
+.hard-rank {
+  width: 22px; height: 22px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; color: #fff; flex-shrink: 0;
+}
+.hard-rank--1 { background: linear-gradient(135deg, #ffc107, #ff9800); }
+.hard-rank--2 { background: linear-gradient(135deg, #90a4ae, #78909c); }
+.hard-rank--3 { background: linear-gradient(135deg, #a1887f, #8d6e63); }
+.hard-rank--4 { background: linear-gradient(135deg, #b0bec5, #90a4ae); }
+.hard-body { flex: 1; min-width: 0; }
+.hard-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.hard-name { font-size: 14px; font-weight: 700; width: 24px; }
+.hard-asset { font-size: 13px; font-weight: 600; font-family: var(--font-number); }
+.hard-pct {
+  font-size: 12px; font-weight: 700; font-family: var(--font-number);
+  margin-left: auto;
+}
+.pct-up { color: var(--color-rise); }
+.pct-down { color: var(--color-fall); }
+.hard-bar-track {
+  height: 16px; border-radius: 8px; background: rgba(255,255,255,0.06);
+  position: relative; overflow: hidden;
+}
+.hard-bar-fill {
+  height: 100%; border-radius: 8px;
+  transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  min-width: 4px;
+}
+.hard-bar-label {
+  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  font-size: 10px; font-weight: 600; color: var(--text-secondary);
+  font-family: var(--font-number);
+}
+.hard-crown {
+  font-size: 22px; flex-shrink: 0;
+  animation: crown-bounce 1.5s ease-in-out infinite;
+}
+@keyframes crown-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
 </style>
