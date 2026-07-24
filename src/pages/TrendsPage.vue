@@ -95,30 +95,27 @@
 
         <LoadingSkeleton v-if="!hardData.length" :count="4" mode="paragraph" />
 
-        <div v-else class="hard-list">
+        <div v-else class="hard-cols">
           <div v-for="(item, idx) in sortedHard" :key="item.name"
-            class="hard-row"
-            :class="{ 'hard-row--top': idx === 0 }">
-            <div class="hard-rank" :class="`hard-rank--${idx + 1}`">{{ idx + 1 }}</div>
-            <div class="hard-body">
-              <div class="hard-meta">
-                <span class="hard-name" :style="{ color: item.color }">{{ item.name }}</span>
-                <span class="hard-asset">{{ formatCompactAsset(item.totalAsset) }}</span>
-                <span class="hard-pct" :class="item.ratio >= 100 ? 'pct-up' : 'pct-down'">
-                  {{ (item.ratio - 100).toFixed(1) }}%
-                </span>
-              </div>
-              <div class="hard-bar-track">
-                <div class="hard-bar-fill"
-                  :style="{
-                    width: Math.min((item.ratio / maxRatio) * 100, 100) + '%',
-                    background: item.color
-                  }">
-                </div>
-                <span class="hard-bar-label">{{ item.ratio.toFixed(1) }}%</span>
+            class="hard-col"
+            :class="{ 'hard-col--top': idx === 0 }">
+            <!-- 排名 -->
+            <div class="hard-col-rank" :class="`hard-col-rank--${idx + 1}`">{{ idx + 1 }}</div>
+            <!-- 百分比值 -->
+            <div class="hard-col-pct" :class="item.ratio >= 100 ? 'pct-up' : 'pct-down'">
+              {{ item.ratio.toFixed(1) }}%
+            </div>
+            <!-- 柱体 -->
+            <div class="hard-col-chart">
+              <div class="hard-col-bar" :style="{ height: hardBarHeight(item.ratio) + '%', background: item.color }">
               </div>
             </div>
-            <div v-if="idx === 0" class="hard-crown">👑</div>
+            <!-- 名字 -->
+            <div class="hard-col-name" :style="{ color: item.color }">{{ item.name }}</div>
+            <!-- 原始资产数 -->
+            <div class="hard-col-asset">{{ Math.round(item.totalAsset) }}</div>
+            <!-- 冠军皇冠 -->
+            <div v-if="idx === 0" class="hard-col-crown">👑</div>
           </div>
         </div>
       </div>
@@ -282,6 +279,21 @@ const maxRatio = computed(() => {
   return Math.max(m, 100)
 })
 
+// 竖向柱的高度缩放（扩大微小差异）
+const hardBarScale = computed(() => {
+  const vals = sortedHard.value.map(d => d.ratio)
+  if (!vals.length) return { base: 100, range: 10 }
+  const min = Math.min(...vals, 100)
+  const max = Math.max(...vals, 100)
+  const pad = Math.max((max - min) * 0.15, 1)
+  return { base: min - pad, range: (max - min) + pad * 2 }
+})
+function hardBarHeight(ratio) {
+  const { base, range } = hardBarScale.value
+  if (range <= 0) return 50
+  return Math.max(((ratio - base) / range) * 100, 2)
+}
+
 // ===== 加载 =====
 function isWeekend(dateStr) {
   const d = new Date(dateStr + 'T00:00:00')
@@ -342,57 +354,65 @@ onMounted(async () => {
 .trend-asset { font-size: 10px; font-family: var(--font-number); }
 .cap-chg-label { font-size: 10px; font-weight: 600; font-family: var(--font-number); }
 
-/* ===== 谁最HARD ===== */
+/* ===== 谁最HARD（竖向4柱） ===== */
 .hard-card { padding-bottom: 20px; }
 .hard-title { font-size: 15px; }
 .hard-subtitle { font-size: 11px; color: var(--text-muted); margin: -6px 0 14px; }
-.hard-list { display: flex; flex-direction: column; gap: 14px; }
-.hard-row {
-  display: flex; align-items: center; gap: 10px;
-  padding: 10px 12px; border-radius: 10px;
-  background: var(--bg-card);
-  position: relative;
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-.hard-row--top {
-  background: linear-gradient(135deg, rgba(255,215,0,0.08), rgba(255,193,7,0.03));
-  box-shadow: 0 0 0 1px rgba(255,193,7,0.15);
-}
-.hard-rank {
-  width: 22px; height: 22px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 11px; font-weight: 700; color: #fff; flex-shrink: 0;
-}
-.hard-rank--1 { background: linear-gradient(135deg, #ffc107, #ff9800); }
-.hard-rank--2 { background: linear-gradient(135deg, #90a4ae, #78909c); }
-.hard-rank--3 { background: linear-gradient(135deg, #a1887f, #8d6e63); }
-.hard-rank--4 { background: linear-gradient(135deg, #b0bec5, #90a4ae); }
-.hard-body { flex: 1; min-width: 0; }
-.hard-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
-.hard-name { font-size: 14px; font-weight: 700; width: 24px; }
-.hard-asset { font-size: 13px; font-weight: 600; font-family: var(--font-number); }
-.hard-pct {
-  font-size: 12px; font-weight: 700; font-family: var(--font-number);
-  margin-left: auto;
-}
 .pct-up { color: var(--color-rise); }
 .pct-down { color: var(--color-fall); }
-.hard-bar-track {
-  height: 16px; border-radius: 8px; background: rgba(255,255,255,0.06);
-  position: relative; overflow: hidden;
+
+.hard-cols {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+  align-items: start;
 }
-.hard-bar-fill {
-  height: 100%; border-radius: 8px;
-  transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-  min-width: 4px;
+.hard-col {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 14px 6px 12px; border-radius: 12px;
+  background: var(--bg-card); position: relative;
+  transition: transform 0.2s, box-shadow 0.2s;
 }
-.hard-bar-label {
-  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
-  font-size: 10px; font-weight: 600; color: var(--text-secondary);
-  font-family: var(--font-number);
+.hard-col--top {
+  background: linear-gradient(180deg, rgba(255,215,0,0.1), rgba(255,193,7,0.03));
+  box-shadow: 0 0 0 1px rgba(255,193,7,0.15);
 }
-.hard-crown {
-  font-size: 22px; flex-shrink: 0;
+/* 排名圆标 */
+.hard-col-rank {
+  width: 20px; height: 20px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 700; color: #fff; margin-bottom: 4px;
+}
+.hard-col-rank--1 { background: linear-gradient(135deg, #ffc107, #ff9800); }
+.hard-col-rank--2 { background: linear-gradient(135deg, #90a4ae, #78909c); }
+.hard-col-rank--3 { background: linear-gradient(135deg, #a1887f, #8d6e63); }
+.hard-col-rank--4 { background: linear-gradient(135deg, #b0bec5, #90a4ae); }
+/* 百分比值 */
+.hard-col-pct {
+  font-size: 13px; font-weight: 800; font-family: var(--font-number);
+  margin-bottom: 6px; letter-spacing: -0.5px;
+}
+/* 柱体容器 */
+.hard-col-chart {
+  width: 100%; height: 130px;
+  display: flex; align-items: flex-end; justify-content: center;
+  margin-bottom: 6px;
+}
+.hard-col-bar {
+  width: 60%; min-width: 16px; max-width: 44px;
+  border-radius: 4px 4px 0 0;
+  transition: height 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+/* 名字 */
+.hard-col-name {
+  font-size: 15px; font-weight: 700; margin-bottom: 2px;
+}
+/* 资产原始数字 */
+.hard-col-asset {
+  font-size: 10px; font-family: var(--font-number); color: var(--text-muted);
+  line-height: 1.2; word-break: break-all; text-align: center;
+}
+/* 皇冠 */
+.hard-col-crown {
+  position: absolute; top: -6px; right: -2px; font-size: 18px;
   animation: crown-bounce 1.5s ease-in-out infinite;
 }
 @keyframes crown-bounce {
