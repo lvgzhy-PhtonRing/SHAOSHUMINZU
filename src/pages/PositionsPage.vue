@@ -65,36 +65,6 @@
         </div>
       </div>
 
-      <!-- 总仓位变化模块 -->
-      <div class="section-card">
-        <div class="section-title">总仓位变化 <span class="subtitle">近10天</span></div>
-        <div class="trend-chart">
-          <div v-if="!trendData.length" class="trend-empty">暂无数据</div>
-          <svg v-else :viewBox="`0 0 ${SVG_W} ${SVG_H}`" class="trend-svg" preserveAspectRatio="xMidYMid meet">
-            <defs>
-              <linearGradient id="trendGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color="var(--bg-accent)" stop-opacity="0.25" />
-                <stop offset="100%" stop-color="var(--bg-accent)" stop-opacity="0.02" />
-              </linearGradient>
-            </defs>
-            <!-- 参考线 -->
-            <line v-for="pct in refLines" :key="pct"
-              :x1="PAD_L" :x2="SVG_W - PAD_R"
-              :y1="yPos(pct)" :y2="yPos(pct)"
-              stroke="rgba(255,255,255,0.05)" stroke-dasharray="3,3" />
-            <!-- 面积填充 -->
-            <path :d="areaPath" fill="url(#trendGrad)" />
-            <!-- 折线 -->
-            <polyline :points="linePoints" fill="none" stroke="var(--bg-accent)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" />
-            <!-- 数据点 + 标签 -->
-            <g v-for="(d, i) in trendData" :key="i">
-              <circle :cx="xPos(i)" :cy="yPos(d.ratio)" r="3.5" fill="var(--bg-accent)" stroke="var(--bg-card)" stroke-width="1.5" />
-              <text :x="xPos(i)" :y="yPos(d.ratio) - 10" text-anchor="middle" class="trend-pct">{{ d.ratio }}%</text>
-              <text :x="xPos(i)" :y="SVG_H - 4" text-anchor="middle" class="trend-day">{{ d.label }}</text>
-            </g>
-          </svg>
-        </div>
-      </div>
     </template>
   </div>
 </template>
@@ -106,7 +76,7 @@ import { useHoldingStore } from '@/stores/holdings'
 import { usePriceStore } from '@/stores/prices'
 import { formatMoney } from '@/utils/formatters'
 import { useFundStore } from '@/stores/funds'
-import { loadPoolAllocation, fetchPositionSnapshots } from '@/api/supabase'
+import { loadPoolAllocation } from '@/api/supabase'
 import DonutChart from '@/components/positions/DonutChart.vue'
 import PoolPositionCard from '@/components/positions/PoolPositionCard.vue'
 
@@ -243,43 +213,6 @@ const chartSegments = computed(() => {
   })
 })
 
-const WEEKDAY = ['日', '一', '二', '三', '四', '五', '六']
-
-const trendData = ref([])
-
-// SVG 折线图参数
-const SVG_W = 800, SVG_H = 200
-const PAD_L = 20, PAD_R = 20, PAD_T = 28, PAD_B = 22
-const CHART_W = SVG_W - PAD_L - PAD_R
-const CHART_H = SVG_H - PAD_T - PAD_B
-
-const trendRatioMax = computed(() => {
-  if (!trendData.value.length) return 100
-  const max = Math.max(...trendData.value.map(d => d.ratio))
-  return Math.ceil((max + 10) / 10) * 10 || 100
-})
-const refLines = computed(() => {
-  const m = trendRatioMax.value
-  return [m * 0.25, m * 0.5, m * 0.75].filter(p => p > 0).map(p => Math.round(p))
-})
-
-function xPos(i) {
-  return PAD_L + (i / Math.max(trendData.value.length - 1, 1)) * CHART_W
-}
-function yPos(r) {
-  return PAD_T + CHART_H * (1 - r / trendRatioMax.value)
-}
-const linePoints = computed(() =>
-  trendData.value.map((d, i) => `${xPos(i)},${yPos(d.ratio)}`).join(' ')
-)
-const areaPath = computed(() => {
-  if (!trendData.value.length) return ''
-  const pts = trendData.value.map((d, i) => `${xPos(i)},${yPos(d.ratio)}`).join(' L ')
-  const lastX = xPos(trendData.value.length - 1)
-  const bottomY = SVG_H - PAD_B
-  return `M ${xPos(0)},${yPos(trendData.value[0].ratio)} L ${pts} L ${lastX},${bottomY} L ${xPos(0)},${bottomY} Z`
-})
-
 onMounted(async () => {
   try {
     // 优先从 Supabase 加载分配金额（跨设备同步）
@@ -301,13 +234,6 @@ onMounted(async () => {
     ])
     const codes = holdingStore.stockCodes
     if (codes.length) await priceStore.loadPrices(codes)
-
-    // 加载仓位快照
-    const snaps = await fetchPositionSnapshots(10)
-    trendData.value = snaps.map(s => ({
-      label: WEEKDAY[new Date(s.date + 'T00:00:00').getDay()],
-      ratio: s.ratio
-    }))
   } catch (e) {
     console.error('Positions page load error:', e)
   } finally {
@@ -329,11 +255,6 @@ onMounted(async () => {
 .section-title .subtitle { font-size: 11px; color: var(--text-secondary); font-weight: 400; }
 .pos-gongyou { margin-bottom: 8px; }
 .pos-users-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.trend-chart { padding: 4px 0 6px; }
-.trend-empty { height: 80px; display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--text-muted); }
-.trend-svg { width: 100%; height: auto; display: block; }
-.trend-pct { font-size: 10px; fill: var(--text-secondary); font-family: var(--font-number); }
-.trend-day { font-size: 10px; fill: var(--text-muted); }
 .legend-horizontal {
   display: flex; flex-wrap: wrap; gap: 10px 16px; justify-content: center; padding: 4px 0 0;
 }

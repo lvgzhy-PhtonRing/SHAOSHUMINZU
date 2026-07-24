@@ -49,12 +49,6 @@
                 <stop offset="0%" stop-color="var(--color-rise)" stop-opacity="0.2" />
                 <stop offset="100%" stop-color="var(--color-rise)" stop-opacity="0.02" />
               </linearGradient>
-              <marker id="arrowUp" markerWidth="8" markerHeight="6" refX="4" refY="0" orient="auto">
-                <polygon points="0,6 4,0 8,6" fill="var(--color-rise)" />
-              </marker>
-              <marker id="arrowDown" markerWidth="8" markerHeight="6" refX="4" refY="6" orient="auto">
-                <polygon points="0,0 4,6 8,0" fill="var(--color-fall)" />
-              </marker>
             </defs>
             <!-- 参考线 -->
             <line v-for="a in assetRefLines" :key="a"
@@ -106,13 +100,13 @@ const WEEKDAY = ['日', '一', '二', '三', '四', '五', '六']
 const trendData = ref([])
 
 // SVG 参数（仓位图）
-const SVG_W = 800, SVG_H = 200
-const PAD_L = 24, PAD_R = 24, PAD_T = 28, PAD_B = 22
+const SVG_W = 800, SVG_H = 260
+const PAD_L = 24, PAD_R = 24, PAD_T = 32, PAD_B = 26
 const CHART_W = SVG_W - PAD_L - PAD_R
 const CHART_H = SVG_H - PAD_T - PAD_B
 
 // SVG 参数（资产图，更高一些给标签留空间）
-const SVG_H2 = 240
+const SVG_H2 = 320
 
 // ===== 仓位折线 =====
 const ratioMax = computed(() => {
@@ -222,6 +216,8 @@ onMounted(async () => {
 .trend-chart { padding: 4px 0 6px; }
 .trend-empty { height: 80px; display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--text-muted); }
 .trend-svg { width: 100%; height: auto; display: block; }
+.section-card + .section-card { margin-top: 16px; }
+.section-card { padding: 16px 14px 18px; }
 .trend-pct { font-size: 10px; fill: var(--text-secondary); font-family: var(--font-number); }
 .trend-day { font-size: 10px; fill: var(--text-muted); }
 .trend-asset { font-size: 10px; font-family: var(--font-number); }
