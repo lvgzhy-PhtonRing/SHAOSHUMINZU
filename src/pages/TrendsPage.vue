@@ -9,7 +9,7 @@
     <template v-else>
       <!-- 仓位趋势 -->
       <div class="section-card">
-        <div class="section-title">仓位趋势 <span class="subtitle">近10天</span></div>
+        <div class="section-title">仓位趋势 <span class="subtitle">近5天</span></div>
         <div class="trend-chart">
           <div v-if="!trendData.length" class="trend-empty">暂无数据</div>
           <svg v-else :viewBox="`0 0 ${SVG_W} ${SVG_H}`" class="trend-svg" preserveAspectRatio="xMidYMid meet">
@@ -28,19 +28,22 @@
             <path :d="ratioAreaPath" fill="url(#ratioGrad)" />
             <!-- 折线 -->
             <polyline :points="ratioLinePts" fill="none" stroke="var(--bg-accent)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" />
-            <!-- 数据点 + 标签 -->
+            <!-- 数据点（圈） -->
             <g v-for="(d, i) in trendData" :key="i">
               <circle :cx="xPos(i)" :cy="ratioY(d.ratio)" r="8" fill="var(--bg-accent)" stroke="var(--bg-card)" stroke-width="3" />
-              <text :x="xPos(i)" :y="ratioY(d.ratio) - 18" text-anchor="middle" class="trend-pct">{{ d.ratio }}%</text>
-              <text :x="xPos(i)" :y="SVG_H - 10" text-anchor="middle" class="trend-day">{{ d.label }}</text>
             </g>
           </svg>
+          <!-- HTML 浮层标签 -->
+          <span v-for="(d, i) in trendData" :key="'rp'+i" class="fl-label fl-pct"
+            :style="flStyle(i, ratioY(d.ratio), -18, SVG_H)">{{ d.ratio }}%</span>
+          <span v-for="(d, i) in trendData" :key="'rd'+i" class="fl-label fl-day"
+            :style="flStyle(i, SVG_H - 10, 0, SVG_H)">{{ d.label }}</span>
         </div>
       </div>
 
       <!-- 资产趋势 -->
       <div class="section-card">
-        <div class="section-title">资产趋势 <span class="subtitle">近10天</span></div>
+        <div class="section-title">资产趋势 <span class="subtitle">近5天</span></div>
         <div class="trend-chart">
           <div v-if="!trendData.length" class="trend-empty">暂无数据</div>
           <svg v-else :viewBox="`0 0 ${SVG_W} ${SVG_H2}`" class="trend-svg" preserveAspectRatio="xMidYMid meet">
@@ -59,32 +62,35 @@
             <path :d="assetAreaPath" fill="url(#assetGrad)" />
             <!-- 折线 -->
             <polyline :points="assetLinePts" fill="none" stroke="var(--color-rise)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" />
-            <!-- 资金变动标记（竖线 + 标签） -->
+            <!-- 资金变动标记（竖线） -->
             <g v-for="(d, i) in trendData" :key="'cc'+i">
               <template v-if="d.capitalChange !== 0">
                 <line :x1="xPos(i)" :x2="xPos(i)"
                   :y1="PAD_T" :y2="SVG_H2 - PAD_B"
                   :stroke="d.capitalChange > 0 ? 'var(--color-rise)' : 'var(--color-fall)'"
                   stroke-width="1.5" stroke-dasharray="5,3" opacity="0.6" />
-                <text :x="xPos(i)" :y="assetY(d.asset) - 22"
-                  text-anchor="middle"
-                  class="cap-chg-label"
-                  :fill="d.capitalChange > 0 ? 'var(--color-rise)' : 'var(--color-fall)'">
-                  {{ formatCapitalChange(d.capitalChange) }}
-                </text>
               </template>
             </g>
-            <!-- 数据点 + 金额标签 -->
+            <!-- 数据点（圈） -->
             <g v-for="(d, i) in trendData" :key="i">
               <circle :cx="xPos(i)" :cy="assetY(d.asset)" r="8" fill="var(--color-rise)" stroke="var(--bg-card)" stroke-width="3" />
-              <text :x="xPos(i)" :y="assetY(d.asset) - 6"
-                text-anchor="end" class="trend-asset"
-                :fill="d.capitalChange !== 0 ? (d.capitalChange > 0 ? 'var(--color-rise)' : 'var(--color-fall)') : 'var(--text-secondary)'">
-                {{ formatCompactAsset(d.asset) }}
-              </text>
-              <text :x="xPos(i)" :y="SVG_H2 - 10" text-anchor="middle" class="trend-day">{{ d.label }}</text>
             </g>
           </svg>
+          <!-- HTML 浮层标签 -->
+          <span v-for="(d, i) in trendData" :key="'cc'+i">
+            <span v-if="d.capitalChange !== 0" class="fl-label fl-capchg"
+              :style="flStyle(i, assetY(d.asset), -22, SVG_H2)"
+              :class="d.capitalChange > 0 ? 'fl-up' : 'fl-down'">
+              {{ formatCapitalChange(d.capitalChange) }}
+            </span>
+          </span>
+          <span v-for="(d, i) in trendData" :key="'aa'+i" class="fl-label fl-asset"
+            :style="flStyle(i, assetY(d.asset), -6, SVG_H2, 'end')"
+            :class="d.capitalChange !== 0 ? (d.capitalChange > 0 ? 'fl-up' : 'fl-down') : ''">
+            {{ formatCompactAsset(d.asset) }}
+          </span>
+          <span v-for="(d, i) in trendData" :key="'ad'+i" class="fl-label fl-day"
+            :style="flStyle(i, SVG_H2 - 10, 0, SVG_H2)">{{ d.label }}</span>
         </div>
       </div>
 
@@ -295,6 +301,18 @@ function hardBarHeight(ratio) {
   return Math.max(((ratio - base) / range) * 100, 2)
 }
 
+// HTML 浮层标签定位（viewBox 坐标 → % 位置）
+function flStyle(i, vy, offsetY, svgH, anchor = 'middle') {
+  const x = PAD_L + (i / Math.max(trendData.value.length - 1, 1)) * CHART_W
+  const textAlign = anchor === 'end' ? 'right' : 'center'
+  return {
+    left: (x / SVG_W * 100).toFixed(2) + '%',
+    top: ((vy + offsetY) / svgH * 100).toFixed(2) + '%',
+    transform: anchor === 'end' ? 'translate(-4px, -50%)' : 'translateX(-50%)',
+    textAlign
+  }
+}
+
 // ===== 加载 =====
 function isWeekend(dateStr) {
   const d = new Date(dateStr + 'T00:00:00')
@@ -327,11 +345,11 @@ onMounted(async () => {
     // 每天首次打开趋势页时自动保存当天快照（确保0操作的日子也有数据）
     await saveCurrentPositionSnapshot()
 
-    // 多取一些快照，过滤周末，取最后10个交易日
-    const snaps = await fetchPositionSnapshots(20)
+    // 多取一些快照，过滤周末，取最后5个交易日
+    const snaps = await fetchPositionSnapshots(12)
     const tradingDays = snaps.filter(s => !isWeekend(s.date))
-    const last10 = tradingDays.slice(-10)
-    trendData.value = last10.map(s => ({
+    const last5 = tradingDays.slice(-5)
+    trendData.value = last5.map(s => ({
       label: WEEKDAY[new Date(s.date + 'T00:00:00').getDay()],
       ratio: s.ratio,
       asset: s.asset || 0,
@@ -348,15 +366,22 @@ onMounted(async () => {
 <style scoped>
 .section-title { padding: 0 0 10px; font-size: 13px; font-weight: 600; }
 .section-title .subtitle { font-size: 11px; color: var(--text-secondary); font-weight: 400; }
-.trend-chart { padding: 4px 0 6px; }
+.trend-chart { padding: 4px 0 6px; position: relative; }
 .trend-empty { height: 80px; display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--text-muted); }
 .trend-svg { width: 100%; height: auto; display: block; }
 .section-card + .section-card { margin-top: 16px; }
 .section-card { padding: 16px 14px 18px; }
-.trend-pct { font-size: 44px; fill: var(--text-primary); font-family: var(--font-number); font-weight: 800; }
-.trend-day { font-size: 32px; fill: var(--text-secondary); font-weight: 600; }
-.trend-asset { font-size: 36px; font-family: var(--font-number); font-weight: 700; }
-.cap-chg-label { font-size: 30px; font-weight: 700; font-family: var(--font-number); }
+/* ===== HTML 浮层标签（真实 CSS 像素） ===== */
+.fl-label {
+  position: absolute; white-space: nowrap; pointer-events: none;
+  font-family: var(--font-number);
+}
+.fl-pct { font-size: 18px; font-weight: 800; color: var(--text-primary); }
+.fl-day { font-size: 14px; font-weight: 600; color: var(--text-secondary); }
+.fl-asset { font-size: 16px; font-weight: 700; }
+.fl-capchg { font-size: 14px; font-weight: 700; }
+.fl-up { color: var(--color-rise); }
+.fl-down { color: var(--color-fall); }
 
 /* ===== 谁最HARD（竖向4柱） ===== */
 .hard-card { padding-bottom: 20px; }
