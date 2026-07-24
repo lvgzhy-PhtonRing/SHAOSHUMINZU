@@ -215,7 +215,8 @@ export async function fetchPositionSnapshots(limit = 10) {
         date: d.key.replace('pos_snap:', ''),
         ratio: parsed.ratio,
         asset: parsed.asset,
-        capitalChange: parsed.capitalChange || 0
+        capitalChange: parsed.capitalChange || 0,
+        updatedAt: parsed.updatedAt || null
       }
     })
     .reverse()

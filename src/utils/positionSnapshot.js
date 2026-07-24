@@ -31,6 +31,7 @@ export async function saveCurrentPositionSnapshot() {
   await savePositionSnapshot(today, {
     ratio: parseFloat(ratio.toFixed(1)),
     asset: Math.round(asset),
-    capitalChange: todayCapitalChanges
+    capitalChange: todayCapitalChanges,
+    updatedAt: new Date().toISOString()
   })
 }

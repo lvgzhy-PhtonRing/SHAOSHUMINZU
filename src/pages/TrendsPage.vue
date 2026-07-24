@@ -130,6 +130,7 @@ import { useHoldingStore } from '@/stores/holdings'
 import { usePriceStore } from '@/stores/prices'
 import { useFundStore } from '@/stores/funds'
 import { fetchPositionSnapshots, loadPoolAllocation } from '@/api/supabase'
+import { saveCurrentPositionSnapshot } from '@/utils/positionSnapshot'
 
 const loading = ref(true)
 const WEEKDAY = ['日', '一', '二', '三', '四', '五', '六']
@@ -322,6 +323,9 @@ onMounted(async () => {
 
     const codes = holdingStore.stockCodes
     if (codes.length) await priceStore.loadPrices(codes)
+
+    // 每天首次打开趋势页时自动保存当天快照（确保0操作的日子也有数据）
+    await saveCurrentPositionSnapshot()
 
     // 多取一些快照，过滤周末，取最后10个交易日
     const snaps = await fetchPositionSnapshots(20)

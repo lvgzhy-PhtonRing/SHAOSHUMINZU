@@ -5,7 +5,7 @@
       <router-view />
     </div>
     <van-tabbar v-model="active" active-color="#0f3460" inactive-color="#888" border>
-      <van-tabbar-item icon="chart-trending-o" @click="go('dashboard')">持仓</van-tabbar-item>
+      <van-tabbar-item icon="diamond-o" @click="go('dashboard')">持仓</van-tabbar-item>
       <van-tabbar-item icon="bar-chart-o" @click="go('positions')">仓位</van-tabbar-item>
       <van-tabbar-item icon="fire-o" @click="go('trends')">趋势</van-tabbar-item>
       <van-tabbar-item icon="exchange" @click="go('trade')">交易</van-tabbar-item>
