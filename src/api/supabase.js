@@ -188,15 +188,18 @@ export async function updatePassword(plainPwd) {
   return !error
 }
 
-/* 保存仓位快照（日期去重） */
-export async function savePositionSnapshot(date, ratio) {
+/* 保存仓位/资产快照（日期去重） */
+export async function savePositionSnapshot(date, data) {
+  const payload = typeof data === 'object'
+    ? data
+    : { ratio: data }  // 兼容旧调用方式
   const { error } = await supabase
     .from('app_config')
-    .upsert({ key: `pos_snap:${date}`, value: JSON.stringify({ ratio }) }, { onConflict: 'key' })
+    .upsert({ key: `pos_snap:${date}`, value: JSON.stringify(payload) }, { onConflict: 'key' })
   if (error) throw new Error(error.message)
 }
 
-/* 读取最近 N 条仓位快照 */
+/* 读取最近 N 条快照（含资产 & 资金变动） */
 export async function fetchPositionSnapshots(limit = 10) {
   const { data, error } = await supabase
     .from('app_config')
@@ -206,7 +209,15 @@ export async function fetchPositionSnapshots(limit = 10) {
     .limit(limit)
   if (error) return []
   return data
-    .map(d => ({ date: d.key.replace('pos_snap:', ''), ratio: JSON.parse(d.value).ratio }))
+    .map(d => {
+      const parsed = JSON.parse(d.value)
+      return {
+        date: d.key.replace('pos_snap:', ''),
+        ratio: parsed.ratio,
+        asset: parsed.asset,
+        capitalChange: parsed.capitalChange || 0
+      }
+    })
     .reverse()
 }
 

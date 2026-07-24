@@ -26,6 +26,12 @@ const routes = [
         meta: { title: '仓位' }
       },
       {
+        path: 'trends',
+        name: 'trends',
+        component: () => import('@/pages/TrendsPage.vue'),
+        meta: { title: '趋势' }
+      },
+      {
         path: 'trade',
         name: 'trade',
         component: () => import('@/pages/TradePage.vue'),

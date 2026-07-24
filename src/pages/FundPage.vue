@@ -1,7 +1,7 @@
 <template>
   <div class="page fund-page">
     <div class="page-header">
-      <span class="page-title">资金池管理</span>
+      <span class="page-title">资金管理</span>
     </div>
 
     <div class="fund-summary">

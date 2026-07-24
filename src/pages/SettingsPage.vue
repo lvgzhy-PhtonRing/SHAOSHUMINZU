@@ -1,7 +1,7 @@
 <template>
   <div class="page settings-page">
     <div class="page-header">
-      <span class="page-title">设置</span>
+      <span class="page-title">软件设置</span>
     </div>
     <div class="settings-section">
       <div class="settings-group">
@@ -37,7 +37,7 @@
         <div class="group-title">关于</div>
         <div class="settings-item">
           <div class="item-left"><span class="item-icon">ℹ️</span><span>版本</span></div>
-          <span class="item-value">v2.0.4</span>
+          <span class="item-value">v2.0.5</span>
         </div>
         <div class="settings-item">
           <div class="item-left"><span class="item-icon">🏛️</span><span>数据存储</span></div>

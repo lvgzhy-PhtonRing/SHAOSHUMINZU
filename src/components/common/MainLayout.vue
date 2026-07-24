@@ -7,6 +7,7 @@
     <van-tabbar v-model="active" active-color="#0f3460" inactive-color="#888" border>
       <van-tabbar-item icon="chart-trending-o" @click="go('dashboard')">持仓</van-tabbar-item>
       <van-tabbar-item icon="bar-chart-o" @click="go('positions')">仓位</van-tabbar-item>
+      <van-tabbar-item icon="trending-up" @click="go('trends')">趋势</van-tabbar-item>
       <van-tabbar-item icon="exchange" @click="go('trade')">交易</van-tabbar-item>
       <van-tabbar-item icon="gold-coin-o" @click="go('fund')">资金</van-tabbar-item>
       <van-tabbar-item icon="setting-o" @click="go('settings')">设置</van-tabbar-item>
@@ -21,7 +22,7 @@ import { useRoute, useRouter } from 'vue-router'
 const route = useRoute()
 const router = useRouter()
 
-const routeMap = { dashboard: 0, positions: 1, trade: 2, fund: 3, settings: 4 }
+const routeMap = { dashboard: 0, positions: 1, trends: 2, trade: 3, fund: 4, settings: 5 }
 const active = ref(routeMap[route.name] || 0)
 
 function go(name) {
