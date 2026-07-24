@@ -30,9 +30,9 @@
             <polyline :points="ratioLinePts" fill="none" stroke="var(--bg-accent)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" />
             <!-- 数据点 + 标签 -->
             <g v-for="(d, i) in trendData" :key="i">
-              <circle :cx="xPos(i)" :cy="ratioY(d.ratio)" r="5" fill="var(--bg-accent)" stroke="var(--bg-card)" stroke-width="2" />
-              <text :x="xPos(i)" :y="ratioY(d.ratio) - 16" text-anchor="middle" class="trend-pct">{{ d.ratio }}%</text>
-              <text :x="xPos(i)" :y="SVG_H - 8" text-anchor="middle" class="trend-day">{{ d.label }}</text>
+              <circle :cx="xPos(i)" :cy="ratioY(d.ratio)" r="8" fill="var(--bg-accent)" stroke="var(--bg-card)" stroke-width="3" />
+              <text :x="xPos(i)" :y="ratioY(d.ratio) - 18" text-anchor="middle" class="trend-pct">{{ d.ratio }}%</text>
+              <text :x="xPos(i)" :y="SVG_H - 10" text-anchor="middle" class="trend-day">{{ d.label }}</text>
             </g>
           </svg>
         </div>
@@ -66,7 +66,7 @@
                   :y1="PAD_T" :y2="SVG_H2 - PAD_B"
                   :stroke="d.capitalChange > 0 ? 'var(--color-rise)' : 'var(--color-fall)'"
                   stroke-width="1.5" stroke-dasharray="5,3" opacity="0.6" />
-                <text :x="xPos(i)" :y="assetY(d.asset) - 20"
+                <text :x="xPos(i)" :y="assetY(d.asset) - 22"
                   text-anchor="middle"
                   class="cap-chg-label"
                   :fill="d.capitalChange > 0 ? 'var(--color-rise)' : 'var(--color-fall)'">
@@ -76,13 +76,13 @@
             </g>
             <!-- 数据点 + 金额标签 -->
             <g v-for="(d, i) in trendData" :key="i">
-              <circle :cx="xPos(i)" :cy="assetY(d.asset)" r="5" fill="var(--color-rise)" stroke="var(--bg-card)" stroke-width="2" />
-              <text :x="xPos(i)" :y="assetY(d.asset) - 4"
+              <circle :cx="xPos(i)" :cy="assetY(d.asset)" r="8" fill="var(--color-rise)" stroke="var(--bg-card)" stroke-width="3" />
+              <text :x="xPos(i)" :y="assetY(d.asset) - 6"
                 text-anchor="end" class="trend-asset"
                 :fill="d.capitalChange !== 0 ? (d.capitalChange > 0 ? 'var(--color-rise)' : 'var(--color-fall)') : 'var(--text-secondary)'">
                 {{ formatCompactAsset(d.asset) }}
               </text>
-              <text :x="xPos(i)" :y="SVG_H2 - 8" text-anchor="middle" class="trend-day">{{ d.label }}</text>
+              <text :x="xPos(i)" :y="SVG_H2 - 10" text-anchor="middle" class="trend-day">{{ d.label }}</text>
             </g>
           </svg>
         </div>
@@ -166,13 +166,13 @@ function defaultAlloc() {
 const poolAmounts = reactive(loadLocalAlloc() || defaultAlloc())
 
 // SVG 参数（仓位图）
-const SVG_W = 800, SVG_H = 300
-const PAD_L = 24, PAD_R = 24, PAD_T = 40, PAD_B = 32
+const SVG_W = 800, SVG_H = 360
+const PAD_L = 24, PAD_R = 24, PAD_T = 44, PAD_B = 38
 const CHART_W = SVG_W - PAD_L - PAD_R
 const CHART_H = SVG_H - PAD_T - PAD_B
 
 // SVG 参数（资产图，更高一些给标签留空间）
-const SVG_H2 = 370
+const SVG_H2 = 440
 
 // ===== 仓位折线 =====
 const ratioMax = computed(() => {
@@ -327,11 +327,11 @@ onMounted(async () => {
     // 每天首次打开趋势页时自动保存当天快照（确保0操作的日子也有数据）
     await saveCurrentPositionSnapshot()
 
-    // 多取一些快照，过滤周末，取最后5个交易日（配合放大文字）
-    const snaps = await fetchPositionSnapshots(12)
+    // 多取一些快照，过滤周末，取最后10个交易日
+    const snaps = await fetchPositionSnapshots(20)
     const tradingDays = snaps.filter(s => !isWeekend(s.date))
-    const last5 = tradingDays.slice(-5)
-    trendData.value = last5.map(s => ({
+    const last10 = tradingDays.slice(-10)
+    trendData.value = last10.map(s => ({
       label: WEEKDAY[new Date(s.date + 'T00:00:00').getDay()],
       ratio: s.ratio,
       asset: s.asset || 0,
@@ -353,10 +353,10 @@ onMounted(async () => {
 .trend-svg { width: 100%; height: auto; display: block; }
 .section-card + .section-card { margin-top: 16px; }
 .section-card { padding: 16px 14px 18px; }
-.trend-pct { font-size: 14px; fill: var(--text-primary); font-family: var(--font-number); font-weight: 700; }
-.trend-day { font-size: 13px; fill: var(--text-secondary); }
-.trend-asset { font-size: 13px; font-family: var(--font-number); font-weight: 600; }
-.cap-chg-label { font-size: 12px; font-weight: 700; font-family: var(--font-number); }
+.trend-pct { font-size: 44px; fill: var(--text-primary); font-family: var(--font-number); font-weight: 800; }
+.trend-day { font-size: 32px; fill: var(--text-secondary); font-weight: 600; }
+.trend-asset { font-size: 36px; font-family: var(--font-number); font-weight: 700; }
+.cap-chg-label { font-size: 30px; font-weight: 700; font-family: var(--font-number); }
 
 /* ===== 谁最HARD（竖向4柱） ===== */
 .hard-card { padding-bottom: 20px; }
