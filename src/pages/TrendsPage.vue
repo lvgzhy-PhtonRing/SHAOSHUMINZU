@@ -9,7 +9,7 @@
     <template v-else>
       <!-- 仓位趋势 -->
       <div class="section-card">
-        <div class="section-title">仓位趋势 <span class="subtitle">近5天</span></div>
+        <div class="section-title">仓位趋势 <span class="subtitle">近7日</span></div>
         <div class="trend-chart">
           <div v-if="!trendData.length" class="trend-empty">暂无数据</div>
           <svg v-else :viewBox="`0 0 ${SVG_W} ${SVG_H}`" class="trend-svg" preserveAspectRatio="xMidYMid meet">
@@ -43,7 +43,7 @@
 
       <!-- 资产趋势 -->
       <div class="section-card">
-        <div class="section-title">资产趋势 <span class="subtitle">近5天</span></div>
+        <div class="section-title">资产趋势 <span class="subtitle">近7日</span></div>
         <div class="trend-chart">
           <div v-if="!trendData.length" class="trend-empty">暂无数据</div>
           <svg v-else :viewBox="`0 0 ${SVG_W} ${SVG_H2}`" class="trend-svg" preserveAspectRatio="xMidYMid meet">
@@ -345,11 +345,11 @@ onMounted(async () => {
     // 每天首次打开趋势页时自动保存当天快照（确保0操作的日子也有数据）
     await saveCurrentPositionSnapshot()
 
-    // 多取一些快照，过滤周末，取最后5个交易日
-    const snaps = await fetchPositionSnapshots(12)
+    // 多取一些快照，过滤周末，取最后7个交易日
+    const snaps = await fetchPositionSnapshots(15)
     const tradingDays = snaps.filter(s => !isWeekend(s.date))
-    const last5 = tradingDays.slice(-5)
-    trendData.value = last5.map(s => ({
+    const last7 = tradingDays.slice(-7)
+    trendData.value = last7.map(s => ({
       label: WEEKDAY[new Date(s.date + 'T00:00:00').getDay()],
       ratio: s.ratio,
       asset: s.asset || 0,
