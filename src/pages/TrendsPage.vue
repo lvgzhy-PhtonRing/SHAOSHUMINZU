@@ -376,10 +376,10 @@ onMounted(async () => {
   position: absolute; white-space: nowrap; pointer-events: none;
   font-family: var(--font-number);
 }
-.fl-pct { font-size: 18px; font-weight: 800; color: var(--text-primary); }
-.fl-day { font-size: 14px; font-weight: 600; color: var(--text-secondary); }
-.fl-asset { font-size: 16px; font-weight: 700; }
-.fl-capchg { font-size: 14px; font-weight: 700; }
+.fl-pct { font-size: 14px; font-weight: 800; color: var(--text-primary); }
+.fl-day { font-size: 11px; font-weight: 600; color: var(--text-secondary); }
+.fl-asset { font-size: 13px; font-weight: 700; }
+.fl-capchg { font-size: 11px; font-weight: 700; }
 .fl-up { color: var(--color-rise); }
 .fl-down { color: var(--color-fall); }
 
