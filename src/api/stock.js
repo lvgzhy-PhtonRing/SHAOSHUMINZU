@@ -118,3 +118,84 @@ export async function fetchStockPrice(code) {
 export function clearPriceCache() {
   cacheTime = {}; priceCache = {}
 }
+
+// ========== 拼音/名称联想 ==========
+const SUGGEST_MAX_AGE = 2 * 60 * 1000
+let suggestCache = {}
+let suggestCacheTime = {}
+
+async function fetchSuggestViaEdge(key) {
+  if (!EDGE_FN) return []
+  const resp = await fetch(`${EDGE_FN}?key=${encodeURIComponent(key)}`, {
+    headers: { 'Authorization': 'Bearer ' + (import.meta.env.VITE_SUPABASE_ANON_KEY || '') }
+  })
+  if (!resp.ok) return []
+  const json = await resp.json()
+  const suggestions = json.suggestions || []
+  for (const s of suggestions) {
+    if (s.stock_name) nameCache[s.stock_code] = s.stock_name
+  }
+  return suggestions
+}
+
+function fetchSuggestJSONP(key) {
+  return new Promise((resolve) => {
+    const script = document.createElement('script')
+    script.src = `https://suggest3.sinajs.cn/suggest/type=11,12,13,14,15&key=${encodeURIComponent(key)}&t=${Date.now()}`
+    script.charset = 'gb18030'
+    const timer = setTimeout(() => { cleanup(); resolve([]) }, 8000)
+
+    function cleanup() {
+      clearTimeout(timer)
+      if (script.parentNode) document.body.removeChild(script)
+      delete window.suggestvalue
+    }
+
+    // Sina suggest 返回 var suggestvalue="..." 声明全局变量，不是 JSONP callback
+    script.onload = () => {
+      cleanup()
+      const raw = window.suggestvalue
+      if (!raw) { resolve([]); return }
+      const suggestions = []
+      const entries = String(raw).split(';').filter(e => e.trim())
+      for (const entry of entries) {
+        const parts = entry.split(',')
+        const name = parts[0] || ''
+        const type = parts[1] || ''
+        const code = parts[2] || ''
+        if (!/^\d{6}$/.test(code)) continue
+        if (type !== '11' && type !== '12') continue
+        try {
+          const decoded = decodeURIComponent(escape(name))
+          if (decoded) nameCache[code] = decoded.replace(/[^\w一-鿿（）]/g, '').trim()
+        } catch (e) {}
+        suggestions.push({
+          stock_code: code,
+          stock_name: nameCache[code] || name,
+          market: type === '11' ? '沪' : '深'
+        })
+      }
+      resolve(suggestions)
+    }
+
+    script.onerror = () => { cleanup(); resolve([]) }
+    document.body.appendChild(script)
+  })
+}
+
+export async function fetchStockSuggestions(key) {
+  if (!key || !key.trim()) return []
+  const k = key.trim()
+  if (suggestCache[k] && (Date.now() - suggestCacheTime[k] < SUGGEST_MAX_AGE)) {
+    return suggestCache[k]
+  }
+
+  let suggestions = await fetchSuggestViaEdge(k).catch(() => [])
+  if (!suggestions.length) {
+    suggestions = await fetchSuggestJSONP(k).catch(() => [])
+  }
+
+  suggestCache[k] = suggestions
+  suggestCacheTime[k] = Date.now()
+  return suggestions
+}

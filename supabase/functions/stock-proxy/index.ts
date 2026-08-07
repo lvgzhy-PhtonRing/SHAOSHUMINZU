@@ -13,11 +13,54 @@ serve(async (req) => {
   }
 
   const url = new URL(req.url)
+
+  // === 拼音/名称联想模式 (key= 参数) ===
+  const keyParam = url.searchParams.get('key') || ''
+  if (keyParam.trim()) {
+    try {
+      const suggestUrl = 'https://suggest3.sinajs.cn/suggest/type=11,12,13,14,15&key=' + encodeURIComponent(keyParam.trim())
+      const resp = await fetch(suggestUrl, {
+        headers: { 'Referer': 'https://finance.sina.com.cn' }
+      })
+
+      const buffer = await resp.arrayBuffer()
+      const decoder = new TextDecoder('gb18030')
+      const text = decoder.decode(buffer)
+
+      // 解析 var suggestvalue="字段1,字段2,...;字段1,字段2,..."
+      const match = text.match(/var suggestvalue="([^"]*)"/)
+      const suggestions: Array<{ stock_code: string; stock_name: string; market: string }> = []
+
+      if (match) {
+        const entries = match[1].split(';').filter(function (e) { return e.trim() })
+        for (const entry of entries) {
+          const parts = entry.split(',')
+          // parts[0]=名称, parts[1]=类型(11=沪A,12=深A), parts[2]=代码
+          const name = parts[0] || ''
+          const type = parts[1] || ''
+          const code = parts[2] || ''
+          if (!/^\d{6}$/.test(code)) continue
+          if (type !== '11' && type !== '12') continue
+          suggestions.push({
+            stock_code: code,
+            stock_name: name,
+            market: type === '11' ? '沪' : '深'
+          })
+        }
+      }
+
+      return new Response(JSON.stringify({ suggestions }), { headers })
+    } catch (err) {
+      return new Response(JSON.stringify({ error: String(err) }), { status: 500, headers })
+    }
+  }
+
+  // === 报价模式 (codes= 参数, 原有逻辑) ===
   const codesParam = url.searchParams.get('codes') || ''
   const codes = codesParam.split(',').filter(function(c) { return /^\d{6}$/.test(c.trim()) })
 
   if (codes.length === 0) {
-    return new Response(JSON.stringify({ error: 'missing codes param' }), { status: 400, headers })
+    return new Response(JSON.stringify({ error: 'missing codes or key param' }), { status: 400, headers })
   }
 
   try {
@@ -36,7 +79,7 @@ serve(async (req) => {
     var decoder = new TextDecoder('gb18030')
     var text = decoder.decode(buffer)
 
-    var results = {}
+    var results: Record<string, unknown> = {}
     var lines = text.split(';\n').filter(function(l) { return l.trim() })
     for (var i = 0; i < lines.length; i++) {
       var line = lines[i]
