@@ -99,6 +99,37 @@ CI/CD：推送到 main 分支自动触发 GitHub Pages 部署。环境变量通�
                              Edge Function → 新浪行情
 ```
 
+## 生产环境子池
+
+生产数据库子池 ID 与 `init.sql` 不同（因历史插入冲突导致自增 ID 跳跃）：
+
+| ID | 名称 | sort_order | 初始分配 |
+|----|------|------------|----------|
+| 16 | 公共池 | 1 | 剩余 = 总资金 − 四人合计 |
+| 42 | 春 | 2 | 110,000 |
+| 64 | 维 | 3 | 110,000 |
+| 65 | 队 | 4 | 110,000 |
+| 66 | 回 | 5 | 110,000 |
+
+修改交易/资金记录的 `pool_id` 时必须使用以上生产 ID。
+
+## 数据库维护
+
+### 维护脚本 (`json/`，不入 git)
+
+| 脚本 | 用途 |
+|------|------|
+| `fetch_transactions.mjs` | 拉取交易记录并汇总统计 |
+| `migrate_pools_v2.mjs` | 重分配交易到子池（含持仓重建） |
+| `fix_capital_data.mjs` | 修正 `capital_log.created_at` 和快照 `capitalChange` |
+| `split_juhua.mjs` | 拆分单只股票持仓到子池 |
+
+### 注意事项
+- 修改 `pool_id` 后必须同步重建 `holdings`，否则持仓数据不一致
+- `capital_log` 的 `note='初始'` 不参与 `capitalChange` 计算（见 `positionSnapshot.js:28`）
+- `capital_log.created_at` 是记录创建时间，批量导入时可能与实际日期不符，需手动修正
+- 持仓成本公式（券商移动平均法）：**(买入总实际支出 − 卖出总实际收入) / 剩余股数**
+
 ## 安全规范
 
 - `.env` 被 `.gitignore` 排除，禁止提交凭据到 git
