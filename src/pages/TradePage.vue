@@ -50,7 +50,7 @@
             <div class="tli-meta">
               <span>{{ formatMoney(log.amount) }}</span>
               <span> · {{ log.pool_name }}</span>
-              <span> · {{ formatDateString(log.created_at) }}</span>
+              <span> · {{ formatDateString(log.trade_date) }}</span>
             </div>
           </div>
           <div class="tli-actions">
@@ -237,7 +237,7 @@ const diff = computed(() => {
   return parseFloat(actualAmount.value) - pendingTrade.value.amount
 })
 
-// 历史买卖记录（从资金记录中过滤，匹配交易获取股票名称）
+// 历史买卖记录（从资金记录中过滤，匹配交易获取股票名称和交易日期）
 const tradeLogs = computed(() => {
   return fundStore.capitalLogs
     .filter(l => l.pool_id !== null)
@@ -253,10 +253,11 @@ const tradeLogs = computed(() => {
         ...l,
         stock_code: code,
         stock_name: tx?.stock_name || '',
+        trade_date: tx?.trade_date || l.created_at,
         pool_name: poolStore.pools.find(p => p.id === l.pool_id)?.name || ''
       }
     })
-    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    .sort((a, b) => new Date(b.trade_date) - new Date(a.trade_date))
 })
 
 function formatDateString(isoStr) {
