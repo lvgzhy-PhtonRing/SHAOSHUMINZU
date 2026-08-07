@@ -73,25 +73,11 @@
       </div>
     </template>
 
-    <!-- 卖出拦截弹窗 -->
-    <teleport to="body">
-      <div v-if="showSellBlock" class="overlay" @click.self="showSellBlock = false">
-        <div class="dialog">
-          <div class="dlg-title">⚠️ 持仓成本未校对</div>
-          <div class="dlg-info">{{ sellBlockStock }} 存在未校对的买入交易（共 {{ sellBlockCount }} 笔）。请先在持仓页面校对成本后再卖出。</div>
-          <div class="dlg-btns">
-            <button class="d-cancel" @click="showSellBlock = false; resetSell()">知道了</button>
-            <button class="d-ok" @click="goToPositions">去校对</button>
-          </div>
-        </div>
-      </div>
-    </teleport>
-
     <!-- 历史买卖记录 -->
     <div class="section-card" v-if="tradeLogs.length">
       <div class="section-title">股票交易记录</div>
       <div class="trade-log-list">
-        <div v-for="log in tradeLogs" :key="log.id" class="trade-log-item" :class="{ 'tli-verified': log.fee > 0 }">
+        <div v-for="log in tradeLogs" :key="log.id" class="trade-log-item">
           <div class="tli-body">
             <div class="tli-header">
               <span class="tli-action" :class="log.type === 'add' ? 'rise' : 'fall'">
@@ -99,11 +85,10 @@
               </span>
               <span class="tli-name">{{ log.stock_name }}</span>
               <span v-if="log.quantity" class="tli-qty">{{ log.quantity }}股</span>
-              <span v-if="log.fee > 0" class="tli-verified-badge">✓已校对</span>
             </div>
             <div class="tli-meta">
               <span>{{ formatMoney(log.amount) }}</span>
-              <span v-if="log.fee > 0" class="tli-fee">(含手续费 {{ formatMoney(log.fee) }})</span>
+              <span v-if="log.fee > 0" class="tli-fee">· 费 {{ formatMoney(log.fee) }}</span>
               <span> · {{ log.pool_name }}</span>
               <span> · {{ formatDateString(log.trade_date) }}</span>
             </div>
@@ -188,19 +173,19 @@
 
 <script setup>
 import { ref, computed, reactive, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { usePoolStore } from '@/stores/pools'
 import { useTransactionStore } from '@/stores/transactions'
 import { useHoldingStore } from '@/stores/holdings'
 import { useFundStore } from '@/stores/funds'
 import { calcNewCostPrice } from '@/utils/calculators'
 import { formatMoney, formatPrice } from '@/utils/formatters'
+import { calcCostPrice, calcActualAmount } from '@/utils/feeCalculator'
 import { upsertHolding, deleteHolding, insertCapitalLog, deleteCapitalLog, updateCapitalLog, updateTransaction, deleteTransaction, fetchTransactionsByPoolStock, loadPoolAllocation } from '@/api/supabase'
 import StockSearch from '@/components/trade/StockSearch.vue'
 import TradeForm from '@/components/trade/TradeForm.vue'
 
 const route = useRoute()
-const router = useRouter()
 const poolStore = usePoolStore()
 const txStore = useTransactionStore()
 const holdingStore = useHoldingStore()
@@ -249,12 +234,13 @@ async function onBuySubmit(data) {
   submitting.value = true
   try {
     const amount = parseFloat(data.amount); const qty = data.quantity; const price = data.price
-    const tx = { pool_id: data.pool_id, stock_code: stockCode.value, stock_name: stockName.value, type: 'buy', quantity: qty, price, amount, fee: 0, status: 'verified', actual_amount: amount, trade_date: data.trade_date, note: data.note || `买入 ${stockCode.value}`, created_by: 'admin' }
+    const { fee, actualAmount } = calcActualAmount(amount)
+    const tx = { pool_id: data.pool_id, stock_code: stockCode.value, stock_name: stockName.value, type: 'buy', quantity: qty, price, amount, fee, status: 'verified', actual_amount: actualAmount, trade_date: data.trade_date, note: data.note || `买入 ${stockCode.value}`, created_by: 'admin' }
     await txStore.addTransaction(tx)
     const existing = holdingStore.holdings.find(h => h.pool_id === data.pool_id && h.stock_code === stockCode.value)
-    const newCost = calcNewCostPrice(amount, qty, existing?.quantity || 0, existing?.cost_price || 0)
+    const newCost = calcNewCostPrice(actualAmount, qty, existing?.quantity || 0, existing?.cost_price || 0)
     await upsertHolding({ pool_id: data.pool_id, stock_code: stockCode.value, stock_name: stockName.value, quantity: (existing?.quantity || 0) + qty, cost_price: newCost })
-    await insertCapitalLog({ pool_id: data.pool_id, type: 'remove', amount, note: `买入 ${stockCode.value}`, created_by: 'admin' })
+    await insertCapitalLog({ pool_id: data.pool_id, type: 'remove', amount: actualAmount, note: `买入 ${stockCode.value}`, created_by: 'admin' })
     await Promise.all([holdingStore.loadHoldings(), fundStore.loadCapitalLogs()])
     const { saveCurrentPositionSnapshot } = await import('@/utils/positionSnapshot')
     saveCurrentPositionSnapshot().catch(e => console.error('Snapshot:', e))
@@ -268,9 +254,6 @@ function onStockSelected(stock) { currentPrice.value = stock.price; stockCode.va
 const sellDate = ref(new Date().toISOString().split('T')[0])
 const sellTotalQty = ref(0)
 const sellEntries = ref([])
-const showSellBlock = ref(false)
-const sellBlockStock = ref('')
-const sellBlockCount = ref(0)
 
 const sellHoldingPools = computed(() => {
   if (!stockCode.value) return []
@@ -330,13 +313,14 @@ async function submitSell() {
   try {
     for (const e of entries) {
       const amt = Math.round(e.sell_qty * currentPrice.value * 100) / 100
-      const tx = { pool_id: e.pool_id, stock_code: stockCode.value, stock_name: stockName.value, type: 'sell', quantity: e.sell_qty, price: currentPrice.value, amount: amt, fee: 0, status: 'verified', actual_amount: amt, trade_date: sellDate.value, note: `卖出 ${stockCode.value}`, created_by: 'admin' }
+      const { fee, actualAmount } = calcActualAmount(amt)
+      const tx = { pool_id: e.pool_id, stock_code: stockCode.value, stock_name: stockName.value, type: 'sell', quantity: e.sell_qty, price: currentPrice.value, amount: amt, fee, status: 'verified', actual_amount: actualAmount, trade_date: sellDate.value, note: `卖出 ${stockCode.value}`, created_by: 'admin' }
       await txStore.addTransaction(tx)
       const existing = holdingStore.holdings.find(h => h.pool_id === e.pool_id && h.stock_code === stockCode.value)
       const remaining = (existing?.quantity || 0) - e.sell_qty
       if (remaining <= 0) await deleteHolding(e.pool_id, stockCode.value)
       else await upsertHolding({ pool_id: e.pool_id, stock_code: stockCode.value, stock_name: existing?.stock_name || stockName.value, quantity: remaining, cost_price: existing?.cost_price || 0 })
-      await insertCapitalLog({ pool_id: e.pool_id, type: 'add', amount: amt, note: `卖出 ${stockCode.value}`, created_by: 'admin' })
+      await insertCapitalLog({ pool_id: e.pool_id, type: 'add', amount: actualAmount, note: `卖出 ${stockCode.value}`, created_by: 'admin' })
     }
     await Promise.all([holdingStore.loadHoldings(), fundStore.loadCapitalLogs()])
     const { saveCurrentPositionSnapshot } = await import('@/utils/positionSnapshot')
@@ -350,7 +334,6 @@ function resetSell() {
 }
 
 function poolColor(name) { const map = { '公共池': '#0f3460', '春': '#e94560', '维': '#00d2a1', '队': '#ffc107', '回': '#7c4dff' }; return map[name] || '#0f3460' }
-function goToPositions() { router.push('/positions') }
 
 // ===== 交易记录 =====
 const tradeLogs = computed(() => {
@@ -419,14 +402,9 @@ onMounted(async () => {
   } catch (e) {}
   await Promise.all([poolStore.loadPools(), fundStore.loadCapitalLogs(), txStore.loadTransactions(), holdingStore.loadHoldings()])
   if (route.query.code) {
+    isSell.value = true
     stockCode.value = route.query.code; stockName.value = route.query.name || ''; currentPrice.value = parseFloat(route.query.price) || 0
-    // 卖出前检查是否有未校对交易
-    const unverified = txStore.transactions.filter(t => t.stock_code === stockCode.value && t.type === 'buy' && (!t.fee || t.fee === 0))
-    if (unverified.length > 0) {
-      isSell.value = false; showSellBlock.value = true; sellBlockStock.value = `${stockCode.value} ${stockName.value}`; sellBlockCount.value = unverified.length
-    } else {
-      isSell.value = true; initSellEntries()
-    }
+    initSellEntries()
   }
 })
 function initSellEntries() {
@@ -466,7 +444,6 @@ function initSellEntries() {
 
 .trade-log-list { display: flex; flex-direction: column; gap: 6px; }
 .trade-log-item { padding: 10px 12px; background: rgba(255,255,255,0.03); border-radius: var(--radius-md); display: flex; gap: 8px; align-items: center; }
-.trade-log-item.tli-verified { border-left: 3px solid #00d2a1; }
 .tli-body { flex: 1; min-width: 0; }
 .tli-header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; flex-wrap: wrap; }
 .tli-action { font-size: 14px; font-weight: 600; font-family: var(--font-number); }
@@ -474,7 +451,6 @@ function initSellEntries() {
 .tli-action.fall { color: var(--color-fall); }
 .tli-name { font-size: 12px; color: var(--text-secondary); }
 .tli-qty { font-size: 11px; color: var(--text-muted); }
-.tli-verified-badge { font-size: 10px; color: #00d2a1; font-weight: 600; }
 .tli-fee { font-size: 10px; color: var(--text-muted); }
 .tli-meta { font-size: 11px; color: var(--text-muted); display: flex; gap: 4px; flex-wrap: wrap; }
 .tli-actions { display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; }

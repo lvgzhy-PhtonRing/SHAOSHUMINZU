@@ -51,51 +51,32 @@
         :pool-name="h.merged ? '' : (poolNameMap[h.pool_id] || '')"
         :pool-color="h.merged ? '#888888' : (poolColorMap[h.pool_id] || '#0f3460')"
         :pool-tags="h.merged ? h.poolNames : []"
-        :show-verify="needsVerify(h)"
-        :show-verified="!needsVerify(h) && hasVerifiedTx(h)"
         @sell="onSellStock"
-        @verify="onVerifyStock"
       />
     </template>
   </div>
 
-  <FeeVerifyDialog
-    :show="verifyDialog.show"
-    :pool-id="verifyDialog.poolId"
-    :stock-code="verifyDialog.stockCode"
-    :stock-name="verifyDialog.stockName"
-    :holding-qty="verifyDialog.holdingQty"
-    :current-cost="verifyDialog.currentCost"
-    :transactions="verifyDialog.transactions"
-    @close="verifyDialog.show = false"
-    @verified="onVerifyConfirmed"
-  />
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePoolStore } from '@/stores/pools'
 import { useHoldingStore } from '@/stores/holdings'
 import { usePriceStore } from '@/stores/prices'
 import { useFundStore } from '@/stores/funds'
-import { useTransactionStore } from '@/stores/transactions'
 import { calcProfit, calcPositionRatio } from '@/utils/calculators'
-import { verifyHoldingCost } from '@/api/supabase'
 import AccountSummary from '@/components/dashboard/AccountSummary.vue'
 import ProfitCard from '@/components/dashboard/ProfitCard.vue'
 import HoldingCard from '@/components/dashboard/HoldingCard.vue'
 import PoolSelector from '@/components/common/PoolSelector.vue'
 import LoadingSkeleton from '@/components/common/LoadingSkeleton.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
-import FeeVerifyDialog from '@/components/holdings/FeeVerifyDialog.vue'
 
 const poolStore = usePoolStore()
 const holdingStore = useHoldingStore()
 const priceStore = usePriceStore()
 const fundStore = useFundStore()
-const txStore = useTransactionStore()
-
 const loading = ref(true)
 const lastUpdated = ref('')
 
@@ -105,56 +86,6 @@ const router = useRouter()
 const poolNameMap = {}
 const poolColorMap = {}
 const colorList = ['#5b8def', '#e94560', '#00d2a1', '#ffc107', '#7c4dff']
-
-// ===== 手续费校对 =====
-const verifyDialog = reactive({ show: false, poolId: null, stockCode: '', stockName: '', holdingQty: 0, currentCost: 0, transactions: [] })
-function openVerifyDialog(stock, poolId) {
-  const poolHolding = holdingStore.holdings.find(h => h.pool_id === poolId && h.stock_code === stock.stock_code)
-  const qty = poolHolding ? poolHolding.quantity : stock.quantity
-  const cost = poolHolding ? poolHolding.cost_price : stock.cost_price
-  const txs = txStore.transactions.filter(t =>
-    t.pool_id === poolId && t.stock_code === stock.stock_code && t.type === 'buy' && (!t.fee || t.fee === 0)
-  )
-  verifyDialog.show = true
-  verifyDialog.poolId = poolId
-  verifyDialog.stockCode = stock.stock_code
-  verifyDialog.stockName = stock.stock_name
-  verifyDialog.holdingQty = qty
-  verifyDialog.currentCost = cost
-  verifyDialog.transactions = txs.map(t => ({ id: t.id, quantity: t.quantity, amount: t.amount }))
-}
-async function onVerifyConfirmed({ poolId, stockCode, newCost, allocations }) {
-  try {
-    await verifyHoldingCost(poolId, stockCode, newCost, allocations)
-    await Promise.all([holdingStore.loadHoldings(), txStore.loadTransactions(), fundStore.loadCapitalLogs()])
-    verifyDialog.show = false
-    alert('✅ 已校对，手续费已合并到交易记录')
-  } catch (e) { console.error('Verify fee error:', e); alert('校对失败：' + e.message) }
-}
-function onVerifyStock(stock) {
-  // 合并持仓：找到第一个有未校对交易的子池
-  let poolId = stock.pool_id
-  if (stock.merged) {
-    const h = holdingStore.holdings.find(ho => ho.stock_code === stock.stock_code && txStore.transactions.some(t => t.pool_id === ho.pool_id && t.type === 'buy' && (!t.fee || t.fee === 0)))
-    if (h) poolId = h.pool_id
-  }
-  openVerifyDialog(stock, poolId)
-}
-function needsVerify(h) {
-  // 合并持仓：任一子池有未校对交易即显示
-  if (h.merged) {
-    const poolIds = holdingStore.holdings.filter(ho => ho.stock_code === h.stock_code).map(ho => ho.pool_id)
-    return txStore.transactions.some(t => poolIds.includes(t.pool_id) && t.stock_code === h.stock_code && t.type === 'buy' && (!t.fee || t.fee === 0))
-  }
-  return txStore.transactions.some(t => t.pool_id === h.pool_id && t.stock_code === h.stock_code && t.type === 'buy' && (!t.fee || t.fee === 0))
-}
-function hasVerifiedTx(h) {
-  if (h.merged) {
-    const poolIds = holdingStore.holdings.filter(ho => ho.stock_code === h.stock_code).map(ho => ho.pool_id)
-    return txStore.transactions.some(t => poolIds.includes(t.pool_id) && t.stock_code === h.stock_code && t.type === 'buy' && t.fee > 0)
-  }
-  return txStore.transactions.some(t => t.pool_id === h.pool_id && t.stock_code === h.stock_code && t.type === 'buy' && t.fee > 0)
-}
 
 onMounted(async () => {
   try {

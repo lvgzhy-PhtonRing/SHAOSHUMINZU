@@ -146,32 +146,6 @@ export async function deleteHolding(poolId, stockCode) {
   if (error) throw new Error(error.message)
 }
 
-/* 校对手续费：更新持仓成本价 + 交易fee/amount + 资金记录 */
-export async function verifyHoldingCost(poolId, stockCode, newCostPrice, feeAllocations) {
-  // feeAllocations: [{ txId, fee, newAmount }]
-  const { error: hErr } = await supabase.from('holdings')
-    .update({ cost_price: newCostPrice })
-    .eq('pool_id', poolId)
-    .eq('stock_code', stockCode)
-  if (hErr) throw new Error(hErr.message)
-
-  for (const a of feeAllocations) {
-    const { error: tErr } = await supabase.from('transactions')
-      .update({ fee: a.fee, amount: a.newAmount, actual_amount: a.newAmount })
-      .eq('id', a.txId)
-    if (tErr) console.warn('Update tx fee:', tErr.message)
-
-    // 更新对应 capital_log
-    const { data: logs } = await supabase.from('capital_log')
-      .select('id').eq('pool_id', poolId).eq('note', `买入 ${stockCode}`).eq('amount', a.oldAmount)
-    if (logs?.length) {
-      await supabase.from('capital_log')
-        .update({ amount: a.newAmount, note: `买入 [已校对] ${stockCode}` })
-        .eq('id', logs[0].id)
-    }
-  }
-}
-
 /* 获取行情缓存 */
 export async function fetchStockCache() {
   const { data, error } = await supabase.from('stock_cache').select('*')
