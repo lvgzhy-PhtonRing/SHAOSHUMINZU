@@ -248,7 +248,7 @@ async function onBuySubmit(data) {
   submitting.value = true
   try {
     const amount = parseFloat(data.amount); const qty = data.quantity; const price = data.price
-    const { fee, actualAmount } = calcActualAmount(amount)
+    const { fee, actualAmount } = calcBuyActual(amount)
     const tx = { pool_id: data.pool_id, stock_code: stockCode.value, stock_name: stockName.value, type: 'buy', quantity: qty, price, amount, fee, status: 'verified', actual_amount: actualAmount, trade_date: data.trade_date, note: data.note || `买入 ${stockCode.value}`, created_by: 'admin' }
     await txStore.addTransaction(tx)
     const existing = holdingStore.holdings.find(h => h.pool_id === data.pool_id && h.stock_code === stockCode.value)
