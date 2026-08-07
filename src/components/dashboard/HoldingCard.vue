@@ -44,6 +44,12 @@
           </span>
         </div>
       </div>
+      <div v-if="showVerify" class="holding-verify-row">
+        <button class="verify-btn" @click.stop="$emit('verify', stock)">校对持仓成本</button>
+      </div>
+      <div v-else-if="showVerified" class="holding-verify-row verified">
+        ✓ 已校对
+      </div>
     </div>
     <template #right>
       <div class="swipe-sell-btn" @click="$emit('sell', stock)">
@@ -61,10 +67,12 @@ const props = defineProps({
   stock: { type: Object, required: true },
   poolName: { type: String, default: '' },
   poolColor: { type: String, default: '#0f3460' },
-  poolTags: { type: Array, default: () => [] }
+  poolTags: { type: Array, default: () => [] },
+  showVerify: { type: Boolean, default: false },
+  showVerified: { type: Boolean, default: false }
 })
 
-defineEmits(['sell', 'tap'])
+defineEmits(['sell', 'tap', 'verify'])
 
 const costReturn = computed(() => {
   const cp = parseFloat(props.stock.cost_price) || 0
@@ -131,4 +139,20 @@ const costReturn = computed(() => {
   border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
   margin: 0 16px 10px 0;
 }
+.holding-verify-row {
+  padding: 6px 0 2px;
+  text-align: center;
+}
+.holding-verify-row.verified {
+  font-size: 11px; color: #00d2a1; font-weight: 500;
+}
+.verify-btn {
+  background: rgba(0,210,161,0.12);
+  border: 1px solid rgba(0,210,161,0.3);
+  color: #00d2a1;
+  font-size: 12px; font-weight: 500;
+  padding: 4px 16px; border-radius: var(--radius-round);
+  cursor: pointer;
+}
+.verify-btn:active { background: rgba(0,210,161,0.2); }
 </style>

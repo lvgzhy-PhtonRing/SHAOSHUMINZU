@@ -11,6 +11,7 @@ declare module 'vue' {
     CapitalLogList: typeof import('./components/fund/CapitalLogList.vue')['default']
     DonutChart: typeof import('./components/positions/DonutChart.vue')['default']
     EmptyState: typeof import('./components/common/EmptyState.vue')['default']
+    FeeVerifyDialog: typeof import('./components/holdings/FeeVerifyDialog.vue')['default']
     FundAllocationForm: typeof import('./components/fund/FundAllocationForm.vue')['default']
     HoldingCard: typeof import('./components/dashboard/HoldingCard.vue')['default']
     LoadingSkeleton: typeof import('./components/common/LoadingSkeleton.vue')['default']
@@ -29,6 +30,5 @@ declare module 'vue' {
     VanSwipeCell: typeof import('vant/es')['SwipeCell']
     VanTabbar: typeof import('vant/es')['Tabbar']
     VanTabbarItem: typeof import('vant/es')['TabbarItem']
-    VerificationCard: typeof import('./components/trade/VerificationCard.vue')['default']
   }
 }
