@@ -128,7 +128,7 @@
             <input v-model="editAmount" type="number" inputmode="decimal" class="dlg-input num-mono" @input="onEditAmountChange" />
           </div>
           <div class="dlg-field">
-            <label class="dlg-label">手续费（{{ FEE_RATE_DISPLAY }}‰ 最低5元）</label>
+            <label class="dlg-label">手续费（{{ editingTrade?.type === 'add' ? '0.5954' : '0.0854' }}‰ 最低5元）</label>
             <span class="dlg-value num-mono">{{ formatMoney(editFee) }}</span>
           </div>
           <div class="dlg-field">
@@ -189,7 +189,7 @@ import { useHoldingStore } from '@/stores/holdings'
 import { useFundStore } from '@/stores/funds'
 import { calcNewCostPrice } from '@/utils/calculators'
 import { formatMoney, formatPrice } from '@/utils/formatters'
-import { calcCostPrice, calcActualAmount, calcFee } from '@/utils/feeCalculator'
+import { calcCostPrice, calcBuyActual, calcSellActual, calcBuyFee, calcSellFee } from '@/utils/feeCalculator'
 import { upsertHolding, deleteHolding, insertCapitalLog, deleteCapitalLog, updateCapitalLog, updateTransaction, deleteTransaction, fetchTransactionsByPoolStock, loadPoolAllocation } from '@/api/supabase'
 import StockSearch from '@/components/trade/StockSearch.vue'
 import TradeForm from '@/components/trade/TradeForm.vue'
@@ -322,7 +322,7 @@ async function submitSell() {
   try {
     for (const e of entries) {
       const amt = Math.round(e.sell_qty * currentPrice.value * 100) / 100
-      const { fee, actualAmount } = calcActualAmount(amt)
+      const { fee, actualAmount } = calcSellActual(amt)
       const tx = { pool_id: e.pool_id, stock_code: stockCode.value, stock_name: stockName.value, type: 'sell', quantity: e.sell_qty, price: currentPrice.value, amount: amt, fee, status: 'verified', actual_amount: actualAmount, trade_date: sellDate.value, note: `卖出 ${stockCode.value}`, created_by: 'admin' }
       await txStore.addTransaction(tx)
       const existing = holdingStore.holdings.find(h => h.pool_id === e.pool_id && h.stock_code === stockCode.value)
@@ -360,17 +360,21 @@ const editingTrade = ref(null); const editAmount = ref(''); const editNote = ref
 const editFee = ref(0)
 const FEE_RATE_DISPLAY = '0.0854'
 
+function editFeeFn(isSell) { return isSell ? calcSellFee : calcBuyFee }
+
 function onEditAmountChange() {
   const amt = parseFloat(editAmount.value) || 0
-  editFee.value = amt > 0 ? calcFee(amt) : 0
+  const isSell = editingTrade.value?.type === 'add'
+  editFee.value = amt > 0 ? editFeeFn(isSell)(amt) : 0
 }
 
 async function startEditTrade(log) {
   editingTrade.value = log; editNote.value = log.note || ''; editQuantity.value = ''; editStockCode.value = log.stock_code || ''; editDate.value = ''
-  // 还原不含手续费的成交金额
-  const baseAmount = log.amount - (log.fee || 0)
+  // 还原不含手续费的成交金额（买入含费、卖出扣费）
+  const isSell = log.type === 'add'
+  const baseAmount = isSell ? log.amount + (log.fee || 0) : log.amount - (log.fee || 0)
   editAmount.value = String(baseAmount > 0 ? baseAmount : log.amount)
-  editFee.value = log.fee || calcFee(parseFloat(editAmount.value) || 0)
+  editFee.value = log.fee || editFeeFn(isSell)(parseFloat(editAmount.value) || 0)
   if (log.stock_code) {
     try { const txs = await fetchTransactionsByPoolStock(log.pool_id, log.stock_code); const match = txs.find(t => (Math.abs(t.amount - log.amount) < 0.01 || Math.abs((t.actual_amount || t.amount) - log.amount) < 0.01)); if (match) { editQuantity.value = String(match.quantity); editDate.value = match.trade_date || '' } } catch (e) {}
   }
@@ -382,7 +386,9 @@ async function saveEditTrade() {
     if (stockCode) {
       const allTxs = await fetchTransactionsByPoolStock(log.pool_id, stockCode); const matchedTx = allTxs.find(t => (Math.abs(t.amount - log.amount) < 0.01 || Math.abs((t.actual_amount || t.amount) - log.amount) < 0.01))
       if (matchedTx && newQty > 0) {
-        const fee = calcFee(amount); const actualAmount = parseFloat((amount + fee).toFixed(2))
+        const isSellEdit = log.type === 'add'
+        const fee = editFeeFn(isSellEdit)(amount)
+        const actualAmount = isSellEdit ? parseFloat((amount - fee).toFixed(2)) : parseFloat((amount + fee).toFixed(2))
         const newPrice = amount / newQty; const txUpdates = { quantity: newQty, amount, price: newPrice, fee, actual_amount: actualAmount }; if (editDate.value) txUpdates.trade_date = editDate.value
         await updateTransaction(matchedTx.id, txUpdates); txStore.transactions = txStore.transactions.map(t => t.id === matchedTx.id ? { ...t, ...txUpdates } : t)
         const isBuy = log.type === 'remove'; const otherTxs = allTxs.filter(t => t.id !== matchedTx.id)
@@ -394,8 +400,10 @@ async function saveEditTrade() {
         await holdingStore.loadHoldings()
       }
     }
-    const capAmount = (amount + (calcFee(amount))).toFixed(2)
-await updateCapitalLog(log.id, { amount: parseFloat(capAmount), note: editNote.value || '' }); await Promise.all([fundStore.loadCapitalLogs(), txStore.loadTransactions()])
+    const isSellCap = log.type === 'add'
+const capFee = editFeeFn(isSellCap)(amount)
+const capAmount = isSellCap ? parseFloat((amount - capFee).toFixed(2)) : parseFloat((amount + capFee).toFixed(2))
+await updateCapitalLog(log.id, { amount: capAmount, note: editNote.value || '' }); await Promise.all([fundStore.loadCapitalLogs(), txStore.loadTransactions()])
     editingTrade.value = null
   } catch (e) { console.error('Save edit trade error:', e) }
 }
