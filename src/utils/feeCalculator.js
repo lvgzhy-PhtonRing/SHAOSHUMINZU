@@ -1,7 +1,7 @@
 // src/utils/feeCalculator.js
-// 手续费自动计算：成交金额 × 0.0845%，最低 5 元
+// 手续费自动计算：成交金额 × 0.0854‰，最低 5 元
 
-const FEE_RATE = 0.000845
+const FEE_RATE = 0.0000854
 const MIN_FEE = 5
 
 /** 计算单笔交易手续费 */
