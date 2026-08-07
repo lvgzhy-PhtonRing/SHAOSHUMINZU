@@ -167,7 +167,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, reactive, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { usePoolStore } from '@/stores/pools'
 import { useTransactionStore } from '@/stores/transactions'
@@ -175,7 +175,7 @@ import { useHoldingStore } from '@/stores/holdings'
 import { useFundStore } from '@/stores/funds'
 import { calcNewCostPrice } from '@/utils/calculators'
 import { formatMoney, formatPrice } from '@/utils/formatters'
-import { upsertHolding, deleteHolding, insertCapitalLog, deleteCapitalLog, updateCapitalLog, updateTransaction, deleteTransaction, fetchTransactionsByPoolStock } from '@/api/supabase'
+import { upsertHolding, deleteHolding, insertCapitalLog, deleteCapitalLog, updateCapitalLog, updateTransaction, deleteTransaction, fetchTransactionsByPoolStock, loadPoolAllocation } from '@/api/supabase'
 import StockSearch from '@/components/trade/StockSearch.vue'
 import TradeForm from '@/components/trade/TradeForm.vue'
 
@@ -184,6 +184,29 @@ const poolStore = usePoolStore()
 const txStore = useTransactionStore()
 const holdingStore = useHoldingStore()
 const fundStore = useFundStore()
+
+// 子池分配金额（与仓位页一致的加载逻辑：Supabase 优先，localStorage 兜底）
+function loadLocalAlloc() {
+  const raw = localStorage.getItem('poolAmounts')
+  if (!raw) return null
+  const parsed = JSON.parse(raw)
+  if (parsed['共有'] !== undefined && parsed['公共池'] === undefined) {
+    parsed['公共池'] = parsed['共有']; delete parsed['共有']
+  }
+  const vals = Object.values(parsed)
+  const sum = vals.reduce((s, v) => s + v, 0)
+  if (vals.every(v => v <= 100) && Math.abs(sum - 100) < 1) {
+    const amt = {}
+    for (const k of Object.keys(parsed)) amt[k] = (fundStore.totalCapital || 0) * parsed[k] / 100
+    return amt
+  }
+  return parsed
+}
+function defaultAlloc() {
+  const each = Math.floor((fundStore.totalCapital || 1000000) / 5 / 10000) * 10000
+  return { '公共池': each, '春': each, '维': each, '队': each, '回': each }
+}
+const poolAmounts = reactive(loadLocalAlloc() || defaultAlloc())
 
 const isSell = ref(false)
 const currentPrice = ref(0)
@@ -254,16 +277,6 @@ function onFormSubmit(data) {
   if (!isSell.value) {
     const pool = poolStore.pools.find(p => p.id === data.pool_id)
     if (pool) {
-      const raw = localStorage.getItem('poolAmounts')
-      let poolAmounts = {}
-      if (raw) {
-        poolAmounts = JSON.parse(raw)
-        // 迁移旧 '共有' 键
-        if (poolAmounts['共有'] !== undefined && poolAmounts['公共池'] === undefined) {
-          poolAmounts['公共池'] = poolAmounts['共有']
-          delete poolAmounts['共有']
-        }
-      }
       const poolCost = holdingStore.holdings
         .filter(h => h.pool_id === data.pool_id)
         .reduce((s, h) => s + h.cost_price * h.quantity, 0)
@@ -485,6 +498,20 @@ async function doDeleteTrade() {
 }
 
 onMounted(async () => {
+  // 优先从 Supabase 同步分配金额（与仓位页一致）
+  try {
+    const server = await loadPoolAllocation()
+    if (server) {
+      let s = server
+      if (s['共有'] !== undefined && s['公共池'] === undefined) {
+        s = { ...s }; s['公共池'] = s['共有']; delete s['共有']
+      }
+      for (const k of Object.keys(s)) {
+        if (poolAmounts[k] !== undefined) poolAmounts[k] = s[k]
+      }
+    }
+  } catch (e) { console.error('Load pool allocation:', e) }
+
   poolStore.loadPools()
   fundStore.loadCapitalLogs()
   txStore.loadTransactions()
