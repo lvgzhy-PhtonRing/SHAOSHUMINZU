@@ -120,6 +120,10 @@
             <input v-model="editAmount" type="number" inputmode="decimal" class="dlg-input num-mono" />
           </div>
           <div class="dlg-field">
+            <label class="dlg-label">交易日期</label>
+            <input v-model="editDate" type="date" class="dlg-input" />
+          </div>
+          <div class="dlg-field">
             <label class="dlg-label">备注</label>
             <input v-model="editNote" type="text" class="dlg-input" placeholder="备注" />
           </div>
@@ -225,6 +229,7 @@ const editAmount = ref('')
 const editNote = ref('')
 const editQuantity = ref('')
 const editStockCode = ref('')
+const editDate = ref('')
 const deletingTrade = ref(null)
 
 const diff = computed(() => {
@@ -370,12 +375,16 @@ async function startEditTrade(log) {
   editNote.value = log.note || ''
   editQuantity.value = ''
   editStockCode.value = log.stock_code || ''
+  editDate.value = ''
 
   if (log.stock_code) {
     try {
       const txs = await fetchTransactionsByPoolStock(log.pool_id, log.stock_code)
       const match = txs.find(t => Math.abs(t.amount - log.amount) < 0.01)
-      if (match) editQuantity.value = String(match.quantity)
+      if (match) {
+        editQuantity.value = String(match.quantity)
+        editDate.value = match.trade_date || ''
+      }
     } catch (e) { console.error('Fetch tx for edit:', e) }
   }
 }
@@ -396,11 +405,13 @@ async function saveEditTrade() {
       const matchedTx = allTxs.find(t => Math.abs(t.amount - log.amount) < 0.01)
 
       if (matchedTx && newQty > 0) {
-        // 2. 更新交易记录（数量+金额）
+        // 2. 更新交易记录（数量+金额+日期）
         const newPrice = amount / newQty
-        await updateTransaction(matchedTx.id, { quantity: newQty, amount, price: newPrice })
+        const txUpdates = { quantity: newQty, amount, price: newPrice }
+        if (editDate.value) txUpdates.trade_date = editDate.value
+        await updateTransaction(matchedTx.id, txUpdates)
         txStore.transactions = txStore.transactions.map(t =>
-          t.id === matchedTx.id ? { ...t, quantity: newQty, amount, price: newPrice } : t
+          t.id === matchedTx.id ? { ...t, ...txUpdates } : t
         )
 
         // 3. 用所有交易重算该子池+该股票的持仓
