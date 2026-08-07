@@ -77,9 +77,9 @@
     <div class="section-card" v-if="tradeLogs.length">
       <div class="section-title">股票交易记录</div>
       <div class="trade-log-list">
-        <van-swipe-cell v-for="log in tradeLogs" :key="log.id" :right-width="130">
-          <div class="trade-log-item" @click="startEditTrade(log)">
-            <div class="tli-body">
+        <van-swipe-cell v-for="log in tradeLogs" :key="log.id" :right-width="140">
+          <div class="trade-log-item">
+            <div class="tli-body" @click="startEditTrade(log)">
               <div class="tli-header">
                 <span class="tli-action" :class="log.type === 'add' ? 'rise' : 'fall'">
                   {{ log.type === 'add' ? '卖出' : '买入' }} {{ log.stock_code }}
@@ -97,8 +97,10 @@
             <span class="tli-arrow">›</span>
           </div>
           <template #right>
-            <button class="swipe-edit-btn" @click.stop="startEditTrade(log)">编辑</button>
-            <button class="swipe-del-btn" @click.stop="confirmDeleteTrade(log)">删除</button>
+            <div class="swipe-actions">
+              <button class="swipe-edit-btn" @click.stop="startEditTrade(log)">编辑</button>
+              <button class="swipe-del-btn" @click.stop="confirmDeleteTrade(log)">删除</button>
+            </div>
           </template>
         </van-swipe-cell>
       </div>
@@ -475,8 +477,9 @@ function initSellEntries() {
 .tli-fee { font-size: 11px; color: var(--text-muted); }
 .tli-meta { font-size: 11px; color: var(--text-muted); display: flex; gap: 4px; flex-wrap: wrap; align-items: baseline; }
 .tli-arrow { font-size: 16px; color: var(--text-muted); opacity: 0.3; flex-shrink: 0; }
-.swipe-edit-btn { height: 100%; width: 65px; border: none; background: var(--bg-accent); color: #fff; font-size: 13px; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-.swipe-del-btn { height: 100%; width: 65px; border: none; background: var(--color-fall); color: #fff; font-size: 13px; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.swipe-actions { display: flex; height: 100%; }
+.swipe-edit-btn { width: 70px; border: none; background: var(--bg-accent); color: #fff; font-size: 13px; font-weight: 500; cursor: pointer; }
+.swipe-del-btn { width: 70px; border: none; background: var(--color-fall); color: #fff; font-size: 13px; font-weight: 500; cursor: pointer; }
 
 .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 9999; padding: 20px; }
 .dialog { background: var(--bg-card); border-radius: var(--radius-lg); padding: 20px; width: 100%; max-width: 360px; }
