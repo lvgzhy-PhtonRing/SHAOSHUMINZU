@@ -405,7 +405,7 @@ async function doDeleteTrade() {
   try {
     const { id, pool_id, amount } = log; const code = log.stock_code
     if (code) {
-      const allTxs = await fetchTransactionsByPoolStock(pool_id, code); const matchedTx = allTxs.find(t => Math.abs(t.amount - amount) < 0.01)
+      const allTxs = await fetchTransactionsByPoolStock(pool_id, code); const matchedTx = allTxs.find(t => Math.abs(t.amount - amount) < 0.01 || Math.abs((t.actual_amount || t.amount) - amount) < 0.01)
       if (matchedTx) { await deleteTransaction(matchedTx.id); txStore.transactions = txStore.transactions.filter(t => t.id !== matchedTx.id) }
       const remaining = allTxs.filter(t => t.id !== (matchedTx?.id))
       if (remaining.length === 0) await deleteHolding(pool_id, code)
