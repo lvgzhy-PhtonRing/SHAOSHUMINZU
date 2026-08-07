@@ -33,13 +33,18 @@
         </div>
       </div>
       <div class="section-card">
+        <div class="sell-price-row">
+          <label class="spr-label">卖出单价</label>
+          <input v-model.number="sellPrice" type="number" inputmode="decimal" step="0.01" class="spr-price-input num-mono" />
+          <span class="spr-unit">元</span>
+        </div>
         <div class="sell-total-row">
           <div class="stl-header">
             <span class="stl-label">卖出总量</span>
             <span class="stl-val num-mono">{{ sellTotalQty }} 股</span>
           </div>
           <input type="range" :min="0" :max="sellTotalHolding" :step="100" v-model.number="sellTotalQty" class="sell-slider" @input="onTotalSliderChange" />
-          <div class="stl-estimate" v-if="sellTotalQty > 0">≈ {{ formatMoney(sellTotalQty * currentPrice) }}</div>
+          <div class="stl-estimate" v-if="sellTotalQty > 0">≈ {{ formatMoney(sellTotalQty * sellPrice) }}</div>
         </div>
         <div v-if="sellTotalQty > 0" class="sell-pools-section">
           <div class="section-title">各池分配</div>
@@ -51,7 +56,7 @@
             <input type="range" :min="0" :max="entry.max_sell" :step="100" v-model.number="entry.sell_qty" class="sell-slider" @input="onPoolSliderChange(entry)" />
             <div class="spr-bottom">
               <span class="num-mono">{{ entry.sell_qty }} 股</span>
-              <span class="spr-estimate" v-if="entry.sell_qty > 0">≈ {{ formatMoney(entry.sell_qty * currentPrice) }}</span>
+              <span class="spr-estimate" v-if="entry.sell_qty > 0">≈ {{ formatMoney(entry.sell_qty * sellPrice) }}</span>
             </div>
           </div>
           <div v-if="sellRemaining > 0" class="sell-remaining">待分配 <span class="num-mono">{{ sellRemaining }}</span> 股</div>
@@ -262,6 +267,7 @@ function onStockSelected(stock) { currentPrice.value = stock.price; stockCode.va
 // ===== 卖出（多池联动滑块） =====
 const sellDate = ref(new Date().toISOString().split('T')[0])
 const sellTotalQty = ref(0)
+const sellPrice = ref(0)
 const sellEntries = ref([])
 
 const sellHoldingPools = computed(() => {
@@ -321,9 +327,9 @@ async function submitSell() {
   submitting.value = true
   try {
     for (const e of entries) {
-      const amt = Math.round(e.sell_qty * currentPrice.value * 100) / 100
+      const amt = Math.round(e.sell_qty * sellPrice.value * 100) / 100
       const { fee, actualAmount } = calcSellActual(amt)
-      const tx = { pool_id: e.pool_id, stock_code: stockCode.value, stock_name: stockName.value, type: 'sell', quantity: e.sell_qty, price: currentPrice.value, amount: amt, fee, status: 'verified', actual_amount: actualAmount, trade_date: sellDate.value, note: `卖出 ${stockCode.value}`, created_by: 'admin' }
+      const tx = { pool_id: e.pool_id, stock_code: stockCode.value, stock_name: stockName.value, type: 'sell', quantity: e.sell_qty, price: sellPrice.value, amount: amt, fee, status: 'verified', actual_amount: actualAmount, trade_date: sellDate.value, note: `卖出 ${stockCode.value}`, created_by: 'admin' }
       await txStore.addTransaction(tx)
       const existing = holdingStore.holdings.find(h => h.pool_id === e.pool_id && h.stock_code === stockCode.value)
       const remaining = (existing?.quantity || 0) - e.sell_qty
@@ -339,7 +345,7 @@ async function submitSell() {
 }
 
 function resetSell() {
-  sellTotalQty.value = 0; sellEntries.value = []; stockCode.value = ''; stockName.value = ''; currentPrice.value = 0; formError.value = ''
+  sellTotalQty.value = 0; sellPrice.value = 0; sellEntries.value = []; stockCode.value = ''; stockName.value = ''; currentPrice.value = 0; formError.value = ''
 }
 
 function poolColor(name) { const map = { '公共池': '#0f3460', '春': '#e94560', '维': '#00d2a1', '队': '#ffc107', '回': '#7c4dff' }; return map[name] || '#0f3460' }
@@ -439,6 +445,7 @@ onMounted(async () => {
 })
 function initSellEntries() {
   sellTotalQty.value = 0
+  sellPrice.value = currentPrice.value
   sellEntries.value = sellHoldingPools.value.map(h => ({ pool_id: h.pool_id, pool_name: h.pool_name, holding_qty: h.holding_qty, max_sell: h.holding_qty, sell_qty: 0 }))
 }
 </script>
@@ -453,6 +460,11 @@ function initSellEntries() {
 .section-title { font-size: 13px; font-weight: 600; padding: 0 0 10px; }
 
 .sell-empty { font-size: 12px; color: var(--text-muted); padding: 8px 0; }
+.sell-price-row { display: flex; align-items: center; gap: 8px; padding: 0 0 12px; }
+.spr-label { font-size: 13px; color: var(--text-secondary); white-space: nowrap; }
+.spr-price-input { flex: 1; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; color: #fff; font-size: 16px; padding: 6px 10px; text-align: right; outline: none; }
+.spr-price-input:focus { border-color: var(--color-rise); }
+.spr-unit { font-size: 13px; color: var(--text-secondary); }
 .sell-total-row { padding: 8px 0 16px; border-bottom: 1px solid rgba(255,255,255,0.06); margin-bottom: 12px; }
 .stl-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
 .stl-label { font-size: 14px; font-weight: 700; }
