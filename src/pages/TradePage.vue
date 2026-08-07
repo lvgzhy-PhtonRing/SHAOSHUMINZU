@@ -93,7 +93,8 @@
                 <span v-if="log.quantity" class="tli-qty">{{ log.quantity }}股</span>
               </div>
               <div class="tli-meta">
-                <span>{{ formatMoney(log.amount) }}</span>
+                <span>@{{ formatPrice(log.price) }}</span>
+                <span> · {{ formatMoney(log.amount) }}</span>
                 <span v-if="log.fee > 0" class="tli-fee">· 费 {{ formatMoney(log.fee) }}</span>
                 <span> · {{ log.pool_name }}</span>
                 <span> · {{ formatDateString(log.trade_date) }}</span>
@@ -356,7 +357,7 @@ const tradeLogs = computed(() => {
     const note = l.note || ''; const parts = note.split(' ')
     const code = parts.length > 1 && /^\d{6}$/.test(parts[parts.length - 1]) ? parts[parts.length - 1] : ''
     const tx = txStore.transactions.find(t => t.pool_id === l.pool_id && code && (t.stock_code === code) && (Math.abs(t.amount - l.amount) < 0.01 || Math.abs((t.actual_amount || t.amount) - l.amount) < 0.01))
-    return { ...l, stock_code: code, stock_name: tx?.stock_name || '', quantity: tx?.quantity || 0, fee: tx?.fee || 0, trade_date: tx?.trade_date || l.created_at, pool_name: poolStore.pools.find(p => p.id === l.pool_id)?.name || '' }
+    return { ...l, stock_code: code, stock_name: tx?.stock_name || '', quantity: tx?.quantity || 0, price: tx?.price || 0, fee: tx?.fee || 0, trade_date: tx?.trade_date || l.created_at, pool_name: poolStore.pools.find(p => p.id === l.pool_id)?.name || '' }
   }).sort((a, b) => new Date(b.trade_date) - new Date(a.trade_date))
 })
 function formatDateString(isoStr) { if (!isoStr) return ''; const d = new Date(isoStr); return `${d.getMonth()+1}/${d.getDate()}` }
