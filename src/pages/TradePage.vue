@@ -340,7 +340,7 @@ const tradeLogs = computed(() => {
   return fundStore.capitalLogs.filter(l => l.pool_id !== null).map(l => {
     const note = l.note || ''; const parts = note.split(' ')
     const code = parts.length > 1 && /^\d{6}$/.test(parts[parts.length - 1]) ? parts[parts.length - 1] : ''
-    const tx = txStore.transactions.find(t => t.pool_id === l.pool_id && code && (t.stock_code === code) && Math.abs(t.amount - l.amount) < 0.01)
+    const tx = txStore.transactions.find(t => t.pool_id === l.pool_id && code && (t.stock_code === code) && (Math.abs(t.amount - l.amount) < 0.01 || Math.abs((t.actual_amount || t.amount) - l.amount) < 0.01))
     return { ...l, stock_code: code, stock_name: tx?.stock_name || '', quantity: tx?.quantity || 0, fee: tx?.fee || 0, trade_date: tx?.trade_date || l.created_at, pool_name: poolStore.pools.find(p => p.id === l.pool_id)?.name || '' }
   }).sort((a, b) => new Date(b.trade_date) - new Date(a.trade_date))
 })
@@ -352,7 +352,7 @@ const editingTrade = ref(null); const editAmount = ref(''); const editNote = ref
 async function startEditTrade(log) {
   editingTrade.value = log; editAmount.value = String(log.amount); editNote.value = log.note || ''; editQuantity.value = ''; editStockCode.value = log.stock_code || ''; editDate.value = ''
   if (log.stock_code) {
-    try { const txs = await fetchTransactionsByPoolStock(log.pool_id, log.stock_code); const match = txs.find(t => Math.abs(t.amount - log.amount) < 0.01); if (match) { editQuantity.value = String(match.quantity); editDate.value = match.trade_date || '' } } catch (e) {}
+    try { const txs = await fetchTransactionsByPoolStock(log.pool_id, log.stock_code); const match = txs.find(t => (Math.abs(t.amount - log.amount) < 0.01 || Math.abs((t.actual_amount || t.amount) - log.amount) < 0.01)); if (match) { editQuantity.value = String(match.quantity); editDate.value = match.trade_date || '' } } catch (e) {}
   }
 }
 async function saveEditTrade() {
@@ -360,7 +360,7 @@ async function saveEditTrade() {
   const log = editingTrade.value; const stockCode = editStockCode.value; const newQty = parseInt(editQuantity.value) || 0
   try {
     if (stockCode) {
-      const allTxs = await fetchTransactionsByPoolStock(log.pool_id, stockCode); const matchedTx = allTxs.find(t => Math.abs(t.amount - log.amount) < 0.01)
+      const allTxs = await fetchTransactionsByPoolStock(log.pool_id, stockCode); const matchedTx = allTxs.find(t => (Math.abs(t.amount - log.amount) < 0.01 || Math.abs((t.actual_amount || t.amount) - log.amount) < 0.01))
       if (matchedTx && newQty > 0) {
         const newPrice = amount / newQty; const txUpdates = { quantity: newQty, amount, price: newPrice }; if (editDate.value) txUpdates.trade_date = editDate.value
         await updateTransaction(matchedTx.id, txUpdates); txStore.transactions = txStore.transactions.map(t => t.id === matchedTx.id ? { ...t, ...txUpdates } : t)
