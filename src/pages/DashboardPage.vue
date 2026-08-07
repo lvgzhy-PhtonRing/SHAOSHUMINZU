@@ -8,7 +8,9 @@
 
     <!-- 账户总资产模块 -->
     <div class="section-card">
+      <LoadingSkeleton v-if="loading" :count="1" />
       <AccountSummary
+        v-else
         :total-asset="summary.totalAsset"
         :market-value="summary.totalMarketValue"
         :available="summary.totalAvailable"
@@ -18,7 +20,9 @@
 
     <!-- 盈亏概览模块 -->
     <div class="section-card">
+      <LoadingSkeleton v-if="loading" :count="1" />
       <ProfitCard
+        v-else
         :float-pnl="summary.floatPnl"
         :daily-pnl="summary.dailyPnl"
       />
