@@ -21,11 +21,11 @@ export async function saveCurrentPositionSnapshot() {
   const asset = totalCapital + (totalMv - totalCost)
   const ratio = asset > 0 ? (totalMv / asset) * 100 : 0
 
-  // 计算本日外部资金净变动（pool_id IS NULL 的加减资）
+  // 计算本日外部资金净变动（排除"初始"，只计增减资）
   const today = new Date().toISOString().slice(0, 10)
   const todayStart = new Date(today + 'T00:00:00').toISOString()
   const todayCapitalChanges = fundStore.capitalLogs
-    .filter(l => l.pool_id === null && l.created_at >= todayStart)
+    .filter(l => l.pool_id === null && l.created_at >= todayStart && l.note !== '初始')
     .reduce((sum, l) => sum + (l.type === 'add' ? l.amount : -l.amount), 0)
 
   await savePositionSnapshot(today, {

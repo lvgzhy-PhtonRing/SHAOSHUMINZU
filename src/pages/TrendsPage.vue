@@ -83,10 +83,10 @@
             {{ formatCompactAsset(d.asset) }}
           </span>
           <span v-for="(d, i) in trendData" :key="'ad'+i" class="fl-label fl-day"
-            :style="flStyle(i, SVG_H2 - 20, 0, SVG_H2)">{{ d.label }}</span>
+            :style="flStyle(i, SVG_H2 - 32, 0, SVG_H2)">{{ d.label }}</span>
           <span v-for="(d, i) in trendData" :key="'cc'+i">
             <span v-if="d.capitalChange !== 0" class="fl-label fl-capchg"
-              :style="flStyle(i, SVG_H2 - 6, 0, SVG_H2)"
+              :style="flStyle(i, SVG_H2 - 10, 0, SVG_H2)"
               :class="d.capitalChange > 0 ? 'fl-up' : 'fl-down'">
               {{ formatCapitalChange(d.capitalChange) }}
             </span>
@@ -178,7 +178,7 @@ const CHART_W = SVG_W - PAD_L - PAD_R
 const CHART_H = SVG_H - PAD_T - PAD_B
 
 // SVG 参数（资产图，更高一些给标签留空间）
-const SVG_H2 = 480
+const SVG_H2 = 510
 
 // ===== 仓位折线 =====
 const ratioMin = computed(() => {
@@ -387,7 +387,7 @@ onMounted(async () => {
 .fl-pct { font-size: 14px; font-weight: 800; color: var(--text-primary); }
 .fl-day { font-size: 11px; font-weight: 600; color: var(--text-secondary); }
 .fl-asset { font-size: 13px; font-weight: 700; }
-.fl-capchg { font-size: 11px; font-weight: 700; }
+.fl-capchg { font-size: 9px; font-weight: 600; }
 .fl-up { color: var(--color-rise); }
 .fl-down { color: var(--color-fall); }
 
