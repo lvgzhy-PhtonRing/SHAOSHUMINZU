@@ -344,8 +344,14 @@ async function submitSell() {
       await txStore.addTransaction(tx)
       const existing = holdingStore.holdings.find(h => h.pool_id === e.pool_id && h.stock_code === stockCode.value)
       const remaining = (existing?.quantity || 0) - e.sell_qty
+      // 券商移动平均法：成本 = (买入总支出 - 卖出总收入) / 剩余股数
+      const allPoolTxs = await fetchTransactionsByPoolStock(e.pool_id, stockCode.value)
+      const buyTotal = allPoolTxs.filter(t => t.type === 'buy').reduce((s, t) => s + (t.actual_amount || t.amount), 0)
+      const sellTotal = allPoolTxs.filter(t => t.type === 'sell').reduce((s, t) => s + (t.actual_amount || t.amount), 0) + actualAmount
+      const netInvestment = buyTotal - sellTotal
+      const newCost = remaining > 0 ? parseFloat((netInvestment / remaining).toFixed(3)) : 0
       if (remaining <= 0) await deleteHolding(e.pool_id, stockCode.value)
-      else await upsertHolding({ pool_id: e.pool_id, stock_code: stockCode.value, stock_name: existing?.stock_name || stockName.value, quantity: remaining, cost_price: existing?.cost_price || 0 })
+      else await upsertHolding({ pool_id: e.pool_id, stock_code: stockCode.value, stock_name: existing?.stock_name || stockName.value, quantity: remaining, cost_price: newCost })
       await insertCapitalLog({ pool_id: e.pool_id, type: 'add', amount: actualAmount, note: `卖出 ${stockCode.value}`, created_by: 'admin' })
     }
     await Promise.all([holdingStore.loadHoldings(), fundStore.loadCapitalLogs()])
