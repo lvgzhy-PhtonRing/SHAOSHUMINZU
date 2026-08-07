@@ -10,3 +10,4 @@ Thumbs.db
 .superpowers/
 *.traineddata
 public/test.html
+json/

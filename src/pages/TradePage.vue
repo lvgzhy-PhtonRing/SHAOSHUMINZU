@@ -264,14 +264,28 @@ function onFormSubmit(data) {
           delete poolAmounts['共有']
         }
       }
-      const alloc = poolAmounts[pool.name] || 0
       const poolCost = holdingStore.holdings
         .filter(h => h.pool_id === data.pool_id)
         .reduce((s, h) => s + h.cost_price * h.quantity, 0)
-      const available = alloc - poolCost
+      let available
+      if (pool.name === '公共池') {
+        // 公共池 = 总可用 − 四子池可用之和（与仓位页面倒挤逻辑一致）
+        const totalCost = holdingStore.holdings.reduce((s, h) => s + h.cost_price * h.quantity, 0)
+        const totalAvailable = fundStore.totalCapital - totalCost
+        let subSum = 0
+        for (const p of poolStore.pools) {
+          if (p.name === '公共池') continue
+          const sa = poolAmounts[p.name] || 0
+          const sc = holdingStore.holdings.filter(h => h.pool_id === p.id).reduce((s, h) => s + h.cost_price * h.quantity, 0)
+          subSum += (sa - sc)
+        }
+        available = totalAvailable - subSum
+      } else {
+        available = (poolAmounts[pool.name] || 0) - poolCost
+      }
       const need = parseFloat(data.amount) || 0
       if (need > available) {
-        formError.value = `子池「${pool.name}」可用资金不足！分配 ${formatMoney(alloc)}，已用 ${formatMoney(poolCost)}，剩余 ${formatMoney(available)}，本次需 ${formatMoney(need)}`
+        formError.value = `子池「${pool.name}」可用资金不足！剩余 ${formatMoney(available)}，本次需 ${formatMoney(need)}`
         return
       }
     }

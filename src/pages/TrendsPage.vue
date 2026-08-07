@@ -77,17 +77,17 @@
             </g>
           </svg>
           <!-- HTML 浮层标签 -->
-          <span v-for="(d, i) in trendData" :key="'cc'+i">
-            <span v-if="d.capitalChange !== 0" class="fl-label fl-capchg"
-              :style="flStyle(i, assetY(d.asset), -22, SVG_H2)"
-              :class="d.capitalChange > 0 ? 'fl-up' : 'fl-down'">
-              {{ formatCapitalChange(d.capitalChange) }}
-            </span>
-          </span>
           <span v-for="(d, i) in trendData" :key="'aa'+i" class="fl-label fl-asset"
             :style="flStyle(i, assetY(d.asset), -6, SVG_H2, 'end')"
             :class="d.capitalChange !== 0 ? (d.capitalChange > 0 ? 'fl-up' : 'fl-down') : ''">
             {{ formatCompactAsset(d.asset) }}
+          </span>
+          <span v-for="(d, i) in trendData" :key="'cc'+i">
+            <span v-if="d.capitalChange !== 0" class="fl-label fl-capchg"
+              :style="flStyle(i, assetY(d.asset), 18, SVG_H2)"
+              :class="d.capitalChange > 0 ? 'fl-up' : 'fl-down'">
+              {{ formatCapitalChange(d.capitalChange) }}
+            </span>
           </span>
           <span v-for="(d, i) in trendData" :key="'ad'+i" class="fl-label fl-day"
             :style="flStyle(i, SVG_H2 - 10, 0, SVG_H2)">{{ d.label }}</span>
@@ -181,21 +181,28 @@ const CHART_H = SVG_H - PAD_T - PAD_B
 const SVG_H2 = 440
 
 // ===== 仓位折线 =====
+const ratioMin = computed(() => {
+  if (!trendData.value.length) return 0
+  const min = Math.min(...trendData.value.map(d => d.ratio))
+  return Math.max(0, Math.floor(min - 2))
+})
 const ratioMax = computed(() => {
   if (!trendData.value.length) return 100
   const max = Math.max(...trendData.value.map(d => d.ratio))
-  return Math.ceil((max + 10) / 10) * 10 || 100
+  return Math.max(ratioMin.value + 5, Math.ceil(max + 2))
 })
 const ratioRefLines = computed(() => {
-  const m = ratioMax.value
-  return [m * 0.25, m * 0.5, m * 0.75].filter(p => p > 0).map(p => Math.round(p))
+  const min = ratioMin.value, max = ratioMax.value
+  const step = (max - min) / 3
+  return [min + step, min + step * 2].filter(v => v > min && v < max).map(v => Math.round(v))
 })
 
 function xPos(i) {
   return PAD_L + (i / Math.max(trendData.value.length - 1, 1)) * CHART_W
 }
 function ratioY(r) {
-  return PAD_T + CHART_H * (1 - r / ratioMax.value)
+  const range = ratioMax.value - ratioMin.value || 1
+  return PAD_T + CHART_H * (1 - (r - ratioMin.value) / range)
 }
 const ratioLinePts = computed(() =>
   trendData.value.map((d, i) => `${xPos(i)},${ratioY(d.ratio)}`).join(' ')
