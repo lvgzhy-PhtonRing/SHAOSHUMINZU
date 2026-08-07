@@ -213,8 +213,10 @@ const summary = computed(() => {
   const floatPnl = totalMarketValue - totalCost
   // 总资产 = 资金池 + 浮动盈亏
   const totalAsset = totalCapital.value + floatPnl
-  // 可用资金 = 资金池 - 持仓成本
-  const totalAvailable = totalCapital.value - totalCost
+  // 可用资金 = 实际现金流（总入金 + 卖出到账 − 买入支出）
+  const sellIn = fundStore.capitalLogs.filter(l => l.pool_id !== null && l.type === 'add').reduce((s, l) => s + l.amount, 0)
+  const buyOut = fundStore.capitalLogs.filter(l => l.pool_id !== null && l.type === 'remove').reduce((s, l) => s + l.amount, 0)
+  const totalAvailable = totalCapital.value + sellIn - buyOut
   return {
     totalAsset,
     totalMarketValue,

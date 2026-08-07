@@ -243,7 +243,10 @@ async function onBuySubmit(data) {
     let available
     if (pool.name === '公共池') {
       const totalCost = holdingStore.holdings.reduce((s, h) => s + h.cost_price * h.quantity, 0)
-      const totalAvailable = fundStore.totalCapital - totalCost
+      // 可用资金 = 实际现金流
+      const sellIn = fundStore.capitalLogs.filter(l => l.pool_id !== null && l.type === 'add').reduce((s, l) => s + l.amount, 0)
+      const buyOut = fundStore.capitalLogs.filter(l => l.pool_id !== null && l.type === 'remove').reduce((s, l) => s + l.amount, 0)
+      const totalAvailable = fundStore.totalCapital + sellIn - buyOut
       let subSum = 0
       for (const p of poolStore.pools) { if (p.name === '公共池') continue; const sa = poolAmounts[p.name] || 0; const sc = holdingStore.holdings.filter(h => h.pool_id === p.id).reduce((s, h) => s + h.cost_price * h.quantity, 0); subSum += (sa - sc) }
       available = totalAvailable - subSum
