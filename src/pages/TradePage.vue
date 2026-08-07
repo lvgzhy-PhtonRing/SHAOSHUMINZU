@@ -77,27 +77,30 @@
     <div class="section-card" v-if="tradeLogs.length">
       <div class="section-title">股票交易记录</div>
       <div class="trade-log-list">
-        <div v-for="log in tradeLogs" :key="log.id" class="trade-log-item">
-          <div class="tli-body">
-            <div class="tli-header">
-              <span class="tli-action" :class="log.type === 'add' ? 'rise' : 'fall'">
-                {{ log.type === 'add' ? '卖出' : '买入' }} {{ log.stock_code }}
-              </span>
-              <span class="tli-name">{{ log.stock_name }}</span>
-              <span v-if="log.quantity" class="tli-qty">{{ log.quantity }}股</span>
+        <van-swipe-cell v-for="log in tradeLogs" :key="log.id" :right-width="130">
+          <div class="trade-log-item" @click="startEditTrade(log)">
+            <div class="tli-body">
+              <div class="tli-header">
+                <span class="tli-action" :class="log.type === 'add' ? 'rise' : 'fall'">
+                  {{ log.type === 'add' ? '卖出' : '买入' }} {{ log.stock_code }}
+                </span>
+                <span class="tli-name">{{ log.stock_name }}</span>
+                <span v-if="log.quantity" class="tli-qty">{{ log.quantity }}股</span>
+              </div>
+              <div class="tli-meta">
+                <span>{{ formatMoney(log.amount) }}</span>
+                <span v-if="log.fee > 0" class="tli-fee">· 费 {{ formatMoney(log.fee) }}</span>
+                <span> · {{ log.pool_name }}</span>
+                <span> · {{ formatDateString(log.trade_date) }}</span>
+              </div>
             </div>
-            <div class="tli-meta">
-              <span>{{ formatMoney(log.amount) }}</span>
-              <span v-if="log.fee > 0" class="tli-fee">· 费 {{ formatMoney(log.fee) }}</span>
-              <span> · {{ log.pool_name }}</span>
-              <span> · {{ formatDateString(log.trade_date) }}</span>
-            </div>
+            <span class="tli-arrow">›</span>
           </div>
-          <div class="tli-actions">
-            <button class="tli-edit-btn" @click="startEditTrade(log)">✏️</button>
-            <button class="tli-del-btn" @click="confirmDeleteTrade(log)">✕</button>
-          </div>
-        </div>
+          <template #right>
+            <button class="swipe-edit-btn" @click.stop="startEditTrade(log)">编辑</button>
+            <button class="swipe-del-btn" @click.stop="confirmDeleteTrade(log)">删除</button>
+          </template>
+        </van-swipe-cell>
       </div>
     </div>
 
@@ -442,8 +445,9 @@ function initSellEntries() {
 .sdr-label { font-size: 12px; color: var(--text-secondary); white-space: nowrap; }
 .sdr-input { flex: 1; padding: 8px 10px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; color: #fff; font-size: 14px; outline: none; }
 
-.trade-log-list { display: flex; flex-direction: column; gap: 6px; }
-.trade-log-item { padding: 10px 12px; background: rgba(255,255,255,0.03); border-radius: var(--radius-md); display: flex; gap: 8px; align-items: center; }
+.trade-log-list { display: flex; flex-direction: column; gap: 2px; }
+.trade-log-item { padding: 12px 14px; background: var(--bg-card); display: flex; gap: 8px; align-items: center; cursor: pointer; }
+.trade-log-item:active { background: rgba(255,255,255,0.06); }
 .tli-body { flex: 1; min-width: 0; }
 .tli-header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; flex-wrap: wrap; }
 .tli-action { font-size: 14px; font-weight: 600; font-family: var(--font-number); }
@@ -451,12 +455,11 @@ function initSellEntries() {
 .tli-action.fall { color: var(--color-fall); }
 .tli-name { font-size: 12px; color: var(--text-secondary); }
 .tli-qty { font-size: 11px; color: var(--text-muted); }
-.tli-fee { font-size: 10px; color: var(--text-muted); }
-.tli-meta { font-size: 11px; color: var(--text-muted); display: flex; gap: 4px; flex-wrap: wrap; }
-.tli-actions { display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; }
-.tli-edit-btn, .tli-del-btn { background: none; border: none; font-size: 13px; cursor: pointer; padding: 2px 4px; line-height: 1; opacity: 0.5; transition: opacity 0.15s; color: var(--text-muted); }
-.tli-edit-btn:hover, .tli-del-btn:hover { opacity: 1; }
-.tli-del-btn:active { color: var(--color-fall); }
+.tli-fee { font-size: 11px; color: var(--text-muted); }
+.tli-meta { font-size: 11px; color: var(--text-muted); display: flex; gap: 4px; flex-wrap: wrap; align-items: baseline; }
+.tli-arrow { font-size: 16px; color: var(--text-muted); opacity: 0.3; flex-shrink: 0; }
+.swipe-edit-btn { height: 100%; width: 65px; border: none; background: var(--bg-accent); color: #fff; font-size: 13px; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.swipe-del-btn { height: 100%; width: 65px; border: none; background: var(--color-fall); color: #fff; font-size: 13px; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 
 .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 9999; padding: 20px; }
 .dialog { background: var(--bg-card); border-radius: var(--radius-lg); padding: 20px; width: 100%; max-width: 360px; }
