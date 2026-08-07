@@ -166,7 +166,7 @@ export async function verifyHoldingCost(poolId, stockCode, newCostPrice, feeAllo
       .select('id').eq('pool_id', poolId).eq('note', `买入 ${stockCode}`).eq('amount', a.oldAmount)
     if (logs?.length) {
       await supabase.from('capital_log')
-        .update({ amount: a.newAmount, note: `买入 ${stockCode} [已校对]` })
+        .update({ amount: a.newAmount, note: `买入 [已校对] ${stockCode}` })
         .eq('id', logs[0].id)
     }
   }
