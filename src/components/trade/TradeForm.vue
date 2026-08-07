@@ -13,12 +13,12 @@
       </div>
 
       <van-field
-        v-model="form.totalAmount"
-        label="成交总金额（元）"
+        v-model="form.price"
+        label="成交单价（元）"
         type="number"
-        placeholder="输入成交总金额（含手续费）"
+        placeholder="输入成交单价"
         class="trade-form-field"
-        :rules="[{ required: true, message: '请输入成交总金额' }]"
+        :rules="[{ required: true, message: '请输入成交单价' }]"
       />
 
       <van-field
@@ -35,16 +35,20 @@
 
       <div class="calc-display">
         <div class="calc-item">
-          <span class="calc-label">计算成本价</span>
-          <span class="calc-value num-mono">{{ computedCostPrice }}</span>
+          <span class="calc-label">预估总金额</span>
+          <span class="calc-value num-mono">{{ computedAmount || '—' }}</span>
+        </div>
+        <div class="calc-item">
+          <span class="calc-label">手续费</span>
+          <span class="calc-value num-mono">{{ computedFee || '—' }}</span>
+        </div>
+        <div class="calc-item">
+          <span class="calc-label">实际{{ isBuy ? '支出' : '收入' }}</span>
+          <span class="calc-value num-mono rise">{{ computedActual || '—' }}</span>
         </div>
         <div class="calc-item" v-if="stockPrice > 0">
           <span class="calc-label">实时市价</span>
-          <span class="calc-value num-mono rise">{{ formatPrice(stockPrice) }}</span>
-        </div>
-        <div class="calc-item" v-if="stockPrice > 0 && parseInt(form.quantity)">
-          <span class="calc-label">当前市值</span>
-          <span class="calc-value num-mono">{{ formatMoney(stockPrice * (parseInt(form.quantity) || 0)) }}</span>
+          <span class="calc-value num-mono" :class="priceVsMarket >= 0 ? 'rise' : 'fall'">{{ formatPrice(stockPrice) }}</span>
         </div>
       </div>
 
@@ -78,6 +82,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import { formatMoney, formatPrice } from '@/utils/formatters'
+import { calcBuyFee } from '@/utils/feeCalculator'
 import PoolSelector from '@/components/common/PoolSelector.vue'
 
 const props = defineProps({
@@ -93,7 +98,6 @@ const emit = defineEmits(['submit'])
 const selectedPool = ref(props.presetPoolId || null)
 const submitted = ref(false)
 
-// 买入时默认选中第一个子池（避免忘记选）
 watch(() => props.pools, (list) => {
   if (!selectedPool.value && list && list.length && !props.hidePool) {
     selectedPool.value = list[0]?.id || null
@@ -102,19 +106,37 @@ watch(() => props.pools, (list) => {
 const submitError = ref('')
 
 const form = ref({
-  totalAmount: '',
+  price: '',
   quantity: '',
   date: new Date().toISOString().split('T')[0],
   note: ''
 })
 
-const computedCostPrice = computed(() => {
-  const amount = parseFloat(form.value.totalAmount) || 0
-  const qty = parseInt(form.value.quantity) || 0
-  if (amount > 0 && qty > 0) {
-    return formatPrice(amount / qty)
+const computedAmount = computed(() => {
+  const p = parseFloat(form.value.price) || 0
+  const q = parseInt(form.value.quantity) || 0
+  if (p > 0 && q > 0) return formatMoney(p * q)
+  return ''
+})
+const computedFee = computed(() => {
+  const p = parseFloat(form.value.price) || 0
+  const q = parseInt(form.value.quantity) || 0
+  if (p > 0 && q > 0) return formatMoney(calcBuyFee(p * q))
+  return ''
+})
+const computedActual = computed(() => {
+  const p = parseFloat(form.value.price) || 0
+  const q = parseInt(form.value.quantity) || 0
+  if (p > 0 && q > 0) {
+    const amt = p * q
+    const fee = calcBuyFee(amt)
+    return formatMoney(props.isBuy ? amt + fee : amt - fee)
   }
-  return '—'
+  return ''
+})
+const priceVsMarket = computed(() => {
+  const p = parseFloat(form.value.price) || 0
+  return props.stockPrice > 0 ? p - props.stockPrice : 0
 })
 
 function onSubmit() {
@@ -124,25 +146,26 @@ function onSubmit() {
     submitError.value = '请选择所属子池'
     return
   }
-  if (!form.value.totalAmount || parseFloat(form.value.totalAmount) <= 0) {
-    submitError.value = '请输入成交总金额'
+  const price = parseFloat(form.value.price)
+  if (!price || price <= 0) {
+    submitError.value = '请输入成交单价'
     return
   }
-  if (!form.value.quantity || parseInt(form.value.quantity) <= 0) {
+  const qty = parseInt(form.value.quantity)
+  if (!qty || qty <= 0) {
     submitError.value = '请输入成交数量'
     return
   }
-  if (parseInt(form.value.quantity) % 100 !== 0) {
+  if (qty % 100 !== 0) {
     submitError.value = '数量必须为100的整数倍'
     return
   }
-  const amount = parseFloat(form.value.totalAmount)
-  const qty = parseInt(form.value.quantity)
+  const amount = parseFloat((price * qty).toFixed(2))
   emit('submit', {
     pool_id: selectedPool.value || props.presetPoolId,
     quantity: qty,
-    price: qty > 0 ? amount / qty : 0,
-    amount: amount,
+    price,
+    amount,
     trade_date: form.value.date,
     note: form.value.note
   })
@@ -160,18 +183,18 @@ function onSubmit() {
   background: rgba(255,255,255,0.03);
   border-radius: var(--radius-md);
   margin: 8px 0;
-  display: flex;
-  gap: 16px;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 16px;
 }
 .calc-item { display: flex; flex-direction: column; gap: 2px; }
 .calc-label { font-size: 11px; color: var(--text-secondary); }
 .calc-value { font-size: 16px; font-weight: 600; font-family: var(--font-number); }
 .calc-value.rise { color: var(--color-rise); }
+.calc-value.fall { color: var(--color-fall); }
 </style>
 
 <style>
-/* Vant 表单域暗色主题覆写 */
 .van-cell.trade-form-field {
   background: rgba(255,255,255,0.04) !important;
   border-radius: var(--radius-md) !important;

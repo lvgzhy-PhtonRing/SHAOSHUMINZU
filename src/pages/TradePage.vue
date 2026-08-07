@@ -65,6 +65,11 @@
           <label class="sdr-label">成交日期</label>
           <input v-model="sellDate" type="date" class="sdr-input" />
         </div>
+        <div class="sell-fee-row" v-if="sellTotalQty > 0">
+          <div class="sfr-item"><span>预估总金额</span><span class="num-mono">{{ formatMoney(sellTotalQty * sellPrice) }}</span></div>
+          <div class="sfr-item"><span>手续费</span><span class="num-mono">{{ formatMoney(sellFee) }}</span></div>
+          <div class="sfr-item"><span>实际到账</span><span class="num-mono rise">{{ formatMoney(sellTotalQty * sellPrice - sellFee) }}</span></div>
+        </div>
         <div style="margin: 16px 0">
           <van-button round block type="primary"
             :color="sellValid ? 'var(--color-rise)' : '#666'"
@@ -195,7 +200,7 @@ import { useHoldingStore } from '@/stores/holdings'
 import { useFundStore } from '@/stores/funds'
 import { calcNewCostPrice } from '@/utils/calculators'
 import { formatMoney, formatPrice } from '@/utils/formatters'
-import { calcCostPrice, calcBuyActual, calcSellActual, calcBuyFee, calcSellFee } from '@/utils/feeCalculator'
+import { calcBuyActual, calcSellActual, calcBuyFee, calcSellFee } from '@/utils/feeCalculator'
 import { upsertHolding, deleteHolding, insertCapitalLog, deleteCapitalLog, updateCapitalLog, updateTransaction, deleteTransaction, fetchTransactionsByPoolStock, loadPoolAllocation } from '@/api/supabase'
 import StockSearch from '@/components/trade/StockSearch.vue'
 import TradeForm from '@/components/trade/TradeForm.vue'
@@ -283,6 +288,11 @@ const sellRemaining = computed(() => {
   const allocated = sellEntries.value.reduce((s, e) => s + (e.sell_qty || 0), 0)
   return Math.max(0, sellTotalQty.value - allocated)
 })
+const sellFee = computed(() => {
+  const amt = sellTotalQty.value * sellPrice.value
+  return amt > 0 ? calcSellFee(amt) : 0
+})
+
 const sellValid = computed(() => {
   if (sellTotalQty.value <= 0 || sellRemaining.value > 0) return false
   for (const e of sellEntries.value) { if (e.sell_qty > e.holding_qty || e.sell_qty % 100 !== 0) return false }
@@ -484,6 +494,9 @@ function initSellEntries() {
 .sell-date-row { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
 .sdr-label { font-size: 12px; color: var(--text-secondary); white-space: nowrap; }
 .sdr-input { flex: 1; padding: 8px 10px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; color: #fff; font-size: 14px; outline: none; }
+.sell-fee-row { padding: 8px 10px; background: rgba(255,255,255,0.03); border-radius: var(--radius-md); margin-top: 8px; }
+.sfr-item { display: flex; justify-content: space-between; padding: 3px 0; font-size: 12px; color: var(--text-secondary); }
+.sfr-item .num-mono { font-size: 12px; }
 
 .trade-log-list { display: flex; flex-direction: column; gap: 2px; }
 .trade-log-item { padding: 12px 14px; background: var(--bg-card); display: flex; gap: 8px; align-items: center; cursor: pointer; }
