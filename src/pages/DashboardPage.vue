@@ -183,6 +183,11 @@ const displayHoldings = computed(() => {
       merged[h.stock_code].poolNames.push({ name: pn, color: pc || '#888' })
     }
   }
+  // 固定子池显示顺序：公共池 → 春 → 维 → 队 → 回
+  const POOL_NAME_ORDER = ['公共池', '春', '维', '队', '回']
+  for (const m of Object.values(merged)) {
+    m.poolNames.sort((a, b) => POOL_NAME_ORDER.indexOf(a.name) - POOL_NAME_ORDER.indexOf(b.name))
+  }
 
   return Object.values(merged).map(m => {
     const priceData = priceStore.prices[m.stock_code] || {}
@@ -211,12 +216,12 @@ const summary = computed(() => {
   const totalMarketValue = holdings.reduce((s, h) => s + h.marketValue, 0)
   const totalCost = holdings.reduce((s, h) => s + h.cost_price * h.quantity, 0)
   const floatPnl = totalMarketValue - totalCost
-  // 总资产 = 资金池 + 浮动盈亏
-  const totalAsset = totalCapital.value + floatPnl
   // 可用资金 = 实际现金流（总入金 + 卖出到账 − 买入支出）
   const sellIn = fundStore.capitalLogs.filter(l => l.pool_id !== null && l.type === 'add').reduce((s, l) => s + l.amount, 0)
   const buyOut = fundStore.capitalLogs.filter(l => l.pool_id !== null && l.type === 'remove').reduce((s, l) => s + l.amount, 0)
   const totalAvailable = totalCapital.value + sellIn - buyOut
+  // 总资产 = 总市值 + 总可用资金（真实资产 = 持仓价值 + 现金）
+  const totalAsset = totalMarketValue + totalAvailable
   return {
     totalAsset,
     totalMarketValue,

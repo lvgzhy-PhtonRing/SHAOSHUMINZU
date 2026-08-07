@@ -82,15 +82,15 @@
             :class="d.capitalChange !== 0 ? (d.capitalChange > 0 ? 'fl-up' : 'fl-down') : ''">
             {{ formatCompactAsset(d.asset) }}
           </span>
+          <span v-for="(d, i) in trendData" :key="'ad'+i" class="fl-label fl-day"
+            :style="flStyle(i, SVG_H2 - 20, 0, SVG_H2)">{{ d.label }}</span>
           <span v-for="(d, i) in trendData" :key="'cc'+i">
             <span v-if="d.capitalChange !== 0" class="fl-label fl-capchg"
-              :style="flStyle(i, assetY(d.asset), 18, SVG_H2)"
+              :style="flStyle(i, SVG_H2 - 6, 0, SVG_H2)"
               :class="d.capitalChange > 0 ? 'fl-up' : 'fl-down'">
               {{ formatCapitalChange(d.capitalChange) }}
             </span>
           </span>
-          <span v-for="(d, i) in trendData" :key="'ad'+i" class="fl-label fl-day"
-            :style="flStyle(i, SVG_H2 - 10, 0, SVG_H2)">{{ d.label }}</span>
         </div>
       </div>
 
@@ -178,7 +178,7 @@ const CHART_W = SVG_W - PAD_L - PAD_R
 const CHART_H = SVG_H - PAD_T - PAD_B
 
 // SVG 参数（资产图，更高一些给标签留空间）
-const SVG_H2 = 440
+const SVG_H2 = 480
 
 // ===== 仓位折线 =====
 const ratioMin = computed(() => {
@@ -258,9 +258,10 @@ function formatCompactAsset(v) {
   return v.toLocaleString('zh-CN')
 }
 function formatCapitalChange(v) {
-  const prefix = v > 0 ? '+' : ''
-  if (Math.abs(v) >= 10000) return prefix + (v / 10000).toFixed(1) + '万'
-  return prefix + v.toLocaleString('zh-CN')
+  const prefix = v > 0 ? '增资' : '减资'
+  const abs = Math.abs(v)
+  if (abs >= 10000) return prefix + (abs / 10000).toFixed(1) + '万'
+  return prefix + abs.toLocaleString('zh-CN')
 }
 
 // ===== 谁最HARD =====

@@ -102,13 +102,14 @@ const totalMarketValue = computed(() => {
 })
 
 const floatPnl = computed(() => totalMarketValue.value - totalCost.value)
-const totalAsset = computed(() => totalCapital.value + floatPnl.value)
 // 可用资金 = 实际现金流（总入金 + 卖出到账 − 买入支出）
 const totalAvailable = computed(() => {
   const sellIn = fundStore.capitalLogs.filter(l => l.pool_id !== null && l.type === 'add').reduce((s, l) => s + l.amount, 0)
   const buyOut = fundStore.capitalLogs.filter(l => l.pool_id !== null && l.type === 'remove').reduce((s, l) => s + l.amount, 0)
   return totalCapital.value + sellIn - buyOut
 })
+// 总资产 = 总市值 + 总可用资金（真实资产 = 持仓价值 + 现金）
+const totalAsset = computed(() => totalMarketValue.value + totalAvailable.value)
 // 从 localStorage/Supabase 恢复各池分配金额（元）
 function loadLocalAlloc() {
   const raw = localStorage.getItem('poolAmounts')
