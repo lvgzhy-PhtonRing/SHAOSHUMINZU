@@ -53,6 +53,10 @@ function onCodeChange(val) {
     stockInfo.value = null
     searched.value = false
   }
+  // 输入满6位自动查询
+  if (val.length === 6) {
+    search()
+  }
 }
 
 async function search() {
