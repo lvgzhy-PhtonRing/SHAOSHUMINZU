@@ -2,7 +2,7 @@
   <div class="trade-form">
     <van-form @submit="onSubmit">
       <div v-if="!hidePool" class="form-section">
-        <label class="form-label">所属子池</label>
+        <label class="form-label">所属子池 <span class="required">*</span></label>
         <PoolSelector
           :pools="pools"
           :current="selectedPool"
@@ -76,7 +76,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { formatMoney, formatPrice } from '@/utils/formatters'
 import PoolSelector from '@/components/common/PoolSelector.vue'
 
@@ -90,8 +90,15 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['submit'])
-const selectedPool = ref(props.presetPoolId)
+const selectedPool = ref(props.presetPoolId || null)
 const submitted = ref(false)
+
+// 买入时默认选中第一个子池（避免忘记选）
+watch(() => props.pools, (list) => {
+  if (!selectedPool.value && list && list.length && !props.hidePool) {
+    selectedPool.value = list[0]?.id || null
+  }
+}, { immediate: true })
 const submitError = ref('')
 
 const form = ref({
@@ -146,6 +153,7 @@ function onSubmit() {
 .trade-form { }
 .form-section { margin-bottom: 12px; }
 .form-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; display: block; }
+.required { color: var(--color-fall); }
 .form-error { color: var(--color-fall); font-size: 12px; margin-top: 4px; }
 .calc-display {
   padding: 10px 12px;

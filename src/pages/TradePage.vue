@@ -46,6 +46,7 @@
                 {{ log.type === 'add' ? '卖出' : '买入' }} {{ log.stock_code }}
               </span>
               <span class="tli-name">{{ log.stock_name }}</span>
+              <span v-if="log.quantity" class="tli-qty">{{ log.quantity }}股</span>
             </div>
             <div class="tli-meta">
               <span>{{ formatMoney(log.amount) }}</span>
@@ -249,10 +250,12 @@ const tradeLogs = computed(() => {
         t.pool_id === l.pool_id && code &&
         (t.stock_code === code) && Math.abs(t.amount - l.amount) < 0.01
       )
+      const qty = tx?.quantity || 0
       return {
         ...l,
         stock_code: code,
         stock_name: tx?.stock_name || '',
+        quantity: qty,
         trade_date: tx?.trade_date || l.created_at,
         pool_name: poolStore.pools.find(p => p.id === l.pool_id)?.name || ''
       }
