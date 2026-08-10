@@ -130,12 +130,12 @@
 </template>
 
 <script setup>
-import { ref, computed, reactive, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { usePoolStore } from '@/stores/pools'
 import { useHoldingStore } from '@/stores/holdings'
 import { usePriceStore } from '@/stores/prices'
 import { useFundStore } from '@/stores/funds'
-import { fetchPositionSnapshots, loadPoolAllocation } from '@/api/supabase'
+import { fetchPositionSnapshots } from '@/api/supabase'
 import { saveCurrentPositionSnapshot } from '@/utils/positionSnapshot'
 
 const loading = ref(true)
@@ -147,29 +147,6 @@ const holdingStore = useHoldingStore()
 const priceStore = usePriceStore()
 const fundStore = useFundStore()
 const totalCapital = computed(() => fundStore.totalCapital)
-
-// ===== 子池分配金额（用于"谁最HARD"计算） =====
-function loadLocalAlloc() {
-  const raw = localStorage.getItem('poolAmounts')
-  if (!raw) return null
-  let parsed = JSON.parse(raw)
-  if (parsed['共有'] !== undefined && parsed['公共池'] === undefined) {
-    parsed = { ...parsed }; parsed['公共池'] = parsed['共有']; delete parsed['共有']
-  }
-  const vals = Object.values(parsed)
-  const sum = vals.reduce((s, v) => s + v, 0)
-  if (vals.every(v => v <= 100) && Math.abs(sum - 100) < 1) {
-    const amt = {}
-    for (const k of Object.keys(parsed)) amt[k] = totalCapital.value * parsed[k] / 100
-    return amt
-  }
-  return parsed
-}
-function defaultAlloc() {
-  const each = Math.floor((totalCapital.value || 1000000) / 5 / 10000) * 10000
-  return { '公共池': each, '春': each, '维': each, '队': each, '回': each }
-}
-const poolAmounts = reactive(loadLocalAlloc() || defaultAlloc())
 
 // SVG 参数（仓位图）
 const SVG_W = 800, SVG_H = 360
@@ -268,20 +245,26 @@ function formatCapitalChange(v) {
 const POOL_COLORS = { '春': '#e94560', '维': '#00d2a1', '队': '#ffc107', '回': '#7c4dff' }
 const POOL_ORDER = ['春', '维', '队', '回']
 
+// 四个子池初始分配：各 110,000
+const SUB_POOL_INIT = 110000
+
 const hardData = computed(() => {
   return POOL_ORDER.map(name => {
     const pool = poolStore.pools.find(p => p.name === name)
     if (!pool) return null
-    const alloc = poolAmounts[name] || 0
-    if (alloc <= 0) return null
+    // 从 capital_log 计算实际可用资金
+    const adds = fundStore.capitalLogs.filter(l => l.pool_id === pool.id && l.type === 'add').reduce((s, l) => s + l.amount, 0)
+    const removes = fundStore.capitalLogs.filter(l => l.pool_id === pool.id && l.type === 'remove').reduce((s, l) => s + l.amount, 0)
+    const poolAvailable = SUB_POOL_INIT + adds - removes
     const holdings = holdingStore.holdings.filter(h => h.pool_id === pool.id)
     const cost = holdings.reduce((s, h) => s + h.cost_price * h.quantity, 0)
     const mv = holdings.reduce((s, h) => {
       return s + (priceStore.prices[h.stock_code]?.price || 0) * h.quantity
     }, 0)
-    const totalAsset = alloc + (mv - cost)
-    const ratio = (totalAsset / alloc) * 100
-    return { name, alloc, cost, mv, totalAsset, ratio, color: POOL_COLORS[name] }
+    // 总资产 = 可用资金 + 持仓市值
+    const totalAsset = poolAvailable + mv
+    const ratio = (totalAsset / SUB_POOL_INIT) * 100
+    return { name, alloc: SUB_POOL_INIT, cost, mv, totalAsset, ratio, color: POOL_COLORS[name] }
   }).filter(Boolean)
 })
 
@@ -335,17 +318,6 @@ onMounted(async () => {
       holdingStore.loadHoldings(),
       fundStore.loadCapitalLogs()
     ])
-
-    // 从 Supabase 同步分配金额（跨设备）
-    let server = await loadPoolAllocation()
-    if (server) {
-      if (server['共有'] !== undefined && server['公共池'] === undefined) {
-        server = { ...server }; server['公共池'] = server['共有']; delete server['共有']
-      }
-      for (const k of Object.keys(server)) {
-        if (poolAmounts[k] !== undefined) poolAmounts[k] = server[k]
-      }
-    }
 
     const codes = holdingStore.stockCodes
     if (codes.length) await priceStore.loadPrices(codes)
