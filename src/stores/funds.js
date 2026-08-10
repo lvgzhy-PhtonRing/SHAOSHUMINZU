@@ -15,6 +15,19 @@ export const useFundStore = defineStore('funds', {
       return state.capitalLogs
         .filter(l => l.pool_id === null)
         .reduce((sum, l) => sum + (l.type === 'add' ? l.amount : -l.amount), 0)
+    },
+    // 总可用资金 = 外部总资本 + 所有卖出到账 − 所有买入支出（含已实现盈亏）
+    totalAvailable: (state) => {
+      const sellIn = state.capitalLogs
+        .filter(l => l.pool_id !== null && l.type === 'add')
+        .reduce((sum, l) => sum + l.amount, 0)
+      const buyOut = state.capitalLogs
+        .filter(l => l.pool_id !== null && l.type === 'remove')
+        .reduce((sum, l) => sum + l.amount, 0)
+      const capital = state.capitalLogs
+        .filter(l => l.pool_id === null)
+        .reduce((sum, l) => sum + (l.type === 'add' ? l.amount : -l.amount), 0)
+      return capital + sellIn - buyOut
     }
   },
   actions: {

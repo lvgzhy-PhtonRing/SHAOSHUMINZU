@@ -101,12 +101,8 @@ const totalMarketValue = computed(() => {
 })
 
 const floatPnl = computed(() => totalMarketValue.value - totalCost.value)
-// 可用资金 = 实际现金流（总入金 + 卖出到账 − 买入支出）
-const totalAvailable = computed(() => {
-  const sellIn = fundStore.capitalLogs.filter(l => l.pool_id !== null && l.type === 'add').reduce((s, l) => s + l.amount, 0)
-  const buyOut = fundStore.capitalLogs.filter(l => l.pool_id !== null && l.type === 'remove').reduce((s, l) => s + l.amount, 0)
-  return totalCapital.value + sellIn - buyOut
-})
+// 可用资金 = 实际现金流（总入金 + 卖出到账 − 买入支出，含已实现盈亏）
+const totalAvailable = computed(() => fundStore.totalAvailable)
 // 总资产 = 总市值 + 总可用资金（真实资产 = 持仓价值 + 现金）
 const totalAsset = computed(() => totalMarketValue.value + totalAvailable.value)
 // 四个子池初始分配：各 110,000（公共池 = 总资金 - 四人合计）

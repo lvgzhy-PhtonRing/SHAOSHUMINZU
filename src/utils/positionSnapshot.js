@@ -10,15 +10,14 @@ export async function saveCurrentPositionSnapshot() {
   const holdingStore = useHoldingStore()
   const priceStore = usePriceStore()
 
-  const totalCapital = fundStore.totalCapital
+  const totalAvailable = fundStore.totalAvailable
   const holdings = holdingStore.holdings
   const prices = priceStore.prices
 
-  const totalCost = holdings.reduce((s, h) => s + h.cost_price * h.quantity, 0)
   const totalMv = holdings.reduce((s, h) => {
     return s + (prices[h.stock_code]?.price || 0) * h.quantity
   }, 0)
-  const asset = totalCapital + (totalMv - totalCost)
+  const asset = totalMv + totalAvailable
   const ratio = asset > 0 ? (totalMv / asset) * 100 : 0
 
   // 计算本日外部资金净变动（排除"初始"，只计增减资）

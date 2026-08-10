@@ -213,6 +213,7 @@ const displayHoldings = computed(() => {
   }).sort((a, b) => b.marketValue - a.marketValue)
 })
 
+const SUB_POOL_INIT = 110000
 const totalCapital = computed(() => fundStore.totalCapital)
 
 const summary = computed(() => {
@@ -220,10 +221,27 @@ const summary = computed(() => {
   const totalMarketValue = holdings.reduce((s, h) => s + h.marketValue, 0)
   const totalCost = holdings.reduce((s, h) => s + h.cost_price * h.quantity, 0)
   const floatPnl = totalMarketValue - totalCost
-  // 可用资金 = 实际现金流（总入金 + 卖出到账 − 买入支出）
-  const sellIn = fundStore.capitalLogs.filter(l => l.pool_id !== null && l.type === 'add').reduce((s, l) => s + l.amount, 0)
-  const buyOut = fundStore.capitalLogs.filter(l => l.pool_id !== null && l.type === 'remove').reduce((s, l) => s + l.amount, 0)
-  const totalAvailable = totalCapital.value + sellIn - buyOut
+
+  const currentPoolId = poolStore.currentPoolId
+  let totalAvailable
+  if (currentPoolId !== null) {
+    // 单池模式：按池过滤现金流 + 池初始分配
+    const pool = poolStore.pools.find(p => p.id === currentPoolId)
+    const poolInitial = pool?.name === '公共池'
+      ? totalCapital.value - SUB_POOL_INIT * (poolStore.pools.length - 1)
+      : SUB_POOL_INIT
+    const poolSellIn = fundStore.capitalLogs
+      .filter(l => l.pool_id === currentPoolId && l.type === 'add')
+      .reduce((s, l) => s + l.amount, 0)
+    const poolBuyOut = fundStore.capitalLogs
+      .filter(l => l.pool_id === currentPoolId && l.type === 'remove')
+      .reduce((s, l) => s + l.amount, 0)
+    totalAvailable = poolInitial + poolSellIn - poolBuyOut
+  } else {
+    // 总账户模式
+    totalAvailable = fundStore.totalAvailable
+  }
+
   // 总资产 = 总市值 + 总可用资金（真实资产 = 持仓价值 + 现金）
   const totalAsset = totalMarketValue + totalAvailable
   return {

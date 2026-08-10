@@ -78,8 +78,10 @@ const totalMarketValue = computed(() => {
 })
 
 const floatPnl = computed(() => totalMarketValue.value - totalCost.value)
-const totalAsset = computed(() => totalCapital.value + floatPnl.value)
-const totalAvailable = computed(() => totalCapital.value - totalCost.value)
+// 总可用资金 = 外部总资本 + 所有卖出到账 − 所有买入支出（含已实现盈亏，与 Dashboard 一致）
+const totalAvailable = computed(() => fundStore.totalAvailable)
+// 总资产 = 持仓市值 + 可用资金
+const totalAsset = computed(() => totalMarketValue.value + totalAvailable.value)
 // 资金变动记录（仅外部资金，不含股票买卖）
 const capitalLogs = computed(() => fundStore.capitalLogs.filter(l => l.pool_id === null))
 
