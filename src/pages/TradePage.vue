@@ -132,19 +132,21 @@
               <span class="dlg-value">{{ editStockCode }}</span>
             </div>
           </div>
-          <div class="dlg-field">
-            <label class="dlg-label">子池</label>
-            <select v-model="editPoolId" class="dlg-input">
-              <option v-for="p in poolStore.allPools" :key="p.id" :value="p.id">{{ p.name }}</option>
-            </select>
+          <div class="dlg-row-flex">
+            <div class="dlg-field dlg-half">
+              <label class="dlg-label">子池</label>
+              <select v-model="editPoolId" class="dlg-input">
+                <option v-for="p in poolStore.allPools" :key="p.id" :value="p.id">{{ p.name }}</option>
+              </select>
+            </div>
+            <div class="dlg-field dlg-half">
+              <label class="dlg-label">成交单价</label>
+              <input v-model="editPrice" type="number" inputmode="decimal" class="dlg-input num-mono" step="0.001" @input="onEditPriceOrQtyChange" />
+            </div>
           </div>
           <div class="dlg-field">
             <label class="dlg-label">成交数量（股）</label>
             <input v-model="editQuantity" type="number" inputmode="numeric" class="dlg-input num-mono" placeholder="0" @input="onEditPriceOrQtyChange" />
-          </div>
-          <div class="dlg-field">
-            <label class="dlg-label">成交单价</label>
-            <input v-model="editPrice" type="number" inputmode="decimal" class="dlg-input num-mono" step="0.001" @input="onEditPriceOrQtyChange" />
           </div>
           <div class="dlg-row-flex">
             <div class="dlg-field dlg-half">
