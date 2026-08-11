@@ -39,7 +39,7 @@
           <span class="calc-value num-mono">{{ computedAmount || '—' }}</span>
         </div>
         <div class="calc-item">
-          <span class="calc-label">手续费</span>
+          <span class="calc-label">{{ isBuy ? '买入' : '卖出' }}费用</span>
           <span class="calc-value num-mono">{{ computedFee || '—' }}</span>
         </div>
         <div class="calc-item" v-if="stockPrice > 0">
@@ -78,7 +78,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import { formatMoney, formatPrice } from '@/utils/formatters'
-import { calcBuyFee } from '@/utils/feeCalculator'
+import { calcBuyFee, calcSellFee } from '@/utils/feeCalculator'
 import PoolSelector from '@/components/common/PoolSelector.vue'
 
 const props = defineProps({
@@ -117,7 +117,7 @@ const computedAmount = computed(() => {
 const computedFee = computed(() => {
   const p = parseFloat(form.value.price) || 0
   const q = parseInt(form.value.quantity) || 0
-  if (p > 0 && q > 0) return formatMoney(calcBuyFee(p * q))
+  if (p > 0 && q > 0) return formatMoney(props.isBuy ? calcBuyFee(p * q) : calcSellFee(p * q))
   return ''
 })
 const priceVsMarket = computed(() => {
