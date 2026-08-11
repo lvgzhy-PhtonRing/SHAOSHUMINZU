@@ -1,16 +1,17 @@
 <template>
   <div class="page trends-page">
     <div class="page-header">
-      <span class="page-title">榜单</span>
+      <span class="page-title">硬度榜单</span>
     </div>
 
     <LoadingSkeleton v-if="loading" :count="3" />
 
     <template v-else>
-      <!-- 最赚钱TOP3 -->
-      <div class="section-card">
+      <!-- 最赚钱 TOP 3 -->
+      <div class="section-card rank-card rank-card--gain">
         <div class="section-title">
-          <span class="rank-icon">🚀</span> 最赚钱TOP3
+          <span class="title-accent title-accent--rise"></span>
+          最赚钱 TOP 3
           <span class="subtitle">仅比较已清仓股票</span>
         </div>
         <div v-if="!topGainers.length" class="rank-empty">暂无已清仓盈利股票</div>
@@ -23,13 +24,14 @@
         </div>
       </div>
 
-      <!-- 亏最多TOP3 -->
-      <div class="section-card">
+      <!-- 亏最多 TOP 3 -->
+      <div class="section-card rank-card rank-card--loss">
         <div class="section-title">
-          <span class="rank-icon">💩</span> 亏最多TOP3
+          <span class="title-accent title-accent--fall"></span>
+          亏最多 TOP 3
           <span class="subtitle">仅比较已清仓股票</span>
         </div>
-        <div v-if="!topLosers.length" class="rank-empty">暂无已清仓亏损股票 🎉</div>
+        <div v-if="!topLosers.length" class="rank-empty">暂无已清仓亏损股票</div>
         <div v-else class="rank-list">
           <div v-for="(item, idx) in topLosers" :key="item.stock_code" class="rank-item">
             <span class="rank-badge" :class="'rank-badge--' + (idx + 1)">{{ idx + 1 }}</span>
@@ -39,10 +41,13 @@
         </div>
       </div>
 
-      <!-- 谁最HARD -->
+      <!-- 子池硬度 -->
       <div class="section-card hard-card">
-        <div class="section-title">🔥 谁最HARD</div>
-        <div class="hard-subtitle">子池资产 / 初始分配</div>
+        <div class="section-title">
+          <span class="title-accent title-accent--hard"></span>
+          子池硬度
+          <span class="subtitle">资产 / 初始分配</span>
+        </div>
 
         <LoadingSkeleton v-if="!hardData.length" :count="4" mode="paragraph" />
 
@@ -60,51 +65,56 @@
             </div>
             <div class="hard-col-name" :style="{ color: item.color }">{{ item.name }}</div>
             <div class="hard-col-asset">{{ Math.round(item.totalAsset) }}</div>
-            <div v-if="idx === 0" class="hard-col-crown">👑</div>
+            <div v-if="idx === 0" class="hard-col-crown">&#9733;</div>
           </div>
         </div>
       </div>
 
-      <!-- 仓位趋势 -->
+      <!-- 趋势总览（仓位+资产合并，日期强制对齐） -->
       <div class="section-card">
-        <div class="section-title">📊 仓位趋势 <span class="subtitle">近7交易日</span></div>
-        <div v-if="!trendData.length" class="trend-empty">暂无数据</div>
-        <div v-else class="bar-chart">
-          <div v-for="(d, i) in trendData" :key="'r'+i" class="bar-row">
-            <span class="bar-label">{{ d.label }}</span>
-            <div class="bar-track">
-              <div class="bar-fill bar-fill--ratio" :style="{ width: ratioBarPct(d.ratio) + '%' }"></div>
-            </div>
-            <span class="bar-value">{{ d.ratio.toFixed(1) }}%</span>
-            <span v-if="i > 0" class="bar-delta" :class="d.ratio >= trendData[i-1].ratio ? 'rise' : 'fall'">
-              {{ d.ratio >= trendData[i-1].ratio ? '▲' : '▼' }}
-            </span>
-            <span v-else class="bar-delta-spacer"></span>
-            <span class="capchg-slot"></span>
-          </div>
+        <div class="section-title">
+          <span class="title-accent title-accent--trend"></span>
+          趋势总览
+          <span class="subtitle">近7交易日</span>
         </div>
-      </div>
-
-      <!-- 资产趋势 -->
-      <div class="section-card">
-        <div class="section-title">💰 资产趋势 <span class="subtitle">近7交易日</span></div>
         <div v-if="!trendData.length" class="trend-empty">暂无数据</div>
-        <div v-else class="bar-chart">
-          <div v-for="(d, i) in trendData" :key="'a'+i" class="bar-row">
-            <span class="bar-label">{{ d.label }}</span>
-            <div class="bar-track">
-              <div class="bar-fill bar-fill--asset" :style="{ width: assetBarPct(d.asset) + '%' }"></div>
+        <div v-else class="trend-table">
+          <!-- 表头 -->
+          <div class="trend-header">
+            <span class="th-label">日期</span>
+            <span class="th-col">仓位比例</span>
+            <span class="th-col">总资产</span>
+          </div>
+          <!-- 数据行 -->
+          <div v-for="(d, i) in trendData" :key="i" class="trend-row">
+            <span class="tr-label">{{ d.label }}</span>
+            <!-- 仓位比例列 -->
+            <div class="tr-col">
+              <div class="bar-track">
+                <div class="bar-fill bar-fill--ratio" :style="{ width: ratioBarPct(d.ratio) + '%' }"></div>
+              </div>
+              <span class="bar-value">{{ d.ratio.toFixed(1) }}%</span>
+              <span v-if="i > 0" class="bar-delta" :class="d.ratio >= trendData[i-1].ratio ? 'rise' : 'fall'">
+                {{ d.ratio >= trendData[i-1].ratio ? '▲' : '▼' }}
+              </span>
+              <span v-else class="bar-delta-spacer"></span>
             </div>
-            <span class="bar-value">{{ formatCompact(d.asset) }}</span>
-            <span v-if="i > 0" class="bar-delta" :class="d.asset >= trendData[i-1].asset ? 'rise' : 'fall'">
-              {{ d.asset >= trendData[i-1].asset ? '▲' : '▼' }}
-            </span>
-            <span v-else class="bar-delta-spacer"></span>
-            <span v-if="d.capitalChange !== 0" class="capchg-tag"
-              :class="d.capitalChange > 0 ? 'rise' : 'fall'">
-              {{ d.capitalChange > 0 ? '增资' : '减资' }}{{ formatCompact(Math.abs(d.capitalChange)) }}
-            </span>
-            <span v-else class="capchg-slot"></span>
+            <!-- 总资产列 -->
+            <div class="tr-col">
+              <div class="bar-track">
+                <div class="bar-fill bar-fill--asset" :style="{ width: assetBarPct(d.asset) + '%' }"></div>
+              </div>
+              <span class="bar-value">{{ formatCompact(d.asset) }}</span>
+              <span v-if="i > 0" class="bar-delta" :class="d.asset >= trendData[i-1].asset ? 'rise' : 'fall'">
+                {{ d.asset >= trendData[i-1].asset ? '▲' : '▼' }}
+              </span>
+              <span v-else class="bar-delta-spacer"></span>
+              <span v-if="d.capitalChange !== 0" class="capchg-tag"
+                :class="d.capitalChange > 0 ? 'rise' : 'fall'">
+                {{ d.capitalChange > 0 ? '+' : '-' }}{{ formatCompact(Math.abs(d.capitalChange)) }}
+              </span>
+              <span v-else class="capchg-slot"></span>
+            </div>
           </div>
         </div>
       </div>
@@ -136,7 +146,6 @@ const totalCapital = computed(() => fundStore.totalCapital)
 
 // ===== 盈亏排行（仅已清仓股票） =====
 const clearedProfitRankings = computed(() => {
-  // 按 stock_code 聚合所有已核实交易
   const byStock = {}
   for (const tx of transactionStore.transactions) {
     if (tx.status !== 'verified') continue
@@ -160,7 +169,6 @@ const clearedProfitRankings = computed(() => {
     }
   }
 
-  // 只保留已清仓（买入量 == 卖出量 > 0）的股票
   return Object.values(byStock)
     .filter(s => s.buyQty > 0 && s.buyQty === s.sellQty)
     .map(s => ({
@@ -182,11 +190,11 @@ const topLosers = computed(() =>
 
 function formatProfit(profit) {
   const abs = Math.abs(Math.round(profit))
-  if (profit >= 0) return `盈利 +${abs.toLocaleString('zh-CN')}元`
-  return `亏损 -${abs.toLocaleString('zh-CN')}元`
+  if (profit >= 0) return `+${abs.toLocaleString('zh-CN')}`
+  return `-${abs.toLocaleString('zh-CN')}`
 }
 
-// ===== 趋势图 CSS 柱状 =====
+// ===== 趋势图 =====
 const maxRatio = computed(() => {
   if (!trendData.value.length) return 100
   return Math.max(...trendData.value.map(d => d.ratio), 1)
@@ -221,7 +229,7 @@ function formatCompact(v) {
   return Math.round(v).toLocaleString('zh-CN')
 }
 
-// ===== 谁最HARD =====
+// ===== 子池硬度 =====
 const POOL_COLORS = { '春': '#e94560', '维': '#00d2a1', '队': '#ffc107', '回': '#7c4dff' }
 const POOL_ORDER = ['春', '维', '队', '回']
 const SUB_POOL_INIT = 110000
@@ -275,7 +283,6 @@ onMounted(async () => {
       fundStore.loadCapitalLogs()
     ])
 
-    // 拉取全部交易记录用于清仓盈亏排行
     const allTxs = await fetchAllTransactions()
     transactionStore.transactions = allTxs
 
@@ -287,12 +294,18 @@ onMounted(async () => {
     const snaps = await fetchPositionSnapshots(15)
     const tradingDays = snaps.filter(s => !isWeekend(s.date))
     const last7 = tradingDays.slice(-7)
-    trendData.value = last7.map(s => ({
-      label: (() => { const d = new Date(s.date + 'T00:00:00'); return '周' + WEEKDAY[d.getDay()] + ' ' + String(d.getMonth()+1).padStart(2,'0') + '/' + String(d.getDate()).padStart(2,'0'); })(),
-      ratio: s.ratio,
-      asset: s.asset || 0,
-      capitalChange: s.capitalChange || 0
-    }))
+    trendData.value = last7.map(s => {
+      const d = new Date(s.date + 'T00:00:00')
+      const label = '周' + WEEKDAY[d.getDay()] + ' ' +
+        String(d.getMonth() + 1).padStart(2, '0') + '/' +
+        String(d.getDate()).padStart(2, '0')
+      return {
+        label,
+        ratio: s.ratio,
+        asset: s.asset || 0,
+        capitalChange: s.capitalChange || 0
+      }
+    })
   } catch (e) {
     console.error('Trends page load error:', e)
   } finally {
@@ -302,13 +315,27 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.section-title { padding: 0 0 10px; font-size: 13px; font-weight: 600; }
-.section-title .subtitle { font-size: 11px; color: var(--text-secondary); font-weight: 400; margin-left: 6px; }
+.section-title { padding: 0 0 10px; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+.section-title .subtitle { font-size: 11px; color: var(--text-secondary); font-weight: 400; }
 .section-card + .section-card { margin-top: 16px; }
 .section-card { padding: 16px 14px 18px; }
 
+/* 标题左边 accent 色条，替代 emoji */
+.title-accent {
+  display: inline-block;
+  width: 3px; height: 14px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.title-accent--rise { background: var(--color-rise); }
+.title-accent--fall { background: var(--color-fall); }
+.title-accent--hard { background: linear-gradient(180deg, #ffc107, #ff9800); }
+.title-accent--trend { background: var(--bg-accent); }
+
 /* ===== 盈亏排行 ===== */
-.rank-icon { font-size: 16px; }
+.rank-card { border-left: 3px solid transparent; }
+.rank-card--gain { border-left-color: rgba(233,69,96,0.3); }
+.rank-card--loss { border-left-color: rgba(0,210,161,0.3); }
 .rank-empty {
   padding: 24px 0;
   text-align: center;
@@ -352,81 +379,99 @@ onMounted(async () => {
 .rank-profit.rise { color: var(--color-rise); }
 .rank-profit.fall { color: var(--color-fall); }
 
-/* ===== CSS 柱状趋势图 ===== */
-.bar-chart {
+/* ===== 趋势总览（合并表格，日期强制对齐） ===== */
+.trend-table {
   display: flex;
   flex-direction: column;
-  gap: 4px;
 }
-.bar-row {
+.trend-header {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 3px 0;
+  padding: 0 0 6px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  margin-bottom: 4px;
 }
-.bar-label {
-  width: 72px;
-  font-size: 11px;
-  font-weight: 600;
+.th-label {
+  width: 72px; flex-shrink: 0;
+  font-size: 10px; color: var(--text-muted); text-align: right;
+}
+.th-col {
+  flex: 1;
+  font-size: 10px; color: var(--text-muted);
+}
+.trend-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+}
+.tr-label {
+  width: 72px; flex-shrink: 0;
+  font-size: 11px; font-weight: 600;
   color: var(--text-secondary);
   text-align: right;
-  flex-shrink: 0;
   white-space: nowrap;
+}
+.tr-col {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
 }
 .bar-track {
   flex: 1;
-  height: 20px;
+  height: 18px;
   background: rgba(255,255,255,0.04);
-  border-radius: 4px;
+  border-radius: 3px;
   overflow: hidden;
+  min-width: 20px;
 }
 .bar-fill {
   height: 100%;
-  border-radius: 4px;
+  border-radius: 3px;
   transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
   min-width: 2px;
 }
 .bar-fill--ratio {
-  background: linear-gradient(90deg, var(--bg-accent), rgba(15,52,96,0.5));
+  background: linear-gradient(90deg, var(--bg-accent), rgba(15,52,96,0.4));
 }
 .bar-fill--asset {
-  background: linear-gradient(90deg, var(--color-rise), rgba(233,69,96,0.3));
+  background: linear-gradient(90deg, var(--color-rise), rgba(233,69,96,0.25));
 }
 .bar-value {
-  width: 56px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   font-family: var(--font-number);
-  text-align: right;
+  white-space: nowrap;
   flex-shrink: 0;
 }
 .bar-delta {
-  width: 16px;
-  font-size: 12px;
+  width: 14px;
+  font-size: 11px;
   text-align: center;
   flex-shrink: 0;
 }
 .bar-delta-spacer {
-  width: 16px;
+  width: 14px;
   flex-shrink: 0;
 }
 .bar-delta.rise { color: var(--color-rise); }
 .bar-delta.fall { color: var(--color-fall); }
 
 .capchg-tag {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 600;
-  padding: 1px 6px;
+  padding: 0 4px;
+  border-radius: 3px;
   white-space: nowrap;
   flex-shrink: 0;
 }
-.capchg-tag.rise { color: var(--color-rise); }
-.capchg-tag.fall { color: var(--color-fall); }
+.capchg-tag.rise { color: var(--color-rise); background: rgba(233,69,96,0.1); }
+.capchg-tag.fall { color: var(--color-fall); background: rgba(0,210,161,0.1); }
 .capchg-slot {
-  font-size: 10px;
-  line-height: 1.4;
-  padding: 1px 6px;
-  visibility: hidden;
+  display: inline-block; width: 0; height: 0;
   flex-shrink: 0;
 }
 
@@ -437,7 +482,7 @@ onMounted(async () => {
   color: var(--text-muted);
 }
 
-/* ===== 谁最HARD（竖向4柱） ===== */
+/* ===== 子池硬度 ===== */
 .hard-card { padding-bottom: 20px; }
 .hard-subtitle { font-size: 11px; color: var(--text-muted); margin: -6px 0 14px; }
 .pct-up { color: var(--color-rise); }
@@ -488,7 +533,8 @@ onMounted(async () => {
   line-height: 1.2; word-break: break-all; text-align: center;
 }
 .hard-col-crown {
-  position: absolute; top: -6px; right: -2px; font-size: 18px;
+  position: absolute; top: -6px; right: -2px;
+  font-size: 16px; color: #ffc107;
   animation: crown-bounce 1.5s ease-in-out infinite;
 }
 @keyframes crown-bounce {
