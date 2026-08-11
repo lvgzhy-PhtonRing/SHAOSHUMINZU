@@ -60,7 +60,6 @@
 
     <!-- ===== 确认弹窗 (分配) ===== -->
     <teleport to="body">
-      <!-- 确认弹窗 (分配) -->
       <div v-if="showAllocConfirm" class="overlay" @click.self="showAllocConfirm=false">
         <div class="dialog">
           <div class="dlg-title">确认资金分配</div>
@@ -346,7 +345,5 @@ function submitAlloc() {
   flex: 2; padding: 10px; border: none; border-radius: var(--radius-md);
   font-size: 14px; font-weight: 600; cursor: pointer; color: #fff;
 }
-.d-ok.add { background: #00d2a1; color: #1a1a2e; }
-.d-ok.remove { background: #e94560; }
 .d-ok.alloc { background: var(--bg-accent); }
 </style>
