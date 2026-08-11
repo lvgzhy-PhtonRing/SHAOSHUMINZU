@@ -1,12 +1,12 @@
 <template>
   <div class="capital-summary">
     <div class="cs-row">
-      <span class="cs-label">资本投入</span>
+      <span class="cs-label">初期投入</span>
       <span class="cs-amount num-mono">{{ formatMoney(totalCapital) }}</span>
     </div>
     <div class="cs-row">
-      <span class="cs-label">现在市值</span>
-      <span class="cs-amount num-mono">{{ formatMoney(marketValue) }}</span>
+      <span class="cs-label">现在资产</span>
+      <span class="cs-amount num-mono">{{ formatMoney(totalAsset) }}</span>
     </div>
     <div class="cs-row">
       <span class="cs-label" :class="pnlClass">{{ pnlLabel }}</span>
@@ -30,8 +30,10 @@ const props = defineProps({
 })
 defineEmits(['open-change', 'open-detail'])
 
-// 累计盈利 = 账户资产 − 资本投入 = (现在市值 + 可用资金) − 资本投入
-const cumPnl = computed(() => (props.marketValue + props.totalAvailable) - props.totalCapital)
+// 现在资产 = 持仓首页的账户资产口径 = 总市值 + 总可用资金
+const totalAsset = computed(() => props.marketValue + props.totalAvailable)
+// 累计盈利 = 现在资产 − 初期投入
+const cumPnl = computed(() => totalAsset.value - props.totalCapital)
 const pnlClass = computed(() => (cumPnl.value >= 0 ? 'rise' : 'fall'))
 const pnlLabel = computed(() => (cumPnl.value >= 0 ? '累计盈利' : '累计亏损'))
 const pnlText = computed(() => (cumPnl.value >= 0 ? `+${formatMoney(cumPnl.value)}` : formatMoney(cumPnl.value)))
