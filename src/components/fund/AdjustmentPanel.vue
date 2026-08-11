@@ -19,7 +19,7 @@
       />
     </div>
     <div class="action-row">
-      <button class="act-btn gen" :disabled="tradingLocked || !brokerValid" @click="generate">生成校对核缺</button>
+      <button class="act-btn gen" :disabled="tradingLocked || !brokerValid || submitting" @click="generate">生成校对核缺</button>
     </div>
     <div v-if="brokerValid" class="diff-preview" :class="diff >= 0 ? 'pos' : 'neg'">
       差额 = 券商账户资产 − 系统账户资产 =
@@ -182,7 +182,7 @@ function closeDialog() {
 function submit() {
   if (!adjAmount.value || adjAmount.value <= 0) return
   if (editingId.value) {
-    emit('edit', { id: editingId.value, amount: adjAmount.value, note: adjNote.value, date: adjDate.value, type: adjType.value })
+    emit('edit', { id: editingId.value, amount: adjAmount.value, note: adjNote.value, date: adjDate.value })
   } else {
     emit('add', { type: adjType.value, amount: adjAmount.value, note: adjNote.value, date: adjDate.value })
   }
@@ -201,6 +201,7 @@ function doDelete() {
 function formatDate(isoStr) {
   if (!isoStr) return ''
   const d = new Date(isoStr)
+  if (isNaN(d.getTime())) return ''
   return `${d.getMonth() + 1}/${d.getDate()}`
 }
 </script>
