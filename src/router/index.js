@@ -41,7 +41,7 @@ const routes = [
         path: 'fund',
         name: 'fund',
         component: () => import('@/pages/FundPage.vue'),
-        meta: { title: '资金' }
+        meta: { title: '资本' }
       },
       {
         path: 'settings',
