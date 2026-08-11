@@ -35,6 +35,26 @@ async function ensureStockList() {
   return stockListPromise
 }
 
+function scoreStock(s, q, isDigits) {
+  let score = 0
+  if (isDigits) {
+    // 纯数字：匹配代码前缀
+    if (s.c === q) score = 100
+    else if (s.c.startsWith(q)) score = q.length * 15
+  } else {
+    // 文字/拼音：多层匹配
+    if (s.n === q) score = Math.max(score, 95)           // 名称完全匹配
+    if (s.n.startsWith(q)) score = Math.max(score, 85)   // 名称前缀
+    if (s.n.includes(q)) score = Math.max(score, 75)     // 名称包含
+    if (s.p.startsWith(q)) score = Math.max(score, 70)   // 全拼前缀
+    if (s.f === q) score = Math.max(score, 65)           // 首字母完全匹配
+    if (s.p.includes(q)) score = Math.max(score, 60)     // 全拼包含
+    if (s.f.startsWith(q)) score = Math.max(score, 55)   // 首字母前缀
+    if (s.f.includes(q)) score = Math.max(score, 45)     // 首字母包含
+  }
+  return score
+}
+
 function searchLocalStocks(query) {
   if (!stockList) return null  // null = 尚未加载完成，调用方应等待或降级
   const q = query.toLowerCase().trim()
@@ -44,27 +64,7 @@ function searchLocalStocks(query) {
   const isDigits = /^\d+$/.test(q)
 
   for (const s of stockList) {
-    let score = 0
-
-    if (isDigits) {
-      // 纯数字：匹配代码前缀
-      if (s.c === q) {
-        score = 100
-      } else if (s.c.startsWith(q)) {
-        score = q.length * 15
-      }
-    } else {
-      // 文字/拼音：多层匹配
-      if (s.n === q) score = Math.max(score, 95)           // 名称完全匹配
-      if (s.n.startsWith(q)) score = Math.max(score, 85)   // 名称前缀
-      if (s.n.includes(q)) score = Math.max(score, 75)     // 名称包含
-      if (s.p.startsWith(q)) score = Math.max(score, 70)   // 全拼前缀
-      if (s.f === q) score = Math.max(score, 65)           // 首字母完全匹配
-      if (s.p.includes(q)) score = Math.max(score, 60)     // 全拼包含
-      if (s.f.startsWith(q)) score = Math.max(score, 55)   // 首字母前缀
-      if (s.f.includes(q)) score = Math.max(score, 45)     // 首字母包含
-    }
-
+    const score = scoreStock(s, q, isDigits)
     if (score > 0) {
       results.push({ ...s, score })
     }
@@ -77,6 +77,29 @@ function searchLocalStocks(query) {
     stock_name: s.n,
     market: s.m === 'sh' ? '沪' : '深'
   }))
+}
+
+// 在给定股票代码集合内做首字母/名称/代码匹配（用于交易记录过滤，只联想已交易过的股票）
+export async function matchTradedStocks(codes, query) {
+  const list = await ensureStockList()
+  if (!list) return null  // 本地列表不可用，调用方降级为简单子串匹配
+  const q = query.toLowerCase().trim()
+  if (!q) return []
+
+  const byCode = {}
+  for (const s of list) byCode[s.c] = s
+  const isDigits = /^\d+$/.test(q)
+
+  const results = []
+  for (const code of codes) {
+    const s = byCode[code]
+    if (!s) continue
+    const score = scoreStock(s, q, isDigits)
+    if (score > 0) results.push({ stock_code: s.c, stock_name: s.n, score })
+  }
+
+  results.sort((a, b) => b.score - a.score)
+  return results
 }
 
 export function preloadStockList() {

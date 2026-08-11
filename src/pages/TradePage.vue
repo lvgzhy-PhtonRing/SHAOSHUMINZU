@@ -74,8 +74,48 @@
 
     <!-- 历史买卖记录 -->
     <div class="section-card" v-if="!isSell && tradeLogs.length">
-      <div class="section-title">股票交易记录</div>
-      <div class="trade-log-list">
+      <div class="section-title trade-rec-title">
+        股票交易记录
+        <span class="rec-all-tag" :class="{ active: !filterStockCode }" @click="clearFilter">全部</span>
+      </div>
+
+      <!-- 按股票过滤 -->
+      <div class="filter-row">
+        <div class="filter-input-wrap">
+          <van-field
+            v-model="filterQuery"
+            placeholder="输入名称首字母/代码过滤"
+            maxlength="20"
+            :border="false"
+            class="filter-input"
+            @update:model-value="onFilterInput"
+            @focus="onFilterFocus"
+            @blur="onFilterBlur"
+          />
+          <span v-if="filterStockCode" class="filter-clear" @click="clearFilter">✕</span>
+          <div v-if="showFilterDropdown" class="filter-dropdown">
+            <div
+              v-for="item in filterSuggestions"
+              :key="item.stock_code"
+              class="filter-sugg-item"
+              @mousedown.prevent="selectFilterStock(item)"
+              @touchstart.prevent="selectFilterStock(item)"
+            >
+              <span class="fs-name">{{ item.stock_name }}</span>
+              <span class="fs-code num-mono">{{ item.stock_code }}</span>
+              <span class="fs-count">{{ item.count }}条</span>
+            </div>
+            <div v-if="!filterSuggestions.length" class="fs-empty">未找到已交易股票</div>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="filterStockCode" class="filter-summary">
+        {{ filterStockName }}（{{ filterStockCode }}）共 {{ filteredLogs.length }} 条记录
+      </div>
+
+      <div v-if="!filteredLogs.length" class="filter-empty">该股票暂无交易记录</div>
+      <div v-else class="trade-log-list">
         <van-swipe-cell v-for="log in displayedLogs" :key="log.id" :right-width="140">
           <div class="trade-log-item">
             <div class="tli-body" @click="startEditTrade(log)">
@@ -104,8 +144,8 @@
           </template>
         </van-swipe-cell>
       </div>
-      <div v-if="tradeLogs.length > 10" class="log-toggle" @click="showAllLogs = !showAllLogs">
-        {{ showAllLogs ? '▲ 收起' : '▼ 展开全部（' + tradeLogs.length + ' 条）' }}
+      <div v-if="filteredLogs.length > 10" class="log-toggle" @click="showAllLogs = !showAllLogs">
+        {{ showAllLogs ? '▲ 收起' : '▼ 展开全部（' + filteredLogs.length + ' 条）' }}
       </div>
     </div>
 
@@ -231,6 +271,7 @@ import { calcBuyActual, calcSellActual, calcBuyFee, calcSellFee } from '@/utils/
 import { upsertHolding, deleteHolding, insertCapitalLog, deleteCapitalLog, updateCapitalLog, updateTransaction, deleteTransaction, fetchTransactionsByPoolStock, loadPoolAllocation } from '@/api/supabase'
 import StockSearch from '@/components/trade/StockSearch.vue'
 import TradeForm from '@/components/trade/TradeForm.vue'
+import { matchTradedStocks } from '@/api/stock'
 
 const route = useRoute()
 const poolStore = usePoolStore()
@@ -403,7 +444,6 @@ function poolColor(name) { const map = { '公共池': '#0f3460', '春': '#e94560
 
 // ===== 交易记录 =====
 const showAllLogs = ref(false)
-const displayedLogs = computed(() => showAllLogs.value ? tradeLogs.value : tradeLogs.value.slice(0, 10))
 const tradeLogs = computed(() => {
   return fundStore.capitalLogs.filter(l => l.pool_id !== null).map(l => {
     const note = l.note || ''; const parts = note.split(' ')
@@ -412,6 +452,86 @@ const tradeLogs = computed(() => {
     return { ...l, stock_code: code, stock_name: tx?.stock_name || '', quantity: tx?.quantity || 0, price: tx?.price || 0, fee: tx?.fee || 0, trade_date: tx?.trade_date || l.created_at, pool_name: poolStore.pools.find(p => p.id === l.pool_id)?.name || '' }
   }).sort((a, b) => new Date(b.trade_date) - new Date(a.trade_date))
 })
+
+// ===== 按股票过滤交易记录 =====
+const filterQuery = ref('')
+const filterStockCode = ref('')
+const filterStockName = ref('')
+const showFilterDropdown = ref(false)
+const filterSuggestions = ref([])
+let filterReqId = 0
+
+// 已交易过的股票（联想只匹配这些）
+const tradedStocks = computed(() => {
+  const byCode = new Map()
+  for (const l of tradeLogs.value) {
+    if (!l.stock_code) continue
+    if (!byCode.has(l.stock_code)) byCode.set(l.stock_code, { code: l.stock_code, name: '', count: 0 })
+    const t = byCode.get(l.stock_code)
+    t.count++
+    if (!t.name && l.stock_name) t.name = l.stock_name
+  }
+  return [...byCode.values()]
+})
+
+async function onFilterInput() {
+  const q = filterQuery.value.trim()
+  if (!q) { filterSuggestions.value = []; showFilterDropdown.value = false; return }
+  const reqId = ++filterReqId
+  const codes = tradedStocks.value.map(t => t.code)
+  const countOf = code => tradedStocks.value.find(t => t.code === code)?.count || 0
+  const results = await matchTradedStocks(codes, q)
+  if (reqId !== filterReqId) return  // 过期请求丢弃
+  if (results === null) {
+    // 本地股票列表不可用，降级为子串匹配
+    const ql = q.toLowerCase()
+    filterSuggestions.value = tradedStocks.value
+      .filter(t => t.code.includes(ql) || t.name.toLowerCase().includes(ql))
+      .map(t => ({ stock_code: t.code, stock_name: t.name, count: t.count }))
+  } else {
+    filterSuggestions.value = results.map(r => ({
+      stock_code: r.stock_code,
+      stock_name: r.stock_name,
+      count: countOf(r.stock_code)
+    }))
+  }
+  showFilterDropdown.value = filterSuggestions.value.length > 0
+}
+
+function onFilterFocus() {
+  if (filterQuery.value.trim() && filterSuggestions.value.length) showFilterDropdown.value = true
+}
+function onFilterBlur() {
+  setTimeout(() => { showFilterDropdown.value = false }, 150)
+}
+
+function selectFilterStock(item) {
+  filterStockCode.value = item.stock_code
+  filterStockName.value = item.stock_name || item.stock_code
+  filterQuery.value = item.stock_name || item.stock_code
+  showFilterDropdown.value = false
+  showAllLogs.value = false
+}
+
+function clearFilter() {
+  filterStockCode.value = ''
+  filterStockName.value = ''
+  filterQuery.value = ''
+  filterSuggestions.value = []
+  showFilterDropdown.value = false
+  showAllLogs.value = false
+}
+
+const filteredLogs = computed(() => {
+  if (!filterStockCode.value) return tradeLogs.value
+  return tradeLogs.value.filter(l => l.stock_code === filterStockCode.value)
+})
+
+const displayedLogs = computed(() => {
+  const base = filteredLogs.value
+  return showAllLogs.value ? base : base.slice(0, 10)
+})
+
 function formatDateString(isoStr) { if (!isoStr) return ''; const d = new Date(isoStr); return `${d.getMonth()+1}/${d.getDate()}` }
 
 // ===== 编辑/删除 =====
@@ -566,6 +686,26 @@ function initSellEntries() {
 .preset-info { display: flex; justify-content: space-between; font-size: 13px; color: var(--text-secondary); }
 .form-err { color: var(--color-fall); font-size: 13px; text-align: center; margin-top: 8px; }
 .section-title { font-size: 13px; font-weight: 600; padding: 0 0 10px; }
+
+/* ===== 交易记录过滤 ===== */
+.trade-rec-title { display: flex; align-items: center; gap: 8px; }
+.rec-all-tag { font-size: 11px; padding: 2px 10px; border-radius: 10px; color: var(--text-secondary); background: rgba(255,255,255,0.06); cursor: pointer; }
+.rec-all-tag.active { color: var(--color-rise); background: rgba(233,69,96,0.12); font-weight: 600; }
+.filter-row { margin-bottom: 10px; }
+.filter-input-wrap { position: relative; }
+.filter-input { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-md); padding: 0 34px 0 4px; }
+.filter-input :deep(.van-field__control) { font-size: 13px; }
+.filter-clear { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 14px; color: var(--text-muted); padding: 4px; cursor: pointer; z-index: 2; }
+.filter-clear:active { opacity: 0.6; }
+.filter-dropdown { position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 20; background: #1c1c22; border: 1px solid rgba(255,255,255,0.12); border-radius: var(--radius-md); overflow: hidden; box-shadow: 0 6px 20px rgba(0,0,0,0.4); max-height: 240px; overflow-y: auto; }
+.filter-sugg-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; cursor: pointer; }
+.filter-sugg-item:active { background: rgba(255,255,255,0.06); }
+.fs-name { font-size: 13px; font-weight: 600; flex: 0 0 auto; max-width: 55%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fs-code { font-size: 12px; color: var(--text-secondary); flex: 0 0 auto; }
+.fs-count { font-size: 11px; color: var(--text-muted); margin-left: auto; }
+.fs-empty { padding: 14px; text-align: center; font-size: 12px; color: var(--text-muted); }
+.filter-summary { font-size: 12px; color: var(--text-secondary); padding: 0 2px 8px; }
+.filter-empty { text-align: center; padding: 18px 0; font-size: 13px; color: var(--text-muted); }
 
 .sell-empty { font-size: 12px; color: var(--text-muted); padding: 8px 0; }
 .sell-price-row { display: flex; align-items: center; gap: 8px; padding: 0 0 12px; }

@@ -274,6 +274,16 @@ function isWeekend(dateStr) {
   const d = new Date(dateStr + 'T00:00:00')
   return d.getDay() === 0 || d.getDay() === 6
 }
+function toDateStr(d) {
+  return d.getFullYear() + '-' +
+    String(d.getMonth() + 1).padStart(2, '0') + '-' +
+    String(d.getDate()).padStart(2, '0')
+}
+function formatTrendLabel(d) {
+  return '周' + WEEKDAY[d.getDay()] + ' ' +
+    String(d.getMonth() + 1).padStart(2, '0') + '/' +
+    String(d.getDate()).padStart(2, '0')
+}
 
 onMounted(async () => {
   try {
@@ -291,21 +301,36 @@ onMounted(async () => {
 
     await saveCurrentPositionSnapshot()
 
-    const snaps = await fetchPositionSnapshots(30)
-    const tradingDays = snaps.filter(s => !isWeekend(s.date))
-    const recent = tradingDays.slice(-15)
-    trendData.value = recent.map(s => {
-      const d = new Date(s.date + 'T00:00:00')
-      const label = '周' + WEEKDAY[d.getDay()] + ' ' +
-        String(d.getMonth() + 1).padStart(2, '0') + '/' +
-        String(d.getDate()).padStart(2, '0')
-      return {
-        label,
-        ratio: s.ratio,
-        asset: s.asset || 0,
-        capitalChange: s.capitalChange || 0
+    // 拉取较多快照，用于对缺失的交易日顺延补数据
+    const snaps = await fetchPositionSnapshots(60)
+    const snapByDate = {}
+    for (const s of snaps) snapByDate[s.date] = s
+
+    const dates = Object.keys(snapByDate).sort()
+    if (dates.length) {
+      const end = new Date(dates[dates.length - 1] + 'T00:00:00')
+      const start = new Date(end)
+      start.setDate(start.getDate() - 30)  // 30 日历日足够覆盖 15 个交易日
+
+      const filled = []
+      let lastData = null
+      const cursor = new Date(start)
+      while (cursor <= end) {
+        const dateStr = toDateStr(cursor)
+        if (!isWeekend(dateStr)) {
+          const snap = snapByDate[dateStr]
+          if (snap) {
+            lastData = { ratio: snap.ratio, asset: snap.asset || 0, capitalChange: snap.capitalChange || 0 }
+            filled.push({ label: formatTrendLabel(cursor), ...lastData })
+          } else if (lastData) {
+            // 交易日无快照 → 用最近一个已知快照顺延补上，资金变动归 0
+            filled.push({ label: formatTrendLabel(cursor), ...lastData, capitalChange: 0 })
+          }
+        }
+        cursor.setDate(cursor.getDate() + 1)
       }
-    })
+      trendData.value = filled.slice(-15)
+    }
   } catch (e) {
     console.error('Trends page load error:', e)
   } finally {
