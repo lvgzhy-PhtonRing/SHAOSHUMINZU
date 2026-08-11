@@ -58,33 +58,8 @@
       <div v-if="gongyouAmt < 0" class="err">四人合计超过总可用 {{ formatMoney(Math.abs(gongyouAmt)) }}</div>
     </div>
 
-    <!-- ===== 2. 增减资金池 ===== -->
-    <div class="card">
-      <div class="card-title">增减资金池</div>
-      <div class="card-desc">为总资金池增加或减少资金</div>
-      <div class="amount-row">
-        <input v-model="deltaAmount" type="number" inputmode="decimal" placeholder="输入金额" class="big-input num-mono" />
-      </div>
-      <div class="action-row">
-        <button class="act-btn add" :disabled="!deltaValid" @click="doCapital('add')">增资 ➕</button>
-        <button class="act-btn remove" :disabled="!deltaValid" @click="doCapital('remove')">减资 ➖</button>
-      </div>
-    </div>
-
-    <!-- ===== 确认弹窗 (增资/减资) ===== -->
+    <!-- ===== 确认弹窗 (分配) ===== -->
     <teleport to="body">
-      <div v-if="showCapitalConfirm" class="overlay" @click.self="showCapitalConfirm=false">
-        <div class="dialog">
-          <div class="dlg-title">{{ capType === 'add' ? '确认增资' : '确认减资' }}</div>
-          <div class="dlg-info">{{ capType === 'add' ? '➕' : '➖' }} <b class="num-mono">{{ formatMoney(capAmount) }}</b> 元</div>
-          <van-field v-model="capNote" label="备注" placeholder="选填" :border="false" style="background:rgba(255,255,255,0.03);border-radius:6px;margin:8px 0;padding:8px 10px" />
-          <div class="dlg-btns">
-            <button class="d-cancel" @click="showCapitalConfirm=false">取消</button>
-            <button :class="capType==='add'?'d-ok add':'d-ok remove'" @click="submitCapital">{{ capType==='add'?'✅ 确认增资':'✅ 确认减资' }}</button>
-          </div>
-        </div>
-      </div>
-
       <!-- 确认弹窗 (分配) -->
       <div v-if="showAllocConfirm" class="overlay" @click.self="showAllocConfirm=false">
         <div class="dialog">
@@ -121,33 +96,7 @@ const props = defineProps({
   poolCosts: { type: Object, default: () => ({}) },
   submitting: { type: Boolean, default: false }
 })
-const emit = defineEmits(['capital-change', 'alloc-change'])
-
-// ====== 增资/减资 ======
-const deltaAmount = ref('')
-const showCapitalConfirm = ref(false)
-const capType = ref('add')
-const capAmount = ref(0)
-const capNote = ref('')
-
-const deltaValid = computed(() => parseFloat(deltaAmount.value) > 0)
-
-function doCapital(type) {
-  capType.value = type
-  capAmount.value = parseFloat(deltaAmount.value)
-  showCapitalConfirm.value = true
-}
-
-function submitCapital() {
-  emit('capital-change', {
-    type: capType.value,
-    amount: capAmount.value,
-    note: capNote.value
-  })
-  showCapitalConfirm.value = false
-  deltaAmount.value = ''
-  capNote.value = ''
-}
+const emit = defineEmits(['alloc-change'])
 
 // ====== 子池分配（万元金额 · 共有=剩余） ======
 
@@ -311,23 +260,6 @@ function submitAlloc() {
 .card-desc { font-size: 12px; color: var(--text-secondary); margin-bottom: 12px; }
 .card-desc b { color: #fff; }
 .unit-hint { font-size: 10px; color: var(--text-muted); margin-left: 6px; }
-
-/* 增资/减资 */
-.big-input {
-  flex: 1; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
-  border-radius: var(--radius-md); color: #fff; font-size: 22px; padding: 12px;
-  text-align: center; outline: none; font-family: var(--font-number);
-}
-.big-input:focus { border-color: var(--bg-accent); }
-.amount-row { display: flex; align-items: center; margin-bottom: 12px; }
-.action-row { display: flex; gap: 10px; }
-.act-btn {
-  flex: 1; padding: 12px; border: none; border-radius: var(--radius-md);
-  font-size: 15px; font-weight: 600; cursor: pointer;
-}
-.act-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-.act-btn.add { background: #00d2a1; color: #1a1a2e; }
-.act-btn.remove { background: #e94560; color: #fff; }
 
 /* 子池 */
 .link-btn {
