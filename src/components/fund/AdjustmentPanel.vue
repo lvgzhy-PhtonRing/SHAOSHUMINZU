@@ -1,17 +1,33 @@
 <template>
   <div class="card">
     <div class="card-title">校对核缺</div>
-    <div class="card-desc">系统可用资金与券商实际余额的差额修正。只调可用资金/总资产，不计入总资本</div>
+    <div class="card-desc">输入券商APP显示的「账户资产」，系统自动计算差额并记录。只调可用资金/总资产，不计入总资本</div>
+
+    <div v-if="tradingLocked" class="lock-banner">
+      ⛔ 交易时段内（工作日 9:00–15:30）禁止校对核缺，请在 15:30 收盘后操作
+      <div class="lock-note">法定休市日仍按工作日判断，以券商实际休市为准</div>
+    </div>
 
     <div class="amount-row">
-      <input v-model="deltaAmount" type="number" inputmode="decimal" placeholder="输入差额金额" class="big-input num-mono" />
+      <input
+        v-model="brokerAsset"
+        type="number"
+        inputmode="decimal"
+        placeholder="券商账户资产（元）"
+        class="big-input num-mono"
+        :disabled="tradingLocked"
+      />
     </div>
     <div class="action-row">
-      <button class="act-btn add" :disabled="!deltaValid" @click="doAdjust('add')">校对核缺 +</button>
-      <button class="act-btn remove" :disabled="!deltaValid" @click="doAdjust('remove')">校对核缺 −</button>
+      <button class="act-btn gen" :disabled="tradingLocked || !brokerValid" @click="generate">生成校对核缺</button>
+    </div>
+    <div v-if="brokerValid" class="diff-preview" :class="diff >= 0 ? 'pos' : 'neg'">
+      差额 = 券商账户资产 − 系统账户资产 =
+      <b class="num-mono">{{ diff >= 0 ? '+' : '' }}{{ formatMoney(diff) }}</b>
+      <span class="hint">系统账户资产（市值 + 可用资金）{{ formatMoney(systemAsset) }}</span>
     </div>
 
-    <!-- 新增/编辑确认弹窗 -->
+    <!-- 确认/编辑弹窗 -->
     <teleport to="body">
       <div v-if="showDialog" class="overlay" @click.self="closeDialog">
         <div class="dialog">
@@ -95,12 +111,34 @@ import { formatMoney } from '@/utils/formatters'
 
 const props = defineProps({
   logs: { type: Array, default: () => [] },
-  submitting: { type: Boolean, default: false }
+  submitting: { type: Boolean, default: false },
+  marketValue: { type: Number, default: 0 },
+  totalAvailable: { type: Number, default: 0 }
 })
 const emit = defineEmits(['add', 'edit', 'delete'])
 
-// ===== 新增 =====
-const deltaAmount = ref('')
+// ===== 交易时段判定：工作日 9:00–15:30 禁止（分钟 540–930） =====
+const tradingLocked = computed(() => {
+  const d = new Date()
+  const day = d.getDay() // 0=周日 6=周六
+  if (day === 0 || day === 6) return false
+  const minutes = d.getHours() * 60 + d.getMinutes()
+  return minutes >= 540 && minutes < 930
+})
+
+// ===== 券商账户资产 → 差额 =====
+const brokerAsset = ref('')
+const brokerValid = computed(() => {
+  const v = parseFloat(brokerAsset.value)
+  return !isNaN(v) && v > 0
+})
+const systemAsset = computed(() => props.marketValue + props.totalAvailable)
+const diff = computed(() => {
+  if (!brokerValid.value) return 0
+  return parseFloat(brokerAsset.value) - systemAsset.value
+})
+
+// ===== 确认/编辑弹窗 =====
 const showDialog = ref(false)
 const adjType = ref('add')
 const adjAmount = ref(0)
@@ -108,16 +146,19 @@ const adjDate = ref(todayStr())
 const adjNote = ref('')
 const editingId = ref(null)
 
-const deltaValid = computed(() => parseFloat(deltaAmount.value) > 0)
-
 function todayStr() {
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-function doAdjust(type) {
-  adjType.value = type
-  adjAmount.value = parseFloat(deltaAmount.value)
+function generate() {
+  const d = diff.value
+  if (Math.abs(d) < 0.005) {
+    alert('系统与券商一致，无需校对')
+    return
+  }
+  adjType.value = d > 0 ? 'add' : 'remove'
+  adjAmount.value = Math.abs(d)
   editingId.value = null
   adjDate.value = todayStr()
   adjNote.value = ''
@@ -146,9 +187,11 @@ function submit() {
     emit('add', { type: adjType.value, amount: adjAmount.value, note: adjNote.value, date: adjDate.value })
   }
   closeDialog()
-  deltaAmount.value = ''
+  brokerAsset.value = ''
 }
 
+// ===== 删除 =====
+const deleting = ref(null)
 function doDelete() {
   if (!deleting.value) return
   emit('delete', deleting.value)
@@ -167,6 +210,13 @@ function formatDate(isoStr) {
 .card-title { font-size: 15px; font-weight: 700; margin-bottom: 2px; }
 .card-desc { font-size: 12px; color: var(--text-secondary); margin-bottom: 12px; }
 
+.lock-banner {
+  background: rgba(233,69,96,0.12); color: var(--color-rise);
+  font-size: 12px; padding: 8px 10px; border-radius: var(--radius-md);
+  margin-bottom: 12px; line-height: 1.5;
+}
+.lock-note { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+
 .amount-row { display: flex; align-items: center; margin-bottom: 12px; }
 .big-input {
   flex: 1; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
@@ -174,14 +224,23 @@ function formatDate(isoStr) {
   text-align: center; outline: none; font-family: var(--font-number);
 }
 .big-input:focus { border-color: var(--color-warn); }
+.big-input:disabled { opacity: 0.4; cursor: not-allowed; }
 .action-row { display: flex; gap: 10px; }
 .act-btn {
   flex: 1; padding: 12px; border: none; border-radius: var(--radius-md);
   font-size: 15px; font-weight: 600; cursor: pointer;
 }
 .act-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-.act-btn.add { background: #7c4dff; color: #fff; }
-.act-btn.remove { background: #ff6b35; color: #fff; }
+.act-btn.gen { background: #7c4dff; color: #fff; }
+
+.diff-preview {
+  font-size: 12px; color: var(--text-secondary); margin-top: 10px;
+  padding: 8px 10px; background: rgba(255,255,255,0.03); border-radius: var(--radius-md);
+}
+.diff-preview b { font-size: 14px; }
+.diff-preview.pos b { color: var(--color-rise); }
+.diff-preview.neg b { color: var(--color-fall); }
+.diff-preview .hint { font-size: 10px; color: var(--text-muted); display: block; margin-top: 2px; }
 
 /* 列表明细 */
 .adjust-list { margin-top: 16px; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 12px; }
