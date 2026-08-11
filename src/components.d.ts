@@ -9,7 +9,6 @@ declare module 'vue' {
   export interface GlobalComponents {
     AccountSummary: typeof import('./components/dashboard/AccountSummary.vue')['default']
     AdjustmentPanel: typeof import('./components/fund/AdjustmentPanel.vue')['default']
-    CapitalChangeDialog: typeof import('./components/fund/CapitalChangeDialog.vue')['default']
     CapitalDetailDialog: typeof import('./components/fund/CapitalDetailDialog.vue')['default']
     CapitalLogList: typeof import('./components/fund/CapitalLogList.vue')['default']
     CapitalSummary: typeof import('./components/fund/CapitalSummary.vue')['default']

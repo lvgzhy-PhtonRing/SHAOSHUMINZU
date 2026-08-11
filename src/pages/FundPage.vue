@@ -31,8 +31,7 @@
       />
     </template>
 
-    <CapitalChangeDialog v-model:show="showChangeDialog" @capital-change="onCapitalChange" />
-    <CapitalDetailDialog v-model:show="showDetailDialog" :logs="capitalLogs" @delete="onDeleteLog" @edit="onEditLog" />
+    <CapitalDetailDialog v-model:show="showDetailDialog" :logs="capitalLogs" @delete="onDeleteLog" @edit="onEditLog" @capital-change="onCapitalChange" />
   </div>
 </template>
 
@@ -48,7 +47,6 @@ import { deleteCapitalLog, updateCapitalLog, updateTransaction, deleteTransactio
 import FundAllocationForm from '@/components/fund/FundAllocationForm.vue'
 import AdjustmentPanel from '@/components/fund/AdjustmentPanel.vue'
 import CapitalSummary from '@/components/fund/CapitalSummary.vue'
-import CapitalChangeDialog from '@/components/fund/CapitalChangeDialog.vue'
 import CapitalDetailDialog from '@/components/fund/CapitalDetailDialog.vue'
 import LoadingSkeleton from '@/components/common/LoadingSkeleton.vue'
 
@@ -59,7 +57,6 @@ const priceStore = usePriceStore()
 const txStore = useTransactionStore()
 
 const loading = ref(true)
-const showChangeDialog = ref(false)
 const showDetailDialog = ref(false)
 const totalCapital = computed(() => fundStore.totalCapital)
 

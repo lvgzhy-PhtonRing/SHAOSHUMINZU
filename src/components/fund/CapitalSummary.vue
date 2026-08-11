@@ -13,8 +13,7 @@
       <span class="cs-amount num-mono" :class="pnlClass">{{ pnlText }}</span>
     </div>
     <div class="cs-btns">
-      <button class="cs-btn change" @click="$emit('open-change')">资本增减</button>
-      <button class="cs-btn detail" @click="$emit('open-detail')">变动明细</button>
+      <button class="cs-btn" @click="$emit('open-detail')">资本明细</button>
     </div>
   </div>
 </template>
@@ -28,7 +27,7 @@ const props = defineProps({
   marketValue: { type: Number, default: 0 },
   totalAvailable: { type: Number, default: 0 }
 })
-defineEmits(['open-change', 'open-detail'])
+defineEmits(['open-detail'])
 
 // 现在资产 = 持仓首页的账户资产口径 = 总市值 + 总可用资金
 const totalAsset = computed(() => props.marketValue + props.totalAvailable)
@@ -60,10 +59,6 @@ const pnlText = computed(() => (cumPnl.value >= 0 ? `+${formatMoney(cumPnl.value
 .cs-btn {
   flex: 1; padding: 12px; border: none; border-radius: var(--radius-md);
   font-size: 15px; font-weight: 600; cursor: pointer;
-}
-.cs-btn.change { background: var(--bg-accent); color: #fff; }
-.cs-btn.detail {
-  background: rgba(255,255,255,0.08); color: var(--text-primary);
-  border: 1px solid rgba(255,255,255,0.1);
+  background: var(--bg-accent); color: #fff;
 }
 </style>
