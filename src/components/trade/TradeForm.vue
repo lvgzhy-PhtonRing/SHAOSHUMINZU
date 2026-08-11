@@ -35,16 +35,12 @@
 
       <div class="calc-display">
         <div class="calc-item">
-          <span class="calc-label">预估总金额</span>
+          <span class="calc-label">股票总金额</span>
           <span class="calc-value num-mono">{{ computedAmount || '—' }}</span>
         </div>
         <div class="calc-item">
           <span class="calc-label">手续费</span>
           <span class="calc-value num-mono">{{ computedFee || '—' }}</span>
-        </div>
-        <div class="calc-item">
-          <span class="calc-label">实际{{ isBuy ? '支出' : '收入' }}</span>
-          <span class="calc-value num-mono rise">{{ computedActual || '—' }}</span>
         </div>
         <div class="calc-item" v-if="stockPrice > 0">
           <span class="calc-label">实时市价</span>
@@ -122,16 +118,6 @@ const computedFee = computed(() => {
   const p = parseFloat(form.value.price) || 0
   const q = parseInt(form.value.quantity) || 0
   if (p > 0 && q > 0) return formatMoney(calcBuyFee(p * q))
-  return ''
-})
-const computedActual = computed(() => {
-  const p = parseFloat(form.value.price) || 0
-  const q = parseInt(form.value.quantity) || 0
-  if (p > 0 && q > 0) {
-    const amt = p * q
-    const fee = calcBuyFee(amt)
-    return formatMoney(props.isBuy ? amt + fee : amt - fee)
-  }
   return ''
 })
 const priceVsMarket = computed(() => {

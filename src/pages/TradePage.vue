@@ -87,7 +87,7 @@
     <div class="section-card" v-if="tradeLogs.length">
       <div class="section-title">股票交易记录</div>
       <div class="trade-log-list">
-        <van-swipe-cell v-for="log in tradeLogs" :key="log.id" :right-width="140">
+        <van-swipe-cell v-for="log in displayedLogs" :key="log.id" :right-width="140">
           <div class="trade-log-item">
             <div class="tli-body" @click="startEditTrade(log)">
               <div class="tli-header">
@@ -114,6 +114,9 @@
             </div>
           </template>
         </van-swipe-cell>
+      </div>
+      <div v-if="tradeLogs.length > 10" class="log-toggle" @click="showAllLogs = !showAllLogs">
+        {{ showAllLogs ? '▲ 收起' : '▼ 展开全部（' + tradeLogs.length + ' 条）' }}
       </div>
     </div>
 
@@ -385,6 +388,8 @@ function resetSell() {
 function poolColor(name) { const map = { '公共池': '#0f3460', '春': '#e94560', '维': '#00d2a1', '队': '#ffc107', '回': '#7c4dff' }; return map[name] || '#0f3460' }
 
 // ===== 交易记录 =====
+const showAllLogs = ref(false)
+const displayedLogs = computed(() => showAllLogs.value ? tradeLogs.value : tradeLogs.value.slice(0, 10))
 const tradeLogs = computed(() => {
   return fundStore.capitalLogs.filter(l => l.pool_id !== null).map(l => {
     const note = l.note || ''; const parts = note.split(' ')
@@ -576,6 +581,8 @@ function initSellEntries() {
 .sfr-item .num-mono { font-size: 12px; }
 
 .trade-log-list { display: flex; flex-direction: column; gap: 2px; }
+.log-toggle { text-align: center; padding: 10px 0 2px; font-size: 12px; color: var(--text-secondary); cursor: pointer; }
+.log-toggle:active { opacity: 0.6; }
 .trade-log-item { padding: 12px 14px; background: var(--bg-card); display: flex; gap: 8px; align-items: center; cursor: pointer; }
 .trade-log-item:active { background: rgba(255,255,255,0.06); }
 .tli-body { flex: 1; min-width: 0; }

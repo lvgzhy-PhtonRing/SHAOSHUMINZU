@@ -36,6 +36,7 @@
 
     <div class="section-title">
       <span>持仓股票</span>
+      <span class="swipe-hint">◀ 左滑股票卖出</span>
       <span class="stock-count">{{ displayHoldings.length }} 只</span>
     </div>
 
@@ -266,4 +267,18 @@ const summary = computed(() => {
   padding: 8px 0 6px; font-size: 13px; font-weight: 600;
 }
 .stock-count { font-size: 12px; color: var(--text-secondary); font-weight: 400; }
+.swipe-hint {
+  font-size: 11px;
+  background: linear-gradient(135deg, #e94560, #ff6b6b);
+  color: #fff;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  animation: hint-pulse 2s ease-in-out infinite;
+}
+@keyframes hint-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
 </style>
