@@ -36,11 +36,10 @@
       <div class="calc-display">
         <div class="calc-item">
           <span class="calc-label">股票总金额</span>
-          <span class="calc-value num-mono">{{ computedAmount || '—' }}</span>
-        </div>
-        <div class="calc-item">
-          <span class="calc-label">{{ isBuy ? '买入' : '卖出' }}费用</span>
-          <span class="calc-value num-mono">{{ computedFee || '—' }}</span>
+          <span class="calc-value num-mono">
+            {{ computedAmount || '—' }}
+            <span v-if="computedFee" class="calc-fee-inline">· {{ isBuy ? '买入' : '卖出' }}费 {{ computedFee }}</span>
+          </span>
         </div>
         <div class="calc-item" v-if="stockPrice > 0">
           <span class="calc-label">实时市价</span>
@@ -176,6 +175,7 @@ function onSubmit() {
 .calc-item { display: flex; flex-direction: column; gap: 2px; }
 .calc-label { font-size: 11px; color: var(--text-secondary); }
 .calc-value { font-size: 16px; font-weight: 600; font-family: var(--font-number); }
+.calc-fee-inline { font-size: 11px; font-weight: 400; color: var(--text-muted); }
 .calc-value.rise { color: var(--color-rise); }
 .calc-value.fall { color: var(--color-fall); }
 </style>
