@@ -4,7 +4,7 @@
       <div class="search-input-wrapper">
         <van-field
           v-model="query"
-          placeholder="输入代码/拼音"
+          placeholder="名称首字母/代码"
           maxlength="20"
           :border="false"
           class="code-input"
