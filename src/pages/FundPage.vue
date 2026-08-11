@@ -14,20 +14,19 @@
 
     <LoadingSkeleton v-if="loading" :count="2" />
     <template v-else>
-      <FundAllocationForm
-        :pools="poolStore.pools"
-        :total-available="totalAvailable"
-        :pool-costs="poolCosts"
-        @alloc-change="onAllocChange"
-      />
       <AdjustmentPanel
         :logs="adjustLogs"
         :submitting="fundStore.submitting"
         :market-value="totalMarketValue"
         :total-available="totalAvailable"
         @add="onAdjustChange"
-        @edit="onAdjustEdit"
         @delete="onDeleteLog"
+      />
+      <FundAllocationForm
+        :pools="poolStore.pools"
+        :total-available="totalAvailable"
+        :pool-costs="poolCosts"
+        @alloc-change="onAllocChange"
       />
     </template>
 
@@ -127,21 +126,6 @@ async function onAdjustChange({ type, amount, note, date }) {
   } catch (e) {
     console.error('Adjust change error:', e)
   }
-}
-
-// 校对核缺编辑（金额/备注/日期）
-async function onAdjustEdit(payload) {
-  try {
-    const { id, amount, note, date } = payload
-    const updates = { amount, note }
-    if (date) updates.created_at = date + 'T00:00:00+00:00'
-    await fundStore.editCapitalLog(id, updates)
-    await fundStore.loadCapitalLogs()
-  } catch (e) {
-    console.error('Adjust edit error:', e)
-  }
-  const { saveCurrentPositionSnapshot } = await import('@/utils/positionSnapshot')
-  saveCurrentPositionSnapshot().catch(e => console.error('Position snapshot:', e))
 }
 
 function onAllocChange({ pools: allocs }) {

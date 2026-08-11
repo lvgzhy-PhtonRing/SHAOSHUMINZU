@@ -1,6 +1,6 @@
 <template>
   <div class="card">
-    <div class="card-title">校对核缺</div>
+    <div class="card-title">券商APP校对</div>
     <div class="card-desc">输入券商APP显示的「账户资产」，系统自动计算差额并记录。只调可用资金/总资产，不计入总资本</div>
 
     <div v-if="tradingLocked" class="lock-banner">
@@ -27,13 +27,13 @@
       <span class="hint">系统账户资产（市值 + 可用资金）{{ formatMoney(systemAsset) }}</span>
     </div>
 
-    <!-- 确认/编辑弹窗 -->
+    <!-- 确认弹窗 -->
     <teleport to="body">
       <div v-if="showDialog" class="overlay" @click.self="closeDialog">
         <div class="dialog">
-          <div class="dlg-title">{{ editingId ? '编辑校对核缺' : '确认校对核缺' }}</div>
+          <div class="dlg-title">确认校对核缺</div>
           <div class="dlg-info">
-            {{ adjType === 'add' ? '➕' : '➖' }} <b class="num-mono">{{ formatMoney(adjAmount) }}</b> 元
+            <b class="num-mono">{{ adjType === 'add' ? '+' : '-' }}{{ formatMoney(adjAmount) }}</b> 元
           </div>
           <div class="dlg-field">
             <label class="dlg-label">日期</label>
@@ -73,33 +73,39 @@
       </div>
     </teleport>
 
-    <!-- 独立列表明细 -->
+    <!-- 独立列表明细（左滑删除） -->
     <div class="adjust-list">
       <div class="log-header">
         <span class="log-title">校对核缺明细</span>
+        <span class="swipe-hint">◀ 左滑删除</span>
         <span class="log-count" v-if="logs.length">共 {{ logs.length }} 条</span>
       </div>
       <div v-if="!logs.length" class="list-empty">暂无校对核缺记录</div>
-      <div v-else class="log-items">
-        <div v-for="log in logs" :key="log.id" class="log-item">
-          <div class="log-icon">{{ log.type === 'add' ? '➕' : '➖' }}</div>
-          <div class="log-info">
-            <div class="log-detail">
-              <span class="log-action adjust">{{ log.type === 'add' ? '校对核缺+' : '校对核缺−' }}</span>
-              <span class="log-amount num-mono" :class="log.type === 'add' ? 'rise' : 'fall'">
-                {{ log.type === 'add' ? '+' : '-' }}{{ formatMoney(log.amount) }}
-              </span>
+      <div v-else class="trade-log-list">
+        <van-swipe-cell v-for="log in logs" :key="log.id" :right-width="70">
+          <div class="trade-log-item">
+            <div class="tli-body">
+              <div class="tli-header">
+                <span class="tli-action" :class="log.type === 'add' ? 'rise' : 'fall'">
+                  {{ log.type === 'add' ? '校对核缺+' : '校对核缺−' }}
+                </span>
+                <span class="tli-amount num-mono" :class="log.type === 'add' ? 'rise' : 'fall'">
+                  {{ log.type === 'add' ? '+' : '-' }}{{ formatMoney(log.amount) }}
+                </span>
+              </div>
+              <div v-if="log.note" class="tli-note">{{ log.note }}</div>
+              <div class="tli-meta">
+                <span>{{ formatDate(log.created_at) }}</span>
+              </div>
             </div>
-            <div class="log-meta">
-              <span>{{ formatDate(log.created_at) }}</span>
-              <span v-if="log.note"> · {{ log.note }}</span>
+            <span class="tli-arrow">›</span>
+          </div>
+          <template #right>
+            <div class="swipe-actions">
+              <button class="swipe-del-btn" @click.stop="deleting = log">删除</button>
             </div>
-          </div>
-          <div class="log-actions">
-            <button class="edit-btn" @click="startEdit(log)">✏️</button>
-            <button class="del-btn" @click="deleting = log">✕</button>
-          </div>
-        </div>
+          </template>
+        </van-swipe-cell>
       </div>
     </div>
   </div>
@@ -115,7 +121,7 @@ const props = defineProps({
   marketValue: { type: Number, default: 0 },
   totalAvailable: { type: Number, default: 0 }
 })
-const emit = defineEmits(['add', 'edit', 'delete'])
+const emit = defineEmits(['add', 'delete'])
 
 // ===== 交易时段判定：工作日 9:00–15:30 禁止（分钟 540–930） =====
 const tradingLocked = computed(() => {
@@ -138,13 +144,12 @@ const diff = computed(() => {
   return parseFloat(brokerAsset.value) - systemAsset.value
 })
 
-// ===== 确认/编辑弹窗 =====
+// ===== 确认弹窗 =====
 const showDialog = ref(false)
 const adjType = ref('add')
 const adjAmount = ref(0)
 const adjDate = ref(todayStr())
 const adjNote = ref('')
-const editingId = ref(null)
 
 function todayStr() {
   const d = new Date()
@@ -159,33 +164,18 @@ function generate() {
   }
   adjType.value = d > 0 ? 'add' : 'remove'
   adjAmount.value = Math.abs(d)
-  editingId.value = null
   adjDate.value = todayStr()
   adjNote.value = ''
   showDialog.value = true
 }
 
-function startEdit(log) {
-  adjType.value = log.type
-  adjAmount.value = log.amount
-  editingId.value = log.id
-  adjDate.value = (log.created_at || '').slice(0, 10) || todayStr()
-  adjNote.value = log.note || ''
-  showDialog.value = true
-}
-
 function closeDialog() {
   showDialog.value = false
-  editingId.value = null
 }
 
 function submit() {
   if (!adjAmount.value || adjAmount.value <= 0) return
-  if (editingId.value) {
-    emit('edit', { id: editingId.value, amount: adjAmount.value, note: adjNote.value, date: adjDate.value })
-  } else {
-    emit('add', { type: adjType.value, amount: adjAmount.value, note: adjNote.value, date: adjDate.value })
-  }
+  emit('add', { type: adjType.value, amount: adjAmount.value, note: adjNote.value, date: adjDate.value })
   closeDialog()
   brokerAsset.value = ''
 }
@@ -220,8 +210,9 @@ function formatDate(isoStr) {
 
 .amount-row { display: flex; align-items: center; margin-bottom: 12px; }
 .big-input {
-  flex: 1; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
-  border-radius: var(--radius-md); color: #fff; font-size: 22px; padding: 12px;
+  flex: 1; min-width: 0; width: 100%;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--radius-md); color: #fff; font-size: 18px; padding: 10px 12px;
   text-align: center; outline: none; font-family: var(--font-number);
 }
 .big-input:focus { border-color: var(--color-warn); }
@@ -243,34 +234,35 @@ function formatDate(isoStr) {
 .diff-preview.neg b { color: var(--color-fall); }
 .diff-preview .hint { font-size: 10px; color: var(--text-muted); display: block; margin-top: 2px; }
 
-/* 列表明细 */
+/* 列表明细（参考交易明细样式，左滑删除） */
 .adjust-list { margin-top: 16px; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 12px; }
-.log-header { display: flex; justify-content: space-between; align-items: center; padding: 0 0 8px; }
+.log-header { display: flex; align-items: center; gap: 8px; padding: 0 0 8px; }
 .log-title { font-size: 14px; font-weight: 600; }
-.log-count { font-size: 12px; color: var(--text-secondary); }
+.swipe-hint {
+  font-size: 11px;
+  background: linear-gradient(135deg, #e94560, #ff6b6b);
+  color: #fff;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-weight: 600;
+}
+.log-count { font-size: 12px; color: var(--text-secondary); margin-left: auto; }
 .list-empty { font-size: 12px; color: var(--text-muted); padding: 10px 0; text-align: center; }
-.log-items { display: flex; flex-direction: column; gap: 4px; }
-.log-item { display: flex; gap: 10px; padding: 8px 10px; background: rgba(255,255,255,0.03); border-radius: var(--radius-md); }
-.log-icon { font-size: 18px; padding-top: 2px; }
-.log-info { flex: 1; min-width: 0; }
-.log-detail { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
-.log-action { font-size: 13px; font-weight: 500; }
-.log-action.adjust { color: var(--color-warn); }
-.log-amount { font-size: 14px; font-weight: 600; font-family: var(--font-number); }
-.log-amount.rise { color: var(--color-rise); }
-.log-amount.fall { color: var(--color-fall); }
-.log-meta { font-size: 11px; color: var(--text-muted); }
-.log-actions { display: flex; flex-direction: column; gap: 4px; align-self: flex-start; }
-.edit-btn {
-  background: none; border: none; font-size: 13px; cursor: pointer; padding: 0 2px; line-height: 1;
-  opacity: 0.5; transition: opacity 0.15s;
-}
-.edit-btn:hover { opacity: 1; }
-.del-btn {
-  background: none; border: none; color: var(--text-muted); font-size: 13px;
-  cursor: pointer; padding: 0 2px; line-height: 1;
-}
-.del-btn:active { color: var(--color-fall); }
+.trade-log-list { display: flex; flex-direction: column; gap: 2px; }
+.trade-log-item { padding: 12px 14px; background: var(--bg-hover); display: flex; gap: 8px; align-items: center; border-radius: var(--radius-md); }
+.tli-body { flex: 1; min-width: 0; }
+.tli-header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; flex-wrap: wrap; }
+.tli-action { font-size: 14px; font-weight: 600; font-family: var(--font-number); }
+.tli-action.rise { color: var(--color-rise); }
+.tli-action.fall { color: var(--color-fall); }
+.tli-amount { font-size: 14px; font-weight: 700; font-family: var(--font-number); }
+.tli-amount.rise { color: var(--color-rise); }
+.tli-amount.fall { color: var(--color-fall); }
+.tli-note { font-size: 13px; color: var(--text-primary); font-weight: 500; margin-bottom: 4px; }
+.tli-meta { font-size: 11px; color: var(--text-muted); }
+.tli-arrow { font-size: 16px; color: var(--text-muted); opacity: 0.3; flex-shrink: 0; }
+.swipe-actions { display: flex; height: 100%; }
+.swipe-del-btn { width: 70px; border: none; background: var(--color-fall); color: #fff; font-size: 13px; font-weight: 500; cursor: pointer; }
 
 /* 弹窗 */
 .overlay {
