@@ -37,7 +37,7 @@
     <div class="section-title">
       <span class="section-title-left">
         <span>持仓股票</span>
-        <span class="swipe-hint">◀ 左滑卖出股票</span>
+        <span class="swipe-hint">◀ 左滑卖出</span>
       </span>
       <span class="stock-count">{{ displayHoldings.length }} 只</span>
     </div>
