@@ -33,8 +33,8 @@
           </template>
         </div>
       </div>
-      <van-button size="small" type="primary" @click="search" :loading="searching">
-        查询
+      <van-button size="small" color="#e94560" @click="onBuyClick" :loading="searching" class="buy-btn">
+        买入股票
       </van-button>
     </div>
     <div v-if="stockInfo" class="stock-info-card">
@@ -65,7 +65,7 @@ import { fetchStockPrice, fetchStockSuggestions, preloadStockList } from '@/api/
 import { isValidStockCode } from '@/utils/validators'
 import { formatPrice } from '@/utils/formatters'
 
-const emit = defineEmits(['stock-selected'])
+const emit = defineEmits(['stock-selected', 'buy-clicked'])
 const query = ref('')
 const stockInfo = ref(null)
 const searching = ref(false)
@@ -135,6 +135,15 @@ function selectSuggestion(item) {
   search()
 }
 
+async function onBuyClick() {
+  if (stockInfo.value) {
+    emit('buy-clicked', stockInfo.value)
+  } else if (isValidStockCode(query.value)) {
+    await search()
+    if (stockInfo.value) emit('buy-clicked', stockInfo.value)
+  }
+}
+
 async function search() {
   if (!isValidStockCode(query.value)) return
   searching.value = true
@@ -153,6 +162,12 @@ async function search() {
 
 <style scoped>
 .stock-search { }
+.buy-btn {
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
 .search-row {
   display: flex;
   gap: 8px;

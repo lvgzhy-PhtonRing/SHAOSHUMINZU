@@ -7,13 +7,13 @@
     <LoadingSkeleton v-if="loading" :count="3" />
 
     <template v-else>
-      <!-- 最劲的票 -->
+      <!-- 已清仓最赚钱TOP3 -->
       <div class="section-card">
         <div class="section-title">
-          <span class="rank-icon">🚀</span> 最劲的票
-          <span class="subtitle">持仓盈亏 TOP 3</span>
+          <span class="rank-icon">🚀</span> 已清仓最赚钱TOP3
+          <span class="subtitle">仅比较已清仓股票</span>
         </div>
-        <div v-if="!topGainers.length" class="rank-empty">暂无盈利股票</div>
+        <div v-if="!topGainers.length" class="rank-empty">暂无已清仓盈利股票</div>
         <div v-else class="rank-list">
           <div v-for="(item, idx) in topGainers" :key="item.stock_code" class="rank-item">
             <span class="rank-badge" :class="'rank-badge--' + (idx + 1)">{{ idx + 1 }}</span>
@@ -23,13 +23,13 @@
         </div>
       </div>
 
-      <!-- 一群垃圾 -->
+      <!-- 已清仓亏最多TOP3 -->
       <div class="section-card">
         <div class="section-title">
-          <span class="rank-icon">💩</span> 一群垃圾
-          <span class="subtitle">持仓亏损 TOP 3</span>
+          <span class="rank-icon">💩</span> 已清仓亏最多TOP3
+          <span class="subtitle">仅比较已清仓股票</span>
         </div>
-        <div v-if="!topLosers.length" class="rank-empty">暂无亏损股票 🎉</div>
+        <div v-if="!topLosers.length" class="rank-empty">暂无已清仓亏损股票 🎉</div>
         <div v-else class="rank-list">
           <div v-for="(item, idx) in topLosers" :key="item.stock_code" class="rank-item">
             <span class="rank-badge" :class="'rank-badge--' + (idx + 1)">{{ idx + 1 }}</span>
@@ -119,7 +119,8 @@ import { usePoolStore } from '@/stores/pools'
 import { useHoldingStore } from '@/stores/holdings'
 import { usePriceStore } from '@/stores/prices'
 import { useFundStore } from '@/stores/funds'
-import { fetchPositionSnapshots } from '@/api/supabase'
+import { useTransactionStore } from '@/stores/transactions'
+import { fetchPositionSnapshots, fetchAllTransactions } from '@/api/supabase'
 import { saveCurrentPositionSnapshot } from '@/utils/positionSnapshot'
 import { formatMoney } from '@/utils/formatters'
 
@@ -131,42 +132,53 @@ const poolStore = usePoolStore()
 const holdingStore = useHoldingStore()
 const priceStore = usePriceStore()
 const fundStore = useFundStore()
+const transactionStore = useTransactionStore()
 const totalCapital = computed(() => fundStore.totalCapital)
 
-// ===== 盈亏排行 =====
-const profitRankings = computed(() => {
-  const merged = {}
-  for (const h of holdingStore.holdings) {
-    if (!merged[h.stock_code]) {
-      merged[h.stock_code] = { stock_code: h.stock_code, totalQty: 0, totalCost: 0 }
+// ===== 盈亏排行（仅已清仓股票） =====
+const clearedProfitRankings = computed(() => {
+  // 按 stock_code 聚合所有已核实交易
+  const byStock = {}
+  for (const tx of transactionStore.transactions) {
+    if (tx.status !== 'verified') continue
+    if (!byStock[tx.stock_code]) {
+      byStock[tx.stock_code] = {
+        stock_code: tx.stock_code,
+        stock_name: tx.stock_name,
+        buyQty: 0,
+        sellQty: 0,
+        buyAmount: 0,
+        sellAmount: 0
+      }
     }
-    merged[h.stock_code].totalQty += h.quantity
-    merged[h.stock_code].totalCost += h.cost_price * h.quantity
+    const entry = byStock[tx.stock_code]
+    if (tx.type === 'buy') {
+      entry.buyQty += tx.quantity
+      entry.buyAmount += tx.actual_amount || tx.amount
+    } else {
+      entry.sellQty += tx.quantity
+      entry.sellAmount += tx.actual_amount || tx.amount
+    }
   }
 
-  return Object.values(merged)
-    .map(m => {
-      const priceData = priceStore.prices[m.stock_code] || {}
-      const currentPrice = priceData.price || 0
-      const stockName = priceData.stock_name || m.stock_code
-      const avgCost = m.totalQty > 0 ? m.totalCost / m.totalQty : 0
-      return {
-        stock_code: m.stock_code,
-        stock_name: stockName,
-        profit: (currentPrice - avgCost) * m.totalQty,
-        totalQty: m.totalQty
-      }
-    })
-    .filter(item => item.totalQty > 0)
+  // 只保留已清仓（买入量 == 卖出量 > 0）的股票
+  return Object.values(byStock)
+    .filter(s => s.buyQty > 0 && s.buyQty === s.sellQty)
+    .map(s => ({
+      stock_code: s.stock_code,
+      stock_name: s.stock_name,
+      profit: s.sellAmount - s.buyAmount,
+      totalQty: s.buyQty
+    }))
     .sort((a, b) => b.profit - a.profit)
 })
 
 const topGainers = computed(() =>
-  profitRankings.value.filter(r => r.profit > 0).slice(0, 3)
+  clearedProfitRankings.value.filter(r => r.profit > 0).slice(0, 3)
 )
 
 const topLosers = computed(() =>
-  [...profitRankings.value].filter(r => r.profit < 0).sort((a, b) => a.profit - b.profit).slice(0, 3)
+  [...clearedProfitRankings.value].filter(r => r.profit < 0).sort((a, b) => a.profit - b.profit).slice(0, 3)
 )
 
 function formatProfit(profit) {
@@ -252,6 +264,10 @@ onMounted(async () => {
       fundStore.loadCapitalLogs()
     ])
 
+    // 拉取全部交易记录用于清仓盈亏排行
+    const allTxs = await fetchAllTransactions()
+    transactionStore.transactions = allTxs
+
     const codes = holdingStore.stockCodes
     if (codes.length) await priceStore.loadPrices(codes)
 
@@ -261,7 +277,7 @@ onMounted(async () => {
     const tradingDays = snaps.filter(s => !isWeekend(s.date))
     const last7 = tradingDays.slice(-7)
     trendData.value = last7.map(s => ({
-      label: WEEKDAY[new Date(s.date + 'T00:00:00').getDay()],
+      label: (() => { const d = new Date(s.date + 'T00:00:00'); return '周' + WEEKDAY[d.getDay()] + ' ' + String(d.getMonth()+1).padStart(2,'0') + '/' + String(d.getDate()).padStart(2,'0'); })(),
       ratio: s.ratio,
       asset: s.asset || 0,
       capitalChange: s.capitalChange || 0
@@ -338,12 +354,13 @@ onMounted(async () => {
   padding: 3px 0;
 }
 .bar-label {
-  width: 28px;
-  font-size: 12px;
+  width: 72px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--text-secondary);
   text-align: right;
   flex-shrink: 0;
+  white-space: nowrap;
 }
 .bar-track {
   flex: 1;

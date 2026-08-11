@@ -65,6 +65,16 @@ export async function fetchCapitalLogs() {
   return error ? [] : data
 }
 
+/* 获取全部交易记录（不限条数，用于清仓盈亏计算） */
+export async function fetchAllTransactions() {
+  const { data, error } = await supabase
+    .from('transactions')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(10000)
+  return error ? [] : data
+}
+
 /* 查询子池+股票的完整交易记录（用于重算持仓） */
 export async function fetchTransactionsByPoolStock(poolId, stockCode) {
   const { data, error } = await supabase

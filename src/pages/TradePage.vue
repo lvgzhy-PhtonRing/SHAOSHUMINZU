@@ -7,18 +7,8 @@
     <!-- 买入表单 -->
     <template v-if="!isSell">
       <div class="section-card">
-        <div class="search-section-label">搜索股票</div>
-        <StockSearch @stock-selected="onStockSelected" />
-      </div>
-      <div class="section-card">
-        <TradeForm
-          ref="formRef"
-          :pools="poolStore.pools"
-          :is-buy="true"
-          :stock-price="currentPrice"
-          :submitting="submitting"
-          @submit="onBuySubmit"
-        />
+        <div class="buy-section-label">📈 录入买入</div>
+        <StockSearch @stock-selected="onStockSelected" @buy-clicked="onBuyClicked" />
         <div v-if="formError" class="form-err">{{ formError }}</div>
       </div>
     </template>
@@ -206,6 +196,25 @@
           </div>
         </div>
       </div>
+
+      <!-- 买入股票弹窗 -->
+      <div v-if="showBuyModal" class="overlay" @click.self="showBuyModal = false">
+        <div class="dialog buy-dialog">
+          <div class="buy-dlg-header">
+            <span class="buy-dlg-title">📈 买入 {{ stockName || stockCode }}</span>
+            <span class="buy-dlg-price num-mono" v-if="currentPrice">{{ formatPrice(currentPrice) }}</span>
+            <button class="buy-dlg-close" @click="showBuyModal = false">✕</button>
+          </div>
+          <TradeForm
+            ref="formRef"
+            :pools="poolStore.pools"
+            :is-buy="true"
+            :stock-price="currentPrice"
+            :submitting="submitting"
+            @submit="onBuySubmit"
+          />
+        </div>
+      </div>
     </teleport>
   </div>
 </template>
@@ -251,6 +260,7 @@ const stockCode = ref('')
 const stockName = ref('')
 const formError = ref('')
 const submitting = ref(false)
+const showBuyModal = ref(false)
 
 // ===== 买入 =====
 async function onBuySubmit(data) {
@@ -285,11 +295,16 @@ async function onBuySubmit(data) {
     await Promise.all([holdingStore.loadHoldings(), fundStore.loadCapitalLogs()])
     const { saveCurrentPositionSnapshot } = await import('@/utils/positionSnapshot')
     saveCurrentPositionSnapshot().catch(e => console.error('Snapshot:', e))
-    stockCode.value = ''; stockName.value = ''; currentPrice.value = 0; formError.value = ''
+    stockCode.value = ''; stockName.value = ''; currentPrice.value = 0; formError.value = ''; showBuyModal.value = false
   } catch (e) { console.error('Buy error:', e); formError.value = '提交失败：' + e.message } finally { submitting.value = false }
 }
 
 function onStockSelected(stock) { currentPrice.value = stock.price; stockCode.value = stock.stock_code; stockName.value = stock.stock_name || '' }
+
+function onBuyClicked(stock) {
+  onStockSelected(stock)
+  showBuyModal.value = true
+}
 
 // ===== 卖出（多池联动滑块） =====
 const sellDate = ref(new Date().toISOString().split('T')[0])
@@ -545,6 +560,7 @@ function initSellEntries() {
 
 <style scoped>
 .search-section-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; }
+.buy-section-label { font-size: 17px; font-weight: 700; color: var(--color-rise); margin-bottom: 10px; text-align: center; }
 .preset-section { border-left: 3px solid var(--color-fall); }
 .preset-name { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
 .preset-code { font-size: 13px; color: var(--text-secondary); font-weight: 400; }
@@ -618,4 +634,28 @@ function initSellEntries() {
 .dlg-rows { margin-bottom: 8px; }
 .dlg-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.03); }
 .dlg-warn { font-size: 11px; color: var(--color-warn); padding: 6px 0; text-align: center; }
+
+/* 买入弹窗 */
+.buy-dialog { max-width: 380px; }
+.buy-dlg-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.buy-dlg-title { font-size: 16px; font-weight: 700; flex: 1; }
+.buy-dlg-price { font-size: 18px; font-weight: 700; color: var(--color-rise); }
+.buy-dlg-close {
+  width: 28px; height: 28px;
+  border: none; border-radius: 50%;
+  background: rgba(255,255,255,0.08);
+  color: var(--text-secondary);
+  font-size: 14px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.buy-dlg-close:active { background: rgba(255,255,255,0.15); }
 </style>
