@@ -10,7 +10,7 @@
         <!-- 增资/减资 确认视图 -->
         <template v-if="confirming">
           <div class="dlg-title sub">{{ capType === 'add' ? '确认增资' : '确认减资' }}</div>
-          <div class="dlg-info">{{ capType === 'add' ? '➕' : '➖' }} <b class="num-mono">{{ formatMoney(capAmount) }}</b> 元</div>
+          <div class="dlg-info"><b class="num-mono">{{ formatMoney(capAmount) }}</b> 元</div>
           <div class="dlg-field">
             <label class="dlg-label">备注</label>
             <input v-model="capNote" type="text" class="dlg-input" placeholder="选填" />
@@ -28,8 +28,8 @@
             <input v-model="deltaAmount" type="number" inputmode="decimal" placeholder="输入金额（元）" class="big-input num-mono" />
           </div>
           <div class="action-row">
-            <button class="act-btn add" :disabled="!deltaValid" @click="doCapital('add')">增资 ➕</button>
-            <button class="act-btn remove" :disabled="!deltaValid" @click="doCapital('remove')">减资 ➖</button>
+            <button class="act-btn add" :disabled="!deltaValid" @click="doCapital('add')">增资</button>
+            <button class="act-btn remove" :disabled="!deltaValid" @click="doCapital('remove')">减资</button>
           </div>
 
           <div class="divider"></div>
@@ -101,8 +101,9 @@ function submit() {
 .section-title { font-size: 14px; font-weight: 600; margin-bottom: 10px; }
 .amount-row { display: flex; align-items: center; margin-bottom: 10px; }
 .big-input {
-  flex: 1; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
-  border-radius: var(--radius-md); color: #fff; font-size: 22px; padding: 12px;
+  flex: 1; min-width: 0; width: 100%;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--radius-md); color: #fff; font-size: 18px; padding: 10px 12px;
   text-align: center; outline: none; font-family: var(--font-number);
 }
 .big-input:focus { border-color: var(--bg-accent); }

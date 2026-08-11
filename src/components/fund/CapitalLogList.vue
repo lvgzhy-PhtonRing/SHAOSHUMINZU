@@ -2,31 +2,36 @@
   <div class="capital-log-list">
     <div class="log-header">
       <span class="log-title">资本变动记录</span>
+      <span class="swipe-hint">◀ 左滑编辑</span>
       <span class="log-count" v-if="logs.length">共 {{ logs.length }} 条</span>
     </div>
     <div v-if="!logs.length"><EmptyState icon="💰" text="暂无资金变动记录" /></div>
-    <div v-else class="log-items">
-      <div v-for="log in logs" :key="log.id" class="log-item">
-        <div class="log-icon">{{ log.type === 'add' ? '➕' : '➖' }}</div>
-        <div class="log-info">
-          <div class="log-detail">
-            <span class="log-action" :class="log.pool_id ? 'trade' : ''">
-              {{ log.pool_id ? (log.type === 'add' ? '卖出' : '买入') : (log.type === 'add' ? '增资' : '减资') }}
-            </span>
-            <span class="log-amount num-mono" :class="log.type === 'add' ? 'rise' : 'fall'">
-              {{ log.type === 'add' ? '+' : '-' }}{{ formatMoney(log.amount) }}
-            </span>
+    <div v-else class="trade-log-list">
+      <van-swipe-cell v-for="log in logs" :key="log.id" :right-width="140">
+        <div class="trade-log-item">
+          <div class="tli-body">
+            <div class="tli-header">
+              <span class="tli-action" :class="log.type === 'add' ? 'rise' : 'fall'">
+                {{ log.pool_id ? (log.type === 'add' ? '卖出' : '买入') : (log.type === 'add' ? '增资' : '减资') }}
+              </span>
+              <span class="tli-amount num-mono" :class="log.type === 'add' ? 'rise' : 'fall'">
+                {{ log.type === 'add' ? '+' : '-' }}{{ formatMoney(log.amount) }}
+              </span>
+            </div>
+            <div v-if="log.note" class="tli-note">{{ log.note }}</div>
+            <div class="tli-meta">
+              <span>{{ formatDateString(log.created_at) }}</span>
+            </div>
           </div>
-          <div class="log-meta">
-            <span>{{ formatDateString(log.created_at) }}</span>
-            <span v-if="log.note"> · {{ log.note }}</span>
+          <span class="tli-arrow">›</span>
+        </div>
+        <template #right>
+          <div class="swipe-actions">
+            <button class="swipe-edit-btn" @click.stop="startEdit(log)">编辑</button>
+            <button class="swipe-del-btn" @click.stop="confirmDelete(log)">删除</button>
           </div>
-        </div>
-        <div class="log-actions">
-          <button class="edit-btn" @click="startEdit(log)">✏️</button>
-          <button class="del-btn" @click="confirmDelete(log)">✕</button>
-        </div>
-      </div>
+        </template>
+      </van-swipe-cell>
     </div>
 
     <!-- 编辑弹窗 -->
@@ -171,31 +176,35 @@ function doDelete() {
 </script>
 
 <style scoped>
-.log-header { display: flex; justify-content: space-between; align-items: center; padding: 0 0 8px; }
+.log-header { display: flex; align-items: center; gap: 8px; padding: 0 0 8px; }
 .log-title { font-size: 14px; font-weight: 600; }
-.log-count { font-size: 12px; color: var(--text-secondary); }
-.log-items { display: flex; flex-direction: column; gap: 4px; }
-.log-item { display: flex; gap: 10px; padding: 8px 10px; background: rgba(255,255,255,0.03); border-radius: var(--radius-md); }
-.log-icon { font-size: 18px; padding-top: 2px; }
-.log-info { flex: 1; min-width: 0; }
-.log-detail { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
-.log-action { font-size: 13px; font-weight: 500; }
-.log-action.trade { color: var(--color-warn); }
-.log-amount { font-size: 14px; font-weight: 600; font-family: var(--font-number); }
-.log-amount.rise { color: var(--color-rise); }
-.log-amount.fall { color: var(--color-fall); }
-.log-meta { font-size: 11px; color: var(--text-muted); }
-.log-actions { display: flex; flex-direction: column; gap: 4px; align-self: flex-start; }
-.edit-btn {
-  background: none; border: none; font-size: 13px; cursor: pointer; padding: 0 2px; line-height: 1;
-  opacity: 0.5; transition: opacity 0.15s;
+.swipe-hint {
+  font-size: 11px;
+  background: linear-gradient(135deg, #e94560, #ff6b6b);
+  color: #fff;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-weight: 600;
 }
-.edit-btn:hover { opacity: 1; }
-.del-btn {
-  background: none; border: none; color: var(--text-muted); font-size: 13px;
-  cursor: pointer; padding: 0 2px; line-height: 1;
-}
-.del-btn:active { color: var(--color-fall); }
+.log-count { font-size: 12px; color: var(--text-secondary); margin-left: auto; }
+
+/* 列表明细（参考交易明细样式） */
+.trade-log-list { display: flex; flex-direction: column; gap: 2px; }
+.trade-log-item { padding: 12px 14px; background: var(--bg-hover); display: flex; gap: 8px; align-items: center; border-radius: var(--radius-md); }
+.tli-body { flex: 1; min-width: 0; }
+.tli-header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; flex-wrap: wrap; }
+.tli-action { font-size: 14px; font-weight: 600; font-family: var(--font-number); }
+.tli-action.rise { color: var(--color-rise); }
+.tli-action.fall { color: var(--color-fall); }
+.tli-amount { font-size: 14px; font-weight: 700; font-family: var(--font-number); }
+.tli-amount.rise { color: var(--color-rise); }
+.tli-amount.fall { color: var(--color-fall); }
+.tli-note { font-size: 13px; color: var(--text-primary); font-weight: 500; margin-bottom: 4px; }
+.tli-meta { font-size: 11px; color: var(--text-muted); }
+.tli-arrow { font-size: 16px; color: var(--text-muted); opacity: 0.3; flex-shrink: 0; }
+.swipe-actions { display: flex; height: 100%; }
+.swipe-edit-btn { width: 70px; border: none; background: var(--bg-accent); color: #fff; font-size: 13px; font-weight: 500; cursor: pointer; }
+.swipe-del-btn { width: 70px; border: none; background: var(--color-fall); color: #fff; font-size: 13px; font-weight: 500; cursor: pointer; }
 
 /* 弹窗共用 */
 .overlay {
