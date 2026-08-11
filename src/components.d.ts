@@ -8,6 +8,7 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     AccountSummary: typeof import('./components/dashboard/AccountSummary.vue')['default']
+    AdjustmentPanel: typeof import('./components/fund/AdjustmentPanel.vue')['default']
     CapitalLogList: typeof import('./components/fund/CapitalLogList.vue')['default']
     DonutChart: typeof import('./components/positions/DonutChart.vue')['default']
     EmptyState: typeof import('./components/common/EmptyState.vue')['default']

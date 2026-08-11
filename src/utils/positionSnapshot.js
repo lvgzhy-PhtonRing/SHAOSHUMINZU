@@ -24,7 +24,7 @@ export async function saveCurrentPositionSnapshot() {
   const today = new Date().toISOString().slice(0, 10)
   const todayStart = new Date(today + 'T00:00:00').toISOString()
   const todayCapitalChanges = fundStore.capitalLogs
-    .filter(l => l.pool_id === null && l.created_at >= todayStart && l.note !== '初始')
+    .filter(l => l.pool_id === null && l.created_at >= todayStart && l.note !== '初始' && l.category !== 'adjust')
     .reduce((sum, l) => sum + (l.type === 'add' ? l.amount : -l.amount), 0)
 
   await savePositionSnapshot(today, {

@@ -10,13 +10,19 @@ export const useFundStore = defineStore('funds', {
     error: null
   }),
   getters: {
-    totalCapital: (state) => {
-      // 只计外部资金变动（pool_id IS NULL），股票买卖不影响总资金池
+    // 外部资本变动（增资/减资/初始），排除校对核缺（category='adjust'）
+    capitalAdjustNet: (state) => {
       return state.capitalLogs
-        .filter(l => l.pool_id === null)
+        .filter(l => l.pool_id === null && l.category === 'adjust')
         .reduce((sum, l) => sum + (l.type === 'add' ? l.amount : -l.amount), 0)
     },
-    // 总可用资金 = 外部总资本 + 所有卖出到账 − 所有买入支出（含已实现盈亏）
+    totalCapital: (state) => {
+      // 只计外部资金变动（pool_id IS NULL 且非校对核缺），股票买卖不影响总资金池
+      return state.capitalLogs
+        .filter(l => l.pool_id === null && l.category !== 'adjust')
+        .reduce((sum, l) => sum + (l.type === 'add' ? l.amount : -l.amount), 0)
+    },
+    // 总可用资金 = 外部总资本 + 校对核缺净额 + 所有卖出到账 − 所有买入支出（含已实现盈亏）
     totalAvailable: (state) => {
       const sellIn = state.capitalLogs
         .filter(l => l.pool_id !== null && l.type === 'add')
@@ -25,9 +31,12 @@ export const useFundStore = defineStore('funds', {
         .filter(l => l.pool_id !== null && l.type === 'remove')
         .reduce((sum, l) => sum + l.amount, 0)
       const capital = state.capitalLogs
-        .filter(l => l.pool_id === null)
+        .filter(l => l.pool_id === null && l.category !== 'adjust')
         .reduce((sum, l) => sum + (l.type === 'add' ? l.amount : -l.amount), 0)
-      return capital + sellIn - buyOut
+      const adjust = state.capitalLogs
+        .filter(l => l.pool_id === null && l.category === 'adjust')
+        .reduce((sum, l) => sum + (l.type === 'add' ? l.amount : -l.amount), 0)
+      return capital + adjust + sellIn - buyOut
     }
   },
   actions: {

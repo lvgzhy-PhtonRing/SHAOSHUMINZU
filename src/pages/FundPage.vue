@@ -25,6 +25,13 @@
         @capital-change="onCapitalChange"
         @alloc-change="onAllocChange"
       />
+      <AdjustmentPanel
+        :logs="adjustLogs"
+        :submitting="fundStore.submitting"
+        @add="onAdjustChange"
+        @edit="onAdjustEdit"
+        @delete="onDeleteLog"
+      />
       <div class="section-card">
         <CapitalLogList :logs="capitalLogs" @delete="onDeleteLog" @edit="onEditLog" />
       </div>
@@ -43,6 +50,7 @@ import { formatMoney } from '@/utils/formatters'
 import { deleteCapitalLog, updateCapitalLog, updateTransaction, deleteTransaction, fetchTransactionsByPoolStock, deleteHolding, upsertHolding } from '@/api/supabase'
 import FundAllocationForm from '@/components/fund/FundAllocationForm.vue'
 import CapitalLogList from '@/components/fund/CapitalLogList.vue'
+import AdjustmentPanel from '@/components/fund/AdjustmentPanel.vue'
 import LoadingSkeleton from '@/components/common/LoadingSkeleton.vue'
 
 const poolStore = usePoolStore()
@@ -82,8 +90,15 @@ const floatPnl = computed(() => totalMarketValue.value - totalCost.value)
 const totalAvailable = computed(() => fundStore.totalAvailable)
 // 总资产 = 持仓市值 + 可用资金
 const totalAsset = computed(() => totalMarketValue.value + totalAvailable.value)
-// 资金变动记录（仅外部资金，不含股票买卖）
-const capitalLogs = computed(() => fundStore.capitalLogs.filter(l => l.pool_id === null))
+// 资本变动记录（仅外部资金 增资/减资/初始，不含股票买卖与校对核缺）
+const capitalLogs = computed(() => fundStore.capitalLogs.filter(l => l.pool_id === null && l.category !== 'adjust'))
+// 校对核缺记录（独立管理）
+const adjustLogs = computed(() => fundStore.capitalLogs.filter(l => l.pool_id === null && l.category === 'adjust'))
+
+function todayStr() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
 
 async function onCapitalChange({ type, amount, note }) {
   try {
@@ -97,6 +112,38 @@ async function onCapitalChange({ type, amount, note }) {
   } catch (e) {
     console.error('Capital change error:', e)
   }
+}
+
+// 校对核缺新增（只调可用资金/总资产，不进总资本）
+async function onAdjustChange({ type, amount, note, date }) {
+  try {
+    await fundStore.addCapitalLog({
+      pool_id: null, type, amount,
+      note: note || '',
+      category: 'adjust',
+      created_at: (date || todayStr()) + 'T00:00:00+00:00',
+      created_by: 'admin'
+    })
+    const { saveCurrentPositionSnapshot } = await import('@/utils/positionSnapshot')
+    saveCurrentPositionSnapshot().catch(e => console.error('Position snapshot:', e))
+  } catch (e) {
+    console.error('Adjust change error:', e)
+  }
+}
+
+// 校对核缺编辑（金额/备注/日期）
+async function onAdjustEdit(payload) {
+  try {
+    const { id, amount, note, date } = payload
+    const updates = { amount, note }
+    if (date) updates.created_at = date + 'T00:00:00+00:00'
+    await fundStore.editCapitalLog(id, updates)
+    await fundStore.loadCapitalLogs()
+  } catch (e) {
+    console.error('Adjust edit error:', e)
+  }
+  const { saveCurrentPositionSnapshot } = await import('@/utils/positionSnapshot')
+  saveCurrentPositionSnapshot().catch(e => console.error('Position snapshot:', e))
 }
 
 function onAllocChange({ pools: allocs }) {

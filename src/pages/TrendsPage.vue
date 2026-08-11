@@ -247,7 +247,7 @@ const capitalDetailList = computed(() => {
   const minDate = trendData.value[0].date
   const maxDate = trendData.value[trendData.value.length - 1].date
   return fundStore.capitalLogs
-    .filter(l => l.pool_id === null && l.note !== '初始' && l.created_at)
+    .filter(l => l.pool_id === null && l.note !== '初始' && l.category !== 'adjust' && l.created_at)
     .filter(l => {
       const d = l.created_at.slice(0, 10)
       return d >= minDate && d <= maxDate

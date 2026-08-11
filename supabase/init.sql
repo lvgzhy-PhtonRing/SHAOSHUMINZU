@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS capital_log (
   type        VARCHAR(10) NOT NULL CHECK (type IN ('add', 'remove')),
   amount      DECIMAL(15,2) NOT NULL,
   note        TEXT,
+  category    VARCHAR(10) NOT NULL DEFAULT 'capital',  -- capital=增资/减资/初始, adjust=校对核缺
   created_by  VARCHAR(20) NOT NULL DEFAULT 'admin',
   created_at  TIMESTAMPTZ DEFAULT NOW()
 );

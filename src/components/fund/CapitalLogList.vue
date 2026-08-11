@@ -1,7 +1,7 @@
 <template>
   <div class="capital-log-list">
     <div class="log-header">
-      <span class="log-title">资金变动记录</span>
+      <span class="log-title">资本变动记录</span>
       <span class="log-count" v-if="logs.length">共 {{ logs.length }} 条</span>
     </div>
     <div v-if="!logs.length"><EmptyState icon="💰" text="暂无资金变动记录" /></div>
