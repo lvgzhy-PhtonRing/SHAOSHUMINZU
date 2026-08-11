@@ -86,7 +86,8 @@
             <span class="th-col">总资产</span>
           </div>
           <!-- 数据行 -->
-          <div v-for="(d, i) in trendData" :key="i" class="trend-row">
+          <div v-for="(d, i) in trendData" :key="i" class="trend-row"
+            :class="{ 'trend-row--week-start': i > 0 && d.label.startsWith('周一') }">
             <span class="tr-label">{{ d.label }}</span>
             <!-- 仓位比例列 -->
             <div class="tr-col">
@@ -110,11 +111,22 @@
               </span>
               <span v-else class="bar-delta-spacer"></span>
               <span v-if="d.capitalChange !== 0" class="capchg-tag"
-                :class="d.capitalChange > 0 ? 'rise' : 'fall'">
-                {{ d.capitalChange > 0 ? '+' : '-' }}{{ formatCompact(Math.abs(d.capitalChange)) }}
-              </span>
+                :class="d.capitalChange > 0 ? 'rise' : 'fall'">!</span>
               <span v-else class="capchg-slot"></span>
             </div>
+          </div>
+        </div>
+
+        <!-- 增资减资明细 -->
+        <div v-if="capitalDetailList.length" class="capchg-detail">
+          <div class="capchg-detail-title">资金变动明细</div>
+          <div v-for="(c, i) in capitalDetailList" :key="i" class="capchg-detail-item">
+            <span class="cd-date">{{ c.label }}</span>
+            <span class="cd-type" :class="c.type === '增资' ? 'rise' : 'fall'">{{ c.type }}</span>
+            <span v-if="c.note" class="cd-note">{{ c.note }}</span>
+            <span class="cd-amount" :class="c.type === '增资' ? 'rise' : 'fall'">
+              {{ c.type === '增资' ? '+' : '-' }}{{ formatMoney(Math.abs(c.amount)) }}
+            </span>
           </div>
         </div>
       </div>
@@ -229,6 +241,31 @@ function formatCompact(v) {
   return Math.round(v).toLocaleString('zh-CN')
 }
 
+// ===== 资金变动明细（趋势总览底部文字列表，对应每行"!"） =====
+const capitalDetailList = computed(() => {
+  if (!trendData.value.length) return []
+  const minDate = trendData.value[0].date
+  const maxDate = trendData.value[trendData.value.length - 1].date
+  return fundStore.capitalLogs
+    .filter(l => l.pool_id === null && l.note !== '初始' && l.created_at)
+    .filter(l => {
+      const d = l.created_at.slice(0, 10)
+      return d >= minDate && d <= maxDate
+    })
+    .slice()
+    .sort((a, b) => a.created_at.localeCompare(b.created_at))
+    .map(l => {
+      const dStr = l.created_at.slice(0, 10)
+      const d = new Date(dStr + 'T00:00:00')
+      return {
+        label: formatTrendLabel(d),
+        type: l.type === 'add' ? '增资' : '减资',
+        note: l.note || '',
+        amount: l.amount
+      }
+    })
+})
+
 // ===== 子池硬度 =====
 const POOL_COLORS = { '春': '#e94560', '维': '#00d2a1', '队': '#ffc107', '回': '#7c4dff' }
 const POOL_ORDER = ['春', '维', '队', '回']
@@ -321,10 +358,10 @@ onMounted(async () => {
           const snap = snapByDate[dateStr]
           if (snap) {
             lastData = { ratio: snap.ratio, asset: snap.asset || 0, capitalChange: snap.capitalChange || 0 }
-            filled.push({ label: formatTrendLabel(cursor), ...lastData })
+            filled.push({ label: formatTrendLabel(cursor), date: dateStr, ...lastData })
           } else if (lastData) {
             // 交易日无快照 → 用最近一个已知快照顺延补上，资金变动归 0
-            filled.push({ label: formatTrendLabel(cursor), ...lastData, capitalChange: 0 })
+            filled.push({ label: formatTrendLabel(cursor), date: dateStr, ...lastData, capitalChange: 0 })
           }
         }
         cursor.setDate(cursor.getDate() + 1)
@@ -432,6 +469,11 @@ onMounted(async () => {
   gap: 8px;
   padding: 4px 0;
 }
+.trend-row--week-start {
+  border-top: 1px dashed rgba(255,255,255,0.14);
+  margin-top: 4px;
+  padding-top: 8px;
+}
 .tr-label {
   width: 72px; flex-shrink: 0;
   font-size: 11px; font-weight: 600;
@@ -500,6 +542,33 @@ onMounted(async () => {
   display: inline-block; width: 0; height: 0;
   flex-shrink: 0;
 }
+
+/* 资金变动明细 */
+.capchg-detail {
+  margin-top: 12px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  padding-top: 10px;
+}
+.capchg-detail-title {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+.capchg-detail-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+  font-size: 11px;
+}
+.cd-date { width: 72px; flex-shrink: 0; color: var(--text-secondary); font-weight: 600; }
+.cd-type { font-weight: 700; flex-shrink: 0; }
+.cd-type.rise { color: var(--color-rise); }
+.cd-type.fall { color: var(--color-fall); }
+.cd-note { flex: 1; min-width: 0; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cd-amount { font-family: var(--font-number); font-weight: 700; flex-shrink: 0; }
+.cd-amount.rise { color: var(--color-rise); }
+.cd-amount.fall { color: var(--color-fall); }
 
 .trend-empty {
   height: 80px;
