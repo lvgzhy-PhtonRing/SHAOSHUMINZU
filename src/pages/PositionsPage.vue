@@ -78,6 +78,7 @@ import { formatMoney } from '@/utils/formatters'
 import { useFundStore } from '@/stores/funds'
 import DonutChart from '@/components/positions/DonutChart.vue'
 import PoolPositionCard from '@/components/positions/PoolPositionCard.vue'
+import { loadPoolAllocation } from '@/api/supabase'
 
 const poolStore = usePoolStore()
 const holdingStore = useHoldingStore()
@@ -85,6 +86,7 @@ const priceStore = usePriceStore()
 
 const fundStore = useFundStore()
 const loading = ref(true)
+const allocConfig = ref(null)
 const totalCapital = computed(() => fundStore.totalCapital)
 
 const colorList = ['#5b8def', '#e94560', '#00d2a1', '#ffc107', '#7c4dff']
@@ -127,12 +129,13 @@ const positionSlogan = computed(() => {
 })
 
 const poolPositionData = computed(() => {
-  // 每个子池的初始分配
+  // 每个子池的初始分配：优先读取保存的分配配置，无配置回退 11 万
   const poolInitial = {}
   for (const p of poolStore.pools) {
-    poolInitial[p.id] = p.name === '公共池'
-      ? totalCapital.value - SUB_POOL_INIT * (poolStore.pools.length - 1)
-      : SUB_POOL_INIT
+    const cfg = allocConfig.value?.[p.name]
+    poolInitial[p.id] = cfg !== undefined
+      ? cfg
+      : (p.name === '公共池' ? totalCapital.value - SUB_POOL_INIT * (poolStore.pools.length - 1) : SUB_POOL_INIT)
   }
 
   // 从 capital_log 实际流水计算每个子池可用资金
@@ -193,6 +196,7 @@ const chartSegments = computed(() => {
 
 onMounted(async () => {
   try {
+    try { allocConfig.value = await loadPoolAllocation() } catch (e) {}
     await Promise.all([
       poolStore.loadPools(),
       holdingStore.loadHoldings(),
