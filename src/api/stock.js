@@ -1,6 +1,7 @@
 // src/api/stock.js
 // 行情接口：优先调用 Supabase Edge Function，降级到 JSONP
 // 缓存: 股票名称永久缓存, 价格60分钟过期
+// 搜索: 本地 stocks.json 优先（毫秒级），降级到远程 suggest API
 
 const PRICE_MAX_AGE = 60 * 60 * 1000
 let nameCache = {}
@@ -9,6 +10,77 @@ let cacheTime = {}
 
 function isStale(code) {
   return !cacheTime[code] || (Date.now() - cacheTime[code] > PRICE_MAX_AGE)
+}
+
+// ========== 本地股票列表（懒加载） ==========
+const STOCKS_JSON_PATH = import.meta.env.BASE_URL + 'stocks.json'
+let stockList = null       // 加载后的数组 [{c, n, p, f, m}, ...]
+let stockListPromise = null
+
+async function ensureStockList() {
+  if (stockList) return stockList
+  if (stockListPromise) return stockListPromise
+  stockListPromise = fetch(STOCKS_JSON_PATH)
+    .then(r => r.json())
+    .then(data => {
+      stockList = data.s || []
+      return stockList
+    })
+    .catch(() => {
+      console.warn('[stock] 本地股票列表加载失败，回退到远程搜索')
+      stockList = null  // 标记加载失败，走远程降级
+      stockListPromise = null
+      return null
+    })
+  return stockListPromise
+}
+
+function searchLocalStocks(query) {
+  if (!stockList) return null  // null = 尚未加载完成，调用方应等待或降级
+  const q = query.toLowerCase().trim()
+  if (!q) return []
+
+  const results = []
+  const isDigits = /^\d+$/.test(q)
+
+  for (const s of stockList) {
+    let score = 0
+
+    if (isDigits) {
+      // 纯数字：匹配代码前缀
+      if (s.c === q) {
+        score = 100
+      } else if (s.c.startsWith(q)) {
+        score = q.length * 15
+      }
+    } else {
+      // 文字/拼音：多层匹配
+      if (s.n === q) score = Math.max(score, 95)           // 名称完全匹配
+      if (s.n.startsWith(q)) score = Math.max(score, 85)   // 名称前缀
+      if (s.n.includes(q)) score = Math.max(score, 75)     // 名称包含
+      if (s.p.startsWith(q)) score = Math.max(score, 70)   // 全拼前缀
+      if (s.f === q) score = Math.max(score, 65)           // 首字母完全匹配
+      if (s.p.includes(q)) score = Math.max(score, 60)     // 全拼包含
+      if (s.f.startsWith(q)) score = Math.max(score, 55)   // 首字母前缀
+      if (s.f.includes(q)) score = Math.max(score, 45)     // 首字母包含
+    }
+
+    if (score > 0) {
+      results.push({ ...s, score })
+    }
+  }
+
+  // 按分数降序，取前 20 条
+  results.sort((a, b) => b.score - a.score)
+  return results.slice(0, 20).map(s => ({
+    stock_code: s.c,
+    stock_name: s.n,
+    market: s.m === 'sh' ? '沪' : '深'
+  }))
+}
+
+export function preloadStockList() {
+  ensureStockList()
 }
 
 // ========== 方法1: Supabase Edge Function ==========
@@ -186,6 +258,14 @@ function fetchSuggestJSONP(key) {
 export async function fetchStockSuggestions(key) {
   if (!key || !key.trim()) return []
   const k = key.trim()
+
+  // 优先本地搜索（毫秒级）
+  const list = await ensureStockList()
+  if (list) {
+    return searchLocalStocks(k) || []
+  }
+
+  // 降级：本地列表未加载成功，走远程 API
   if (suggestCache[k] && (Date.now() - suggestCacheTime[k] < SUGGEST_MAX_AGE)) {
     return suggestCache[k]
   }

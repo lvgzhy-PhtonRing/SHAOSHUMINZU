@@ -131,12 +131,22 @@
             <span class="dlg-value">{{ editStockCode }}</span>
           </div>
           <div class="dlg-field">
-            <label class="dlg-label">成交数量（股）</label>
-            <input v-model="editQuantity" type="number" inputmode="numeric" class="dlg-input num-mono" placeholder="0" />
+            <label class="dlg-label">子池</label>
+            <select v-model="editPoolId" class="dlg-input">
+              <option v-for="p in poolStore.allPools" :key="p.id" :value="p.id">{{ p.name }}</option>
+            </select>
           </div>
           <div class="dlg-field">
-            <label class="dlg-label">成交金额（不含费）</label>
-            <input v-model="editAmount" type="number" inputmode="decimal" class="dlg-input num-mono" @input="onEditAmountChange" />
+            <label class="dlg-label">成交数量（股）</label>
+            <input v-model="editQuantity" type="number" inputmode="numeric" class="dlg-input num-mono" placeholder="0" @input="onEditPriceOrQtyChange" />
+          </div>
+          <div class="dlg-field">
+            <label class="dlg-label">成交单价</label>
+            <input v-model="editPrice" type="number" inputmode="decimal" class="dlg-input num-mono" step="0.001" @input="onEditPriceOrQtyChange" />
+          </div>
+          <div class="dlg-field">
+            <label class="dlg-label">成交金额（{{ formatMoney(editComputedAmount) }}）</label>
+            <span class="dlg-value num-mono">含费 {{ formatMoney(editComputedActual) }}</span>
           </div>
           <div class="dlg-field">
             <label class="dlg-label">手续费（{{ editingTrade?.type === 'add' ? '0.5954' : '0.0854' }}‰ 最低5元）</label>
@@ -243,7 +253,6 @@ async function onBuySubmit(data) {
     let available
     if (pool.name === '公共池') {
       const totalCost = holdingStore.holdings.reduce((s, h) => s + h.cost_price * h.quantity, 0)
-      // 可用资金 = 实际现金流
       const sellIn = fundStore.capitalLogs.filter(l => l.pool_id !== null && l.type === 'add').reduce((s, l) => s + l.amount, 0)
       const buyOut = fundStore.capitalLogs.filter(l => l.pool_id !== null && l.type === 'remove').reduce((s, l) => s + l.amount, 0)
       const totalAvailable = fundStore.totalCapital + sellIn - buyOut
@@ -347,7 +356,6 @@ async function submitSell() {
       await txStore.addTransaction(tx)
       const existing = holdingStore.holdings.find(h => h.pool_id === e.pool_id && h.stock_code === stockCode.value)
       const remaining = (existing?.quantity || 0) - e.sell_qty
-      // 券商移动平均法：成本 = (买入总支出 - 卖出总收入) / 剩余股数
       const allPoolTxs = await fetchTransactionsByPoolStock(e.pool_id, stockCode.value)
       const buyTotal = allPoolTxs.filter(t => t.type === 'buy').reduce((s, t) => s + (t.actual_amount || t.amount), 0)
       const sellTotal = allPoolTxs.filter(t => t.type === 'sell').reduce((s, t) => s + (t.actual_amount || t.amount), 0) + actualAmount
@@ -382,58 +390,112 @@ const tradeLogs = computed(() => {
 function formatDateString(isoStr) { if (!isoStr) return ''; const d = new Date(isoStr); return `${d.getMonth()+1}/${d.getDate()}` }
 
 // ===== 编辑/删除 =====
-const editingTrade = ref(null); const editAmount = ref(''); const editNote = ref(''); const editQuantity = ref(''); const editStockCode = ref(''); const editDate = ref(''); const deletingTrade = ref(null)
+const editingTrade = ref(null); const editPrice = ref(''); const editNote = ref(''); const editQuantity = ref(''); const editStockCode = ref(''); const editDate = ref(''); const editPoolId = ref(null); const deletingTrade = ref(null)
 const editFee = ref(0)
+const editComputedAmount = ref(0)
+const editComputedActual = ref(0)
 const FEE_RATE_DISPLAY = '0.0854'
 
 function editFeeFn(isSell) { return isSell ? calcSellFee : calcBuyFee }
 
-function onEditAmountChange() {
-  const amt = parseFloat(editAmount.value) || 0
+function onEditPriceOrQtyChange() {
+  const price = parseFloat(editPrice.value) || 0
+  const qty = parseInt(editQuantity.value) || 0
+  const amount = price * qty
+  editComputedAmount.value = amount
   const isSell = editingTrade.value?.type === 'add'
-  editFee.value = amt > 0 ? editFeeFn(isSell)(amt) : 0
+  editFee.value = amount > 0 ? editFeeFn(isSell)(amount) : 0
+  editComputedActual.value = amount > 0 ? (isSell ? amount - editFee.value : amount + editFee.value) : 0
 }
 
 async function startEditTrade(log) {
   editingTrade.value = log; editNote.value = log.note || ''; editQuantity.value = ''; editStockCode.value = log.stock_code || ''; editDate.value = ''
-  // 还原不含手续费的成交金额（买入含费、卖出扣费）
-  const isSell = log.type === 'add'
-  const baseAmount = isSell ? log.amount + (log.fee || 0) : log.amount - (log.fee || 0)
-  editAmount.value = String(baseAmount > 0 ? baseAmount : log.amount)
-  editFee.value = log.fee || editFeeFn(isSell)(parseFloat(editAmount.value) || 0)
+  editPoolId.value = log.pool_id
+  editPrice.value = ''; editFee.value = 0; editComputedAmount.value = 0; editComputedActual.value = 0
   if (log.stock_code) {
-    try { const txs = await fetchTransactionsByPoolStock(log.pool_id, log.stock_code); const match = txs.find(t => (Math.abs(t.amount - log.amount) < 0.01 || Math.abs((t.actual_amount || t.amount) - log.amount) < 0.01)); if (match) { editQuantity.value = String(match.quantity); editDate.value = match.trade_date || '' } } catch (e) {}
+    try {
+      const txs = await fetchTransactionsByPoolStock(log.pool_id, log.stock_code)
+      const match = txs.find(t => (Math.abs(t.amount - log.amount) < 0.01 || Math.abs((t.actual_amount || t.amount) - log.amount) < 0.01))
+      if (match) {
+        editQuantity.value = String(match.quantity)
+        editDate.value = match.trade_date || ''
+        editPrice.value = String(match.price || (match.quantity > 0 ? (match.amount / match.quantity).toFixed(3) : ''))
+      }
+    } catch (e) {}
+  }
+  onEditPriceOrQtyChange()
+}
+
+// 提取持仓重算逻辑
+async function recalcHoldingsForPool(poolId, stockCode, stockName) {
+  const allTxs = await fetchTransactionsByPoolStock(poolId, stockCode)
+  if (allTxs.length === 0) {
+    await deleteHolding(poolId, stockCode)
+    return
+  }
+  let totalBuyQty = 0, totalBuyAmt = 0, netQty = 0
+  for (const tx of allTxs) {
+    if (tx.type === 'buy') { totalBuyQty += tx.quantity; totalBuyAmt += tx.amount }
+    netQty += tx.type === 'buy' ? tx.quantity : -tx.quantity
+  }
+  if (netQty <= 0) {
+    await deleteHolding(poolId, stockCode)
+  } else {
+    const costPrice = totalBuyQty > 0 ? totalBuyAmt / totalBuyQty : 0
+    await upsertHolding({ pool_id: poolId, stock_code: stockCode, stock_name: stockName || '', quantity: netQty, cost_price: costPrice })
   }
 }
+
 async function saveEditTrade() {
-  if (!editingTrade.value) return; const amount = parseFloat(editAmount.value); if (!amount || amount <= 0) return
-  const log = editingTrade.value; const stockCode = editStockCode.value; const newQty = parseInt(editQuantity.value) || 0
+  if (!editingTrade.value) return
+  const price = parseFloat(editPrice.value); const newQty = parseInt(editQuantity.value) || 0
+  if (!price || price <= 0 || !newQty) return
+  const amount = parseFloat((price * newQty).toFixed(2))
+  const log = editingTrade.value; const stockCode = editStockCode.value; const newPoolId = editPoolId.value; const oldPoolId = log.pool_id
+  const poolChanged = newPoolId && newPoolId !== oldPoolId
+
   try {
     if (stockCode) {
-      const allTxs = await fetchTransactionsByPoolStock(log.pool_id, stockCode); const matchedTx = allTxs.find(t => (Math.abs(t.amount - log.amount) < 0.01 || Math.abs((t.actual_amount || t.amount) - log.amount) < 0.01))
-      if (matchedTx && newQty > 0) {
-        const isSellEdit = log.type === 'add'
-        const fee = editFeeFn(isSellEdit)(amount)
-        const actualAmount = isSellEdit ? parseFloat((amount - fee).toFixed(2)) : parseFloat((amount + fee).toFixed(2))
-        const newPrice = amount / newQty; const txUpdates = { quantity: newQty, amount, price: newPrice, fee, actual_amount: actualAmount }; if (editDate.value) txUpdates.trade_date = editDate.value
-        await updateTransaction(matchedTx.id, txUpdates); txStore.transactions = txStore.transactions.map(t => t.id === matchedTx.id ? { ...t, ...txUpdates } : t)
-        const isBuy = log.type === 'remove'; const otherTxs = allTxs.filter(t => t.id !== matchedTx.id)
-        const allCalculated = [...otherTxs, { ...matchedTx, quantity: newQty, amount, price: newPrice, type: isBuy ? 'buy' : 'sell' }]
-        let totalBuyQty = 0, totalBuyAmt = 0; for (const tx of allCalculated) { if (tx.type === 'buy') { totalBuyQty += tx.quantity; totalBuyAmt += tx.amount } }
-        const newCostPrice = totalBuyQty > 0 ? totalBuyAmt / totalBuyQty : 0; const netQty = allCalculated.reduce((s, tx) => s + (tx.type === 'buy' ? tx.quantity : -tx.quantity), 0)
-        if (netQty <= 0) await deleteHolding(log.pool_id, stockCode)
-        else await upsertHolding({ pool_id: log.pool_id, stock_code: stockCode, stock_name: matchedTx.stock_name || '', quantity: netQty, cost_price: newCostPrice })
+      const allTxs = await fetchTransactionsByPoolStock(oldPoolId, stockCode)
+      const matchedTx = allTxs.find(t => (Math.abs(t.amount - log.amount) < 0.01 || Math.abs((t.actual_amount || t.amount) - log.amount) < 0.01))
+      if (matchedTx) {
+        const isSell = log.type === 'add'
+        const fee = editFeeFn(isSell)(amount)
+        const actualAmount = isSell ? parseFloat((amount - fee).toFixed(2)) : parseFloat((amount + fee).toFixed(2))
+        const txUpdates = { quantity: newQty, amount, price, fee, actual_amount: actualAmount }
+        if (editDate.value) txUpdates.trade_date = editDate.value
+        if (poolChanged) txUpdates.pool_id = newPoolId
+
+        await updateTransaction(matchedTx.id, txUpdates)
+        txStore.transactions = txStore.transactions.map(t => t.id === matchedTx.id ? { ...t, ...txUpdates } : t)
+
+        if (poolChanged) {
+          await recalcHoldingsForPool(oldPoolId, stockCode, matchedTx.stock_name)
+          await recalcHoldingsForPool(newPoolId, stockCode, matchedTx.stock_name)
+        } else {
+          await recalcHoldingsForPool(oldPoolId, stockCode, matchedTx.stock_name)
+        }
         await holdingStore.loadHoldings()
+
+        const capUpdates = { amount: actualAmount, note: editNote.value || '' }
+        if (poolChanged) capUpdates.pool_id = newPoolId
+        await updateCapitalLog(log.id, capUpdates)
+
+        if (poolChanged) {
+          fundStore.capitalLogs = fundStore.capitalLogs.map(c => c.id === log.id ? { ...c, pool_id: newPoolId, amount: actualAmount, note: editNote.value || '' } : c)
+        }
       }
     }
-    const isSellCap = log.type === 'add'
-const capFee = editFeeFn(isSellCap)(amount)
-const capAmount = isSellCap ? parseFloat((amount - capFee).toFixed(2)) : parseFloat((amount + capFee).toFixed(2))
-await updateCapitalLog(log.id, { amount: capAmount, note: editNote.value || '' }); await Promise.all([fundStore.loadCapitalLogs(), txStore.loadTransactions()])
+
+    await Promise.all([fundStore.loadCapitalLogs(), txStore.loadTransactions()])
+    const { saveCurrentPositionSnapshot } = await import('@/utils/positionSnapshot')
+    await saveCurrentPositionSnapshot().catch(e => console.error('Snapshot:', e))
     editingTrade.value = null
   } catch (e) { console.error('Save edit trade error:', e) }
 }
+
 function confirmDeleteTrade(log) { deletingTrade.value = log }
+
 async function doDeleteTrade() {
   if (!deletingTrade.value) return; const log = deletingTrade.value
   try {
@@ -441,12 +503,12 @@ async function doDeleteTrade() {
     if (code) {
       const allTxs = await fetchTransactionsByPoolStock(pool_id, code); const matchedTx = allTxs.find(t => Math.abs(t.amount - amount) < 0.01 || Math.abs((t.actual_amount || t.amount) - amount) < 0.01)
       if (matchedTx) { await deleteTransaction(matchedTx.id); txStore.transactions = txStore.transactions.filter(t => t.id !== matchedTx.id) }
-      const remaining = allTxs.filter(t => t.id !== (matchedTx?.id))
-      if (remaining.length === 0) await deleteHolding(pool_id, code)
-      else { let totalBuyQty = 0, totalBuyAmt = 0; for (const tx of remaining) { if (tx.type === 'buy') { totalBuyQty += tx.quantity; totalBuyAmt += tx.amount } }; const netQty = remaining.reduce((s, tx) => s + (tx.type === 'buy' ? tx.quantity : -tx.quantity), 0); if (netQty <= 0) await deleteHolding(pool_id, code); else await upsertHolding({ pool_id, stock_code: code, stock_name: matchedTx?.stock_name || '', quantity: netQty, cost_price: totalBuyQty > 0 ? totalBuyAmt / totalBuyQty : 0 }) }
+      await recalcHoldingsForPool(pool_id, code, matchedTx?.stock_name || '')
       await holdingStore.loadHoldings()
     }
     await deleteCapitalLog(id); await Promise.all([fundStore.loadCapitalLogs(), txStore.loadTransactions()])
+    const { saveCurrentPositionSnapshot } = await import('@/utils/positionSnapshot')
+    await saveCurrentPositionSnapshot().catch(e => console.error('Snapshot:', e))
     deletingTrade.value = null
   } catch (e) { console.error('Delete trade error:', e) }
 }

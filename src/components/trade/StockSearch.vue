@@ -61,7 +61,7 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import { fetchStockPrice, fetchStockSuggestions } from '@/api/stock'
+import { fetchStockPrice, fetchStockSuggestions, preloadStockList } from '@/api/stock'
 import { isValidStockCode } from '@/utils/validators'
 import { formatPrice } from '@/utils/formatters'
 
@@ -74,13 +74,11 @@ const suggestions = ref([])
 const loadingSuggestions = ref(false)
 const showDropdown = ref(false)
 
-let debounceTimer
 let lastRequestId = 0
 
 const isCode = computed(() => /^\d{6}$/.test(query.value))
 
 function onInputChange(val) {
-  clearTimeout(debounceTimer)
   stockInfo.value = null
   searched.value = false
 
@@ -104,29 +102,20 @@ function onInputChange(val) {
     return
   }
 
-  // 含字母/中文：去抖联想
+  // 含字母/中文：本地搜索，毫秒级响应
   const requestId = ++lastRequestId
-  debounceTimer = setTimeout(async () => {
-    loadingSuggestions.value = true
-    showDropdown.value = true
-    try {
-      const results = await fetchStockSuggestions(query.value)
-      if (requestId === lastRequestId) {
-        suggestions.value = results || []
-      }
-    } catch (e) {
-      if (requestId === lastRequestId) {
-        suggestions.value = []
-      }
-    } finally {
-      if (requestId === lastRequestId) {
-        loadingSuggestions.value = false
-      }
+  loadingSuggestions.value = true
+  showDropdown.value = true
+  fetchStockSuggestions(query.value).then(results => {
+    if (requestId === lastRequestId) {
+      suggestions.value = results || []
+      loadingSuggestions.value = false
     }
-  }, 300)
+  })
 }
 
 function onFocus() {
+  preloadStockList()  // 提前加载本地股票列表
   if (query.value && !/^\d+$/.test(query.value) && suggestions.value.length) {
     showDropdown.value = true
   }
