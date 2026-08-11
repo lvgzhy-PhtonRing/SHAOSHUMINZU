@@ -76,11 +76,12 @@
     <div class="section-card" v-if="!isSell && tradeLogs.length">
       <div class="section-title trade-rec-title">
         股票交易记录
-        <span class="rec-all-tag" :class="{ active: !filterStockCode }" @click="clearFilter">全部</span>
+        <span class="swipe-hint">◀ 左滑编辑</span>
       </div>
 
       <!-- 按股票过滤 -->
       <div class="filter-row">
+        <span class="rec-all-tag" :class="{ active: !filterStockCode }" @click="clearFilter">全部</span>
         <div class="filter-input-wrap">
           <van-field
             v-model="filterQuery"
@@ -118,7 +119,7 @@
       <div v-else class="trade-log-list">
         <van-swipe-cell v-for="log in displayedLogs" :key="log.id" :right-width="140">
           <div class="trade-log-item">
-            <div class="tli-body" @click="startEditTrade(log)">
+            <div class="tli-body">
               <div class="tli-header">
                 <span class="tli-action" :class="log.type === 'add' ? 'rise' : 'fall'">
                   {{ log.type === 'add' ? '卖出' : '买入' }} {{ log.stock_code }}
@@ -689,10 +690,18 @@ function initSellEntries() {
 
 /* ===== 交易记录过滤 ===== */
 .trade-rec-title { display: flex; align-items: center; gap: 8px; }
-.rec-all-tag { font-size: 11px; padding: 2px 10px; border-radius: 10px; color: var(--text-secondary); background: rgba(255,255,255,0.06); cursor: pointer; }
+.swipe-hint {
+  font-size: 11px;
+  background: linear-gradient(135deg, #e94560, #ff6b6b);
+  color: #fff;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-weight: 600;
+}
+.rec-all-tag { font-size: 11px; padding: 2px 10px; border-radius: 10px; color: var(--text-secondary); background: rgba(255,255,255,0.06); cursor: pointer; flex: 0 0 auto; }
 .rec-all-tag.active { color: var(--color-rise); background: rgba(233,69,96,0.12); font-weight: 600; }
-.filter-row { margin-bottom: 10px; }
-.filter-input-wrap { position: relative; }
+.filter-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.filter-input-wrap { position: relative; flex: 1; min-width: 0; }
 .filter-input { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-md); padding: 0 34px 0 4px; }
 .filter-input :deep(.van-field__control) { font-size: 13px; }
 .filter-clear { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 14px; color: var(--text-muted); padding: 4px; cursor: pointer; z-index: 2; }
@@ -738,8 +747,7 @@ function initSellEntries() {
 .trade-log-list { display: flex; flex-direction: column; gap: 2px; }
 .log-toggle { text-align: center; padding: 10px 0 2px; font-size: 12px; color: var(--text-secondary); cursor: pointer; }
 .log-toggle:active { opacity: 0.6; }
-.trade-log-item { padding: 12px 14px; background: var(--bg-card); display: flex; gap: 8px; align-items: center; cursor: pointer; }
-.trade-log-item:active { background: rgba(255,255,255,0.06); }
+.trade-log-item { padding: 12px 14px; background: var(--bg-card); display: flex; gap: 8px; align-items: center; }
 .tli-body { flex: 1; min-width: 0; }
 .tli-header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; flex-wrap: wrap; }
 .tli-action { font-size: 14px; font-weight: 600; font-family: var(--font-number); }
