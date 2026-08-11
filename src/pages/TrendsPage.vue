@@ -7,10 +7,10 @@
     <LoadingSkeleton v-if="loading" :count="3" />
 
     <template v-else>
-      <!-- 已清仓最赚钱TOP3 -->
+      <!-- 最赚钱TOP3 -->
       <div class="section-card">
         <div class="section-title">
-          <span class="rank-icon">🚀</span> 已清仓最赚钱TOP3
+          <span class="rank-icon">🚀</span> 最赚钱TOP3
           <span class="subtitle">仅比较已清仓股票</span>
         </div>
         <div v-if="!topGainers.length" class="rank-empty">暂无已清仓盈利股票</div>
@@ -23,10 +23,10 @@
         </div>
       </div>
 
-      <!-- 已清仓亏最多TOP3 -->
+      <!-- 亏最多TOP3 -->
       <div class="section-card">
         <div class="section-title">
-          <span class="rank-icon">💩</span> 已清仓亏最多TOP3
+          <span class="rank-icon">💩</span> 亏最多TOP3
           <span class="subtitle">仅比较已清仓股票</span>
         </div>
         <div v-if="!topLosers.length" class="rank-empty">暂无已清仓亏损股票 🎉</div>
@@ -192,16 +192,28 @@ const maxRatio = computed(() => {
   if (!trendData.value.length) return 100
   return Math.max(...trendData.value.map(d => d.ratio), 1)
 })
+const minRatio = computed(() => {
+  if (!trendData.value.length) return 0
+  return Math.min(...trendData.value.map(d => d.ratio), 100)
+})
 const maxAsset = computed(() => {
   if (!trendData.value.length) return 1000000
   return Math.max(...trendData.value.map(d => d.asset), 1)
 })
+const minAsset = computed(() => {
+  if (!trendData.value.length) return 0
+  return Math.min(...trendData.value.map(d => d.asset), 0)
+})
 
 function ratioBarPct(ratio) {
-  return (ratio / maxRatio.value) * 100
+  const range = maxRatio.value - minRatio.value
+  if (range < 0.01) return 100
+  return ((ratio - minRatio.value) / range) * 100
 }
 function assetBarPct(asset) {
-  return (asset / maxAsset.value) * 100
+  const range = maxAsset.value - minAsset.value
+  if (range < 0.01) return 100
+  return ((asset - minAsset.value) / range) * 100
 }
 
 function formatCompact(v) {

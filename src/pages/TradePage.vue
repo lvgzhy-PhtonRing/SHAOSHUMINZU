@@ -1,13 +1,12 @@
 <template>
   <div class="page trade-page">
     <div class="page-header">
-      <span class="page-title">{{ isSell ? '录入卖出' : '录入买入' }}</span>
+      <span class="page-title">{{ isSell ? '录入卖出' : '交易记录' }}</span>
     </div>
 
     <!-- 买入表单 -->
     <template v-if="!isSell">
       <div class="section-card">
-        <div class="buy-section-label">📈 录入买入</div>
         <StockSearch @stock-selected="onStockSelected" @buy-clicked="onBuyClicked" />
         <div v-if="formError" class="form-err">{{ formError }}</div>
       </div>
