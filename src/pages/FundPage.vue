@@ -4,16 +4,13 @@
       <span class="page-title">资本管理</span>
     </div>
 
-    <div class="fund-summary">
-      <div class="fs-row">
-        <span class="fs-label">总可用资金</span>
-        <span class="fs-amount num-mono">{{ formatMoney(totalAvailable) }}</span>
-      </div>
-      <div class="fs-row">
-        <span class="fs-label">股票总市值</span>
-        <span class="fs-amount num-mono">{{ formatMoney(totalMarketValue) }}</span>
-      </div>
-    </div>
+    <CapitalSummary
+      :total-capital="totalCapital"
+      :market-value="totalMarketValue"
+      :total-available="totalAvailable"
+      @open-change="showChangeDialog = true"
+      @open-detail="showDetailDialog = true"
+    />
 
     <LoadingSkeleton v-if="loading" :count="2" />
     <template v-else>
@@ -22,20 +19,21 @@
         :total-available="totalAvailable"
         :pool-costs="poolCosts"
         :submitting="fundStore.submitting"
-        @capital-change="onCapitalChange"
         @alloc-change="onAllocChange"
       />
       <AdjustmentPanel
         :logs="adjustLogs"
         :submitting="fundStore.submitting"
+        :market-value="totalMarketValue"
+        :total-available="totalAvailable"
         @add="onAdjustChange"
         @edit="onAdjustEdit"
         @delete="onDeleteLog"
       />
-      <div class="section-card">
-        <CapitalLogList :logs="capitalLogs" @delete="onDeleteLog" @edit="onEditLog" />
-      </div>
     </template>
+
+    <CapitalChangeDialog v-model:show="showChangeDialog" @capital-change="onCapitalChange" />
+    <CapitalDetailDialog v-model:show="showDetailDialog" :logs="capitalLogs" @delete="onDeleteLog" @edit="onEditLog" />
   </div>
 </template>
 
@@ -46,11 +44,13 @@ import { useFundStore } from '@/stores/funds'
 import { useHoldingStore } from '@/stores/holdings'
 import { usePriceStore } from '@/stores/prices'
 import { useTransactionStore } from '@/stores/transactions'
-import { formatMoney } from '@/utils/formatters'
+
 import { deleteCapitalLog, updateCapitalLog, updateTransaction, deleteTransaction, fetchTransactionsByPoolStock, deleteHolding, upsertHolding } from '@/api/supabase'
 import FundAllocationForm from '@/components/fund/FundAllocationForm.vue'
-import CapitalLogList from '@/components/fund/CapitalLogList.vue'
 import AdjustmentPanel from '@/components/fund/AdjustmentPanel.vue'
+import CapitalSummary from '@/components/fund/CapitalSummary.vue'
+import CapitalChangeDialog from '@/components/fund/CapitalChangeDialog.vue'
+import CapitalDetailDialog from '@/components/fund/CapitalDetailDialog.vue'
 import LoadingSkeleton from '@/components/common/LoadingSkeleton.vue'
 
 const poolStore = usePoolStore()
@@ -60,6 +60,8 @@ const priceStore = usePriceStore()
 const txStore = useTransactionStore()
 
 const loading = ref(true)
+const showChangeDialog = ref(false)
+const showDetailDialog = ref(false)
 const totalCapital = computed(() => fundStore.totalCapital)
 
 // 各子池持仓成本（用于计算可用资金）
@@ -301,16 +303,5 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.fund-summary {
-  margin-bottom: 16px;
-  padding: 16px;
-  background: var(--bg-card);
-  border-radius: var(--radius-lg);
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-.fs-row { display: flex; justify-content: space-between; align-items: baseline; }
-.fs-label { font-size: 13px; color: var(--text-secondary); }
-.fs-amount { font-size: 22px; font-weight: 700; font-family: var(--font-number); }
+
 </style>
