@@ -79,10 +79,10 @@ const props = defineProps({
 const emit = defineEmits(['edit'])
 
 const users = [
-  { key: '春', color: '#e94560' },
-  { key: '维', color: '#00d2a1' },
-  { key: '队', color: '#ffc107' },
-  { key: '回', color: '#7c4dff' }
+  { key: '春', name: '春', color: '#e94560' },
+  { key: '维', name: '维', color: '#00d2a1' },
+  { key: '队', name: '队', color: '#ffc107' },
+  { key: '回', name: '回', color: '#7c4dff' }
 ]
 
 const wan = (yuan) => (yuan / 10000).toFixed(1)
@@ -198,10 +198,10 @@ const emit = defineEmits(['close', 'save'])
 
 const STEP = 10000
 const users = [
-  { key: '春', color: '#e94560' },
-  { key: '维', color: '#00d2a1' },
-  { key: '队', color: '#ffc107' },
-  { key: '回', color: '#7c4dff' }
+  { key: '春', name: '春', color: '#e94560' },
+  { key: '维', name: '维', color: '#00d2a1' },
+  { key: '队', name: '队', color: '#ffc107' },
+  { key: '回', name: '回', color: '#7c4dff' }
 ]
 const userKeys = users.map(u => u.key)
 

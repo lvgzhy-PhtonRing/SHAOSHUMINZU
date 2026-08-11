@@ -22,15 +22,24 @@
         @add="onAdjustChange"
         @delete="onDeleteLog"
       />
-      <FundAllocationForm
-        :pools="poolStore.pools"
-        :total-available="totalAvailable"
+      <FundAllocationSummary
+        :allocation="allocation"
         :pool-costs="poolCosts"
-        @alloc-change="onAllocChange"
+        :total-available="totalAvailable"
+        @edit="showAllocEditor = true"
       />
     </template>
 
     <CapitalDetailDialog v-model:show="showDetailDialog" :logs="capitalLogs" @delete="onDeleteLog" @edit="onEditLog" @capital-change="onCapitalChange" />
+
+    <FundAllocationEditor
+      v-if="showAllocEditor"
+      :allocation="allocation"
+      :pool-costs="poolCosts"
+      :total-available="totalAvailable"
+      @close="showAllocEditor = false"
+      @save="onAllocSave"
+    />
   </div>
 </template>
 
@@ -42,8 +51,9 @@ import { useHoldingStore } from '@/stores/holdings'
 import { usePriceStore } from '@/stores/prices'
 import { useTransactionStore } from '@/stores/transactions'
 
-import { deleteCapitalLog, updateCapitalLog, updateTransaction, deleteTransaction, fetchTransactionsByPoolStock, deleteHolding, upsertHolding } from '@/api/supabase'
-import FundAllocationForm from '@/components/fund/FundAllocationForm.vue'
+import { deleteCapitalLog, updateCapitalLog, updateTransaction, deleteTransaction, fetchTransactionsByPoolStock, deleteHolding, upsertHolding, savePoolAllocation, loadPoolAllocation } from '@/api/supabase'
+import FundAllocationSummary from '@/components/fund/FundAllocationSummary.vue'
+import FundAllocationEditor from '@/components/fund/FundAllocationEditor.vue'
 import AdjustmentPanel from '@/components/fund/AdjustmentPanel.vue'
 import CapitalSummary from '@/components/fund/CapitalSummary.vue'
 import CapitalDetailDialog from '@/components/fund/CapitalDetailDialog.vue'
@@ -87,6 +97,39 @@ const floatPnl = computed(() => totalMarketValue.value - totalCost.value)
 const totalAvailable = computed(() => fundStore.totalAvailable)
 // 总资产 = 持仓市值 + 可用资金
 const totalAsset = computed(() => totalMarketValue.value + totalAvailable.value)
+
+// ===== 子池资金分配（只读结果 + 全屏编辑） =====
+const showAllocEditor = ref(false)
+const USER_KEYS = ['春', '维', '队', '回']
+
+function defaultAllocation() {
+  const each = Math.floor(totalAvailable.value / 5 / 10000) * 10000
+  const alloc = { '公共池': totalAvailable.value - each * 4 }
+  for (const k of USER_KEYS) alloc[k] = each
+  return alloc
+}
+const allocation = ref(defaultAllocation())
+
+async function loadAllocation() {
+  try {
+    const server = await loadPoolAllocation()
+    if (server) { allocation.value = server; return }
+  } catch (e) {}
+  try {
+    const raw = localStorage.getItem('poolAmounts')
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      if (parsed['公共池'] !== undefined) allocation.value = parsed
+    }
+  } catch (e) {}
+}
+
+function onAllocSave(config) {
+  allocation.value = config
+  localStorage.setItem('poolAmounts', JSON.stringify(config))
+  savePoolAllocation(config).catch(e => console.error('Save allocation:', e))
+  showAllocEditor.value = false
+}
 // 资本变动记录（仅外部资金 增资/减资/初始，不含股票买卖与校对核缺）
 const capitalLogs = computed(() => fundStore.capitalLogs.filter(l => l.pool_id === null && l.category !== 'adjust'))
 // 校对核缺记录（独立管理）
@@ -126,10 +169,6 @@ async function onAdjustChange({ type, amount, note, date }) {
   } catch (e) {
     console.error('Adjust change error:', e)
   }
-}
-
-function onAllocChange({ pools: allocs }) {
-  console.log('Allocation saved:', allocs)
 }
 
 async function onEditLog(payload) {
@@ -273,7 +312,12 @@ function parseStockCode2(note) {
 
 onMounted(async () => {
   try {
-    await Promise.all([poolStore.loadPools(), holdingStore.loadHoldings(), fundStore.loadCapitalLogs()])
+    await Promise.all([
+      poolStore.loadPools(),
+      holdingStore.loadHoldings(),
+      fundStore.loadCapitalLogs(),
+      loadAllocation()
+    ])
     const codes = holdingStore.stockCodes
     if (codes.length) await priceStore.loadPrices(codes)
   } catch (e) {
