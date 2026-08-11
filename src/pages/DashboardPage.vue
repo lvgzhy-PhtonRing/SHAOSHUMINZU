@@ -35,8 +35,10 @@
     />
 
     <div class="section-title">
-      <span>持仓股票</span>
-      <span class="swipe-hint">◀ 左滑股票卖出</span>
+      <span class="section-title-left">
+        <span>持仓股票</span>
+        <span class="swipe-hint">◀ 左滑卖出股票</span>
+      </span>
       <span class="stock-count">{{ displayHoldings.length }} 只</span>
     </div>
 
@@ -266,6 +268,7 @@ const summary = computed(() => {
   display: flex; justify-content: space-between;
   padding: 8px 0 6px; font-size: 13px; font-weight: 600;
 }
+.section-title-left { display: flex; align-items: center; gap: 8px; }
 .stock-count { font-size: 12px; color: var(--text-secondary); font-weight: 400; }
 .swipe-hint {
   font-size: 11px;

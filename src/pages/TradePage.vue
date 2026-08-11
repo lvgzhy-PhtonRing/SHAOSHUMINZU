@@ -1,7 +1,7 @@
 <template>
   <div class="page trade-page">
     <div class="page-header">
-      <span class="page-title">{{ isSell ? '卖出' : '录入买入' }}</span>
+      <span class="page-title">{{ isSell ? '录入卖出' : '录入买入' }}</span>
     </div>
 
     <!-- 买入表单 -->
@@ -84,7 +84,7 @@
     </template>
 
     <!-- 历史买卖记录 -->
-    <div class="section-card" v-if="tradeLogs.length">
+    <div class="section-card" v-if="!isSell && tradeLogs.length">
       <div class="section-title">股票交易记录</div>
       <div class="trade-log-list">
         <van-swipe-cell v-for="log in displayedLogs" :key="log.id" :right-width="140">
