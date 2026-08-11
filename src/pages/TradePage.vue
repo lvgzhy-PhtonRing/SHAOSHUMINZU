@@ -122,13 +122,15 @@
       <div v-if="editingTrade" class="overlay" @click.self="editingTrade = null">
         <div class="dialog">
           <div class="dlg-title">编辑交易记录</div>
-          <div class="dlg-field">
-            <label class="dlg-label">类型</label>
-            <span class="dlg-value">{{ editingTrade.type === 'add' ? '卖出' : '买入' }}</span>
-          </div>
-          <div class="dlg-field">
-            <label class="dlg-label">股票代码</label>
-            <span class="dlg-value">{{ editStockCode }}</span>
+          <div class="dlg-row-flex">
+            <div class="dlg-field dlg-half">
+              <label class="dlg-label">类型</label>
+              <span class="dlg-value">{{ editingTrade.type === 'add' ? '卖出' : '买入' }}</span>
+            </div>
+            <div class="dlg-field dlg-half">
+              <label class="dlg-label">股票代码</label>
+              <span class="dlg-value">{{ editStockCode }}</span>
+            </div>
           </div>
           <div class="dlg-field">
             <label class="dlg-label">子池</label>
@@ -144,13 +146,15 @@
             <label class="dlg-label">成交单价</label>
             <input v-model="editPrice" type="number" inputmode="decimal" class="dlg-input num-mono" step="0.001" @input="onEditPriceOrQtyChange" />
           </div>
-          <div class="dlg-field">
-            <label class="dlg-label">成交金额（{{ formatMoney(editComputedAmount) }}）</label>
-            <span class="dlg-value num-mono">含费 {{ formatMoney(editComputedActual) }}</span>
-          </div>
-          <div class="dlg-field">
-            <label class="dlg-label">手续费（{{ editingTrade?.type === 'add' ? '0.5954' : '0.0854' }}‰ 最低5元）</label>
-            <span class="dlg-value num-mono">{{ formatMoney(editFee) }}</span>
+          <div class="dlg-row-flex">
+            <div class="dlg-field dlg-half">
+              <label class="dlg-label">成交金额（{{ formatMoney(editComputedAmount) }}）</label>
+              <span class="dlg-value num-mono">含费 {{ formatMoney(editComputedActual) }}</span>
+            </div>
+            <div class="dlg-field dlg-half">
+              <label class="dlg-label">手续费（{{ editingTrade?.type === 'add' ? '0.5954' : '0.0854' }}‰）</label>
+              <span class="dlg-value num-mono">{{ formatMoney(editFee) }}</span>
+            </div>
           </div>
           <div class="dlg-field">
             <label class="dlg-label">交易日期</label>
@@ -590,6 +594,8 @@ function initSellEntries() {
 .dialog { background: var(--bg-card); border-radius: var(--radius-lg); padding: 20px; width: 100%; max-width: 360px; }
 .dlg-title { font-size: 17px; font-weight: 700; margin-bottom: 16px; }
 .dlg-field { margin-bottom: 12px; }
+.dlg-row-flex { display: flex; gap: 12px; margin-bottom: 12px; }
+.dlg-half { flex: 1; min-width: 0; }
 .dlg-label { display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; }
 .dlg-value { font-size: 14px; color: var(--text-primary); }
 .dlg-input { width: 100%; padding: 10px 12px; border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-md); background: rgba(255,255,255,0.04); color: #fff; font-size: 15px; outline: none; box-sizing: border-box; }
