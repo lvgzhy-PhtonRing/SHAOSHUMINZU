@@ -41,11 +41,11 @@
         </div>
       </div>
 
-      <!-- 子池硬度 -->
+      <!-- 谁最HARD -->
       <div class="section-card hard-card">
         <div class="section-title">
           <span class="title-accent title-accent--hard"></span>
-          子池硬度
+          谁最HARD
           <span class="subtitle">资产 / 初始分配</span>
         </div>
 
@@ -75,7 +75,7 @@
         <div class="section-title">
           <span class="title-accent title-accent--trend"></span>
           趋势总览
-          <span class="subtitle">近7交易日</span>
+          <span class="subtitle">近15交易日</span>
         </div>
         <div v-if="!trendData.length" class="trend-empty">暂无数据</div>
         <div v-else class="trend-table">
@@ -291,10 +291,10 @@ onMounted(async () => {
 
     await saveCurrentPositionSnapshot()
 
-    const snaps = await fetchPositionSnapshots(15)
+    const snaps = await fetchPositionSnapshots(30)
     const tradingDays = snaps.filter(s => !isWeekend(s.date))
-    const last7 = tradingDays.slice(-7)
-    trendData.value = last7.map(s => {
+    const recent = tradingDays.slice(-15)
+    trendData.value = recent.map(s => {
       const d = new Date(s.date + 'T00:00:00')
       const label = '周' + WEEKDAY[d.getDay()] + ' ' +
         String(d.getMonth() + 1).padStart(2, '0') + '/' +
@@ -356,15 +356,16 @@ onMounted(async () => {
   border-radius: 10px;
 }
 .rank-badge {
-  width: 22px; height: 22px;
-  border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 11px; font-weight: 700; color: #fff;
+  width: 24px;
+  font-size: 15px;
+  font-weight: 800;
+  font-family: var(--font-number);
+  text-align: center;
   flex-shrink: 0;
 }
-.rank-badge--1 { background: linear-gradient(135deg, #ffc107, #ff9800); }
-.rank-badge--2 { background: linear-gradient(135deg, #90a4ae, #78909c); }
-.rank-badge--3 { background: linear-gradient(135deg, #a1887f, #8d6e63); }
+.rank-badge--1 { color: var(--color-rise); }
+.rank-badge--2 { color: var(--text-secondary); }
+.rank-badge--3 { color: var(--text-muted); }
 .rank-stock-name {
   flex: 1;
   font-size: 15px;
@@ -394,7 +395,7 @@ onMounted(async () => {
 }
 .th-label {
   width: 72px; flex-shrink: 0;
-  font-size: 10px; color: var(--text-muted); text-align: right;
+  font-size: 10px; color: var(--text-muted); text-align: left;
 }
 .th-col {
   flex: 1;
@@ -410,7 +411,7 @@ onMounted(async () => {
   width: 72px; flex-shrink: 0;
   font-size: 11px; font-weight: 600;
   color: var(--text-secondary);
-  text-align: right;
+  text-align: left;
   white-space: nowrap;
 }
 .tr-col {
