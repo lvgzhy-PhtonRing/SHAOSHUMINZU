@@ -37,7 +37,7 @@
 import { ref, computed } from 'vue'
 import { formatMoney } from '@/utils/formatters'
 
-const props = defineProps({ show: { type: Boolean, default: false } })
+defineProps({ show: { type: Boolean, default: false } })
 const emit = defineEmits(['update:show', 'capital-change'])
 
 const deltaAmount = ref('')

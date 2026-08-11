@@ -92,8 +92,7 @@ import { savePoolAllocation } from '@/api/supabase'
 const props = defineProps({
   pools: { type: Array, default: () => [] },
   totalAvailable: { type: Number, default: 0 },
-  poolCosts: { type: Object, default: () => ({}) },
-  submitting: { type: Boolean, default: false }
+  poolCosts: { type: Object, default: () => ({}) }
 })
 const emit = defineEmits(['alloc-change'])
 

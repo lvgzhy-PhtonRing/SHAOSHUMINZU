@@ -18,7 +18,6 @@
         :pools="poolStore.pools"
         :total-available="totalAvailable"
         :pool-costs="poolCosts"
-        :submitting="fundStore.submitting"
         @alloc-change="onAllocChange"
       />
       <AdjustmentPanel
