@@ -80,6 +80,7 @@
               {{ d.ratio >= trendData[i-1].ratio ? '▲' : '▼' }}
             </span>
             <span v-else class="bar-delta-spacer"></span>
+            <span class="capchg-slot"></span>
           </div>
         </div>
       </div>
@@ -99,13 +100,11 @@
               {{ d.asset >= trendData[i-1].asset ? '▲' : '▼' }}
             </span>
             <span v-else class="bar-delta-spacer"></span>
-          </div>
-          <!-- 资金变动标记 -->
-          <div v-for="(d, i) in trendData" :key="'cc'+i">
-            <div v-if="d.capitalChange !== 0" class="capchg-tag"
+            <span v-if="d.capitalChange !== 0" class="capchg-tag"
               :class="d.capitalChange > 0 ? 'rise' : 'fall'">
               {{ d.capitalChange > 0 ? '增资' : '减资' }}{{ formatCompact(Math.abs(d.capitalChange)) }}
-            </div>
+            </span>
+            <span v-else class="capchg-slot"></span>
           </div>
         </div>
       </div>
@@ -202,7 +201,7 @@ const maxAsset = computed(() => {
 })
 const minAsset = computed(() => {
   if (!trendData.value.length) return 0
-  return Math.min(...trendData.value.map(d => d.asset), 0)
+  return Math.min(...trendData.value.map(d => d.asset))
 })
 
 function ratioBarPct(ratio) {
@@ -418,10 +417,18 @@ onMounted(async () => {
   font-size: 10px;
   font-weight: 600;
   padding: 1px 6px;
-  margin-top: 2px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .capchg-tag.rise { color: var(--color-rise); }
 .capchg-tag.fall { color: var(--color-fall); }
+.capchg-slot {
+  font-size: 10px;
+  line-height: 1.4;
+  padding: 1px 6px;
+  visibility: hidden;
+  flex-shrink: 0;
+}
 
 .trend-empty {
   height: 80px;
