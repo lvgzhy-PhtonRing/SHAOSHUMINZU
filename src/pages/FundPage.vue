@@ -153,7 +153,9 @@ async function onEditLog(payload) {
     const { id, amount, note } = payload
     // 普通资金变动（增资/减资）：更新后刷新，确保总可用联动
     if (!payload.pool_id) {
-      await fundStore.editCapitalLog(id, { amount, note })
+      const updates = { amount, note }
+      if (payload.date) updates.created_at = payload.date + 'T00:00:00+00:00'
+      await fundStore.editCapitalLog(id, updates)
       await fundStore.loadCapitalLogs()
       return
     }

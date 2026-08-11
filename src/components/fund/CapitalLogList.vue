@@ -58,6 +58,10 @@
             <input v-model="editAmount" type="number" inputmode="decimal" class="dlg-input num-mono" />
           </div>
           <div class="dlg-field">
+            <label class="dlg-label">日期</label>
+            <input v-model="editDate" type="date" class="dlg-input" />
+          </div>
+          <div class="dlg-field">
             <label class="dlg-label">备注</label>
             <input v-model="editNote" type="text" class="dlg-input" placeholder="股票代码或备注" />
           </div>
@@ -109,6 +113,7 @@ const emit = defineEmits(['delete', 'edit'])
 const editing = ref(null)
 const editAmount = ref('')
 const editNote = ref('')
+const editDate = ref('')
 const editQuantity = ref('')
 const editStockCode = ref('')
 
@@ -132,6 +137,7 @@ async function startEdit(log) {
   editing.value = log
   editAmount.value = String(log.amount)
   editNote.value = log.note || ''
+  editDate.value = (log.created_at || '').slice(0, 10)
   editQuantity.value = ''
   editStockCode.value = ''
 
@@ -152,7 +158,7 @@ function saveEdit() {
   if (!editing.value) return
   const amount = parseFloat(editAmount.value)
   if (!amount || amount <= 0) return
-  const payload = { id: editing.value.id, amount, note: editNote.value, origAmount: editing.value.amount }
+  const payload = { id: editing.value.id, amount, note: editNote.value, date: editDate.value, origAmount: editing.value.amount }
   if (editing.value.pool_id) {
     payload.quantity = parseInt(editQuantity.value) || 0
     payload.stock_code = editStockCode.value
