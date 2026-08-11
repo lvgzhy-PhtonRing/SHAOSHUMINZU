@@ -129,13 +129,19 @@ const positionSlogan = computed(() => {
 })
 
 const poolPositionData = computed(() => {
-  // 每个子池的初始分配：优先读取保存的分配配置，无配置回退 11 万
+  // 每个子池的初始分配：四人从配置读取（缺省 11 万），公共池 = 总资本 − 四人合计（不读配置）
   const poolInitial = {}
+  const fourAlloc = {}
   for (const p of poolStore.pools) {
-    const cfg = allocConfig.value?.[p.name]
-    poolInitial[p.id] = cfg !== undefined
-      ? cfg
-      : (p.name === '公共池' ? totalCapital.value - SUB_POOL_INIT * (poolStore.pools.length - 1) : SUB_POOL_INIT)
+    if (p.name !== '公共池') {
+      fourAlloc[p.id] = allocConfig.value?.[p.name] ?? SUB_POOL_INIT
+    }
+  }
+  const fourSum = Object.values(fourAlloc).reduce((s, v) => s + v, 0)
+  for (const p of poolStore.pools) {
+    poolInitial[p.id] = p.name === '公共池'
+      ? totalCapital.value - fourSum
+      : (fourAlloc[p.id] ?? SUB_POOL_INIT)
   }
 
   // 从 capital_log 实际流水计算每个子池可用资金

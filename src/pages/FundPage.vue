@@ -24,8 +24,9 @@
       />
       <FundAllocationSummary
         :allocation="allocation"
-        :pool-costs="poolCosts"
-        :total-available="totalAvailable"
+        :pool-flows="poolFlows"
+        :pool-market-values="poolMarketValues"
+        :total-capital="totalCapital"
         @edit="showAllocEditor = true"
       />
     </template>
@@ -35,8 +36,8 @@
     <FundAllocationEditor
       v-if="showAllocEditor"
       :allocation="allocation"
-      :pool-costs="poolCosts"
-      :total-available="totalAvailable"
+      :pool-flows="poolFlows"
+      :total-capital="totalCapital"
       @close="showAllocEditor = false"
       @save="onAllocSave"
     />
@@ -99,27 +100,64 @@ const totalAvailable = computed(() => fundStore.totalAvailable)
 const totalAsset = computed(() => totalMarketValue.value + totalAvailable.value)
 
 // ===== 子池资金分配（只读结果 + 全屏编辑） =====
-const showAllocEditor = ref(false)
+const STEP = 10000
 const USER_KEYS = ['春', '维', '队', '回']
+const showAllocEditor = ref(false)
 
 function defaultAllocation() {
-  const each = Math.floor(totalAvailable.value / 5 / 10000) * 10000
-  const alloc = { '公共池': totalAvailable.value - each * 4 }
+  const each = Math.floor(totalCapital.value / 5 / STEP) * STEP
+  const alloc = {}
   for (const k of USER_KEYS) alloc[k] = each
   return alloc
 }
 const allocation = ref(defaultAllocation())
 
+// 各子池 capital_log 流水（sell-in / buy-out），用于 flow 模型算可用
+const poolFlows = computed(() => {
+  const map = {}
+  for (const l of fundStore.capitalLogs) {
+    if (l.pool_id === null) continue
+    const pool = poolStore.pools.find(p => p.id === l.pool_id)
+    const name = pool?.name
+    if (!name) continue
+    const entry = map[name] = map[name] || { sellIn: 0, buyOut: 0 }
+    if (l.type === 'add') entry.sellIn += l.amount
+    else entry.buyOut += l.amount
+  }
+  return map
+})
+
+// 各子池持仓市值
+const poolMarketValues = computed(() => {
+  const map = {}
+  for (const h of holdingStore.holdings) {
+    const pool = poolStore.pools.find(p => p.id === h.pool_id)
+    const name = pool?.name
+    if (!name) continue
+    const price = priceStore.prices[h.stock_code]?.price || 0
+    map[name] = (map[name] || 0) + price * h.quantity
+  }
+  return map
+})
+
 async function loadAllocation() {
   try {
     const server = await loadPoolAllocation()
-    if (server) { allocation.value = server; return }
+    if (server) {
+      for (const k of USER_KEYS) {
+        if (server[k] !== undefined) allocation.value[k] = server[k]
+      }
+      return
+    }
   } catch (e) {}
+  // fallback to localStorage（向后兼容：旧格式可能含公共池，忽略）
   try {
     const raw = localStorage.getItem('poolAmounts')
     if (raw) {
       const parsed = JSON.parse(raw)
-      if (parsed['公共池'] !== undefined) allocation.value = parsed
+      for (const k of USER_KEYS) {
+        if (parsed[k] !== undefined) allocation.value[k] = parsed[k]
+      }
     }
   } catch (e) {}
 }

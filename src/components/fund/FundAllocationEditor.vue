@@ -7,7 +7,7 @@
           <button class="ed-close" @click="close">✕</button>
         </div>
 
-        <div class="ed-sub">总可用资金 <b class="num-mono">{{ formatMoney(totalAvailable) }}</b></div>
+        <div class="ed-sub">总资本 <b class="num-mono">{{ formatMoney(totalCapital) }}</b></div>
 
         <div class="link-row">
           <span class="link-label">🔗 四人联动</span>
@@ -25,7 +25,7 @@
             <van-slider v-model="sharedVal" :min="sliderMin" :max="sliderMax" :step="STEP" />
             <div class="sr-meta">
               四人合计 {{ wan(usersTotal) }}万 ·
-              每人可用 {{ formatMoney(sharedVal - maxCost) }}
+              每人可用 {{ formatMoney(availableOf(users[0].key)) }}
             </div>
           </div>
         </template>
@@ -62,8 +62,8 @@ import { formatMoney } from '@/utils/formatters'
 
 const props = defineProps({
   allocation: { type: Object, default: () => ({}) },
-  poolCosts: { type: Object, default: () => ({}) },
-  totalAvailable: { type: Number, default: 0 }
+  poolFlows: { type: Object, default: () => ({}) },
+  totalCapital: { type: Number, default: 0 }
 })
 const emit = defineEmits(['close', 'save'])
 
@@ -76,42 +76,53 @@ const users = [
 ]
 const userKeys = users.map(u => u.key)
 
-// ===== 初始金额（元），从 props.allocation 初始化，缺省按均分 =====
+// ===== 初始金额（元），从 props.allocation 初始化，缺省按总资本均分 =====
 function defaultEach() {
-  return Math.floor(props.totalAvailable / 5 / STEP) * STEP
+  return Math.floor(props.totalCapital / 5 / STEP) * STEP
 }
 const amounts = reactive({})
 for (const k of userKeys) amounts[k] = props.allocation[k] || defaultEach()
 
-// 联动默认开启；若存储的四人金额不等（上次独立保存），则初始为独立态
 function initialLinked() {
   const first = amounts[userKeys[0]]
   return userKeys.every(k => amounts[k] === first)
 }
 const linked = ref(initialLinked())
 
-// ===== 成本 / 下限 / 上限 =====
-const costOf = (k) => props.poolCosts[k] || 0
-const floorOf = (k) => Math.ceil((costOf(k) + 1) / STEP) * STEP
-const availableOf = (k) => amounts[k] - costOf(k)
-const cap = computed(() => props.totalAvailable - costOf('公共池')) // 四人合计上限
+// ===== Flow-based 可用资金：可用 = 初始分配 + 卖出到账 − 买入支出 =====
+const flowOf = (k) => props.poolFlows[k] || { sellIn: 0, buyOut: 0 }
+// netBuy = 总买入 − 总卖出（正 = 净消耗资金）
+const netBuyOf = (k) => flowOf(k).buyOut - flowOf(k).sellIn
+const availableOf = (k) => amounts[k] - netBuyOf(k)
+
+// ===== 下限：可用 > 0 → 分配 > netBuy =====
+const floorOf = (k) => {
+  const nb = netBuyOf(k)
+  if (nb < 0) return 0
+  return Math.ceil((nb + 1) / STEP) * STEP
+}
+
+// ===== 上限：公共池 可用 > 0 =====
+// 公共池可用 = (totalCapital − Σ四人分配) + sellIn[公共池] − buyOut[公共池] > 0
+// → Σ四人 < totalCapital + sellIn[公共池] − buyOut[公共池]
+const gongyouNetBuy = computed(() => netBuyOf('公共池'))
+const userCap = computed(() => Math.max(0, props.totalCapital - gongyouNetBuy.value - 1))
 const sumFloors = computed(() => userKeys.reduce((s, k) => s + floorOf(k), 0))
 
-// 联动：共享值范围 [floorShared, sliderMax]，sliderMax 钳制到不小于下限
+// 联动：共享值范围 [floorShared, vMax]
 const floorShared = computed(() => Math.max(...userKeys.map(k => floorOf(k))))
-const vMax = computed(() => Math.floor((cap.value - 1) / 4 / STEP) * STEP)
+const vMax = computed(() => Math.floor(userCap.value / 4 / STEP) * STEP)
 const sliderMin = computed(() => floorShared.value)
 const sliderMax = computed(() => Math.max(vMax.value, floorShared.value))
 const sharedVal = computed({
   get: () => amounts[userKeys[0]],
   set: (v) => { for (const k of userKeys) amounts[k] = v }
 })
-const maxCost = computed(() => Math.max(...userKeys.map(k => costOf(k))))
 
-// 独立：拖动某根时，max 动态收紧使累计不超上限（cap − 1 留 1 元给公共池）
+// 独立：拖动某根时 max 动态收紧
 function maxOf(key) {
   const others = userKeys.filter(k => k !== key).reduce((s, k) => s + amounts[k], 0)
-  const m = Math.floor((cap.value - 1 - others) / STEP) * STEP
+  const m = Math.floor((userCap.value - others) / STEP) * STEP
   return Math.max(floorOf(key), m)
 }
 
@@ -124,31 +135,30 @@ function toggleLink() {
   }
 }
 
-// ===== 派生显示 =====
+// ===== 派生 =====
 const wan = (yuan) => (yuan / 10000).toFixed(1)
 const usersTotal = computed(() => userKeys.reduce((s, k) => s + amounts[k], 0))
-const publicAlloc = computed(() => props.totalAvailable - usersTotal.value)
-const publicAvailable = computed(() => publicAlloc.value - costOf('公共池'))
+const publicAlloc = computed(() => props.totalCapital - usersTotal.value)
+const publicAvailable = computed(() => publicAlloc.value - gongyouNetBuy.value)
 
 // ===== 校验 =====
 const errorMsg = computed(() => {
-  if (cap.value <= 0) return '公共池持仓已超过总可用，无法分配'
-  if (linked.value && floorShared.value > vMax.value) return '四人持仓下限超过可分配上限，请先减持或调整公共池'
-  if (!linked.value && sumFloors.value > cap.value - 1) return '四人持仓下限合计超过可分配上限，请先减持或调整公共池'
+  if (userCap.value <= 0) return '公共池可用资金不足，无法分配'
+  if (linked.value && floorShared.value > vMax.value) return '单人下限超过可分配上限，请先减持'
+  if (!linked.value && sumFloors.value > userCap.value) return '四人下限合计超过可分配上限，请先减持'
   return ''
 })
 const canSave = computed(() => {
-  if (cap.value <= 0) return false
-  if (usersTotal.value > cap.value - 1) return false
+  if (userCap.value <= 0) return false
+  if (usersTotal.value > userCap.value) return false
   if (linked.value) return floorShared.value <= vMax.value
-  return sumFloors.value <= cap.value - 1
+  return sumFloors.value <= userCap.value
 })
 
-// ===== 关闭 / 保存 =====
 function close() { emit('close') }
 function doSave() {
   if (!canSave.value) return
-  const config = { '公共池': publicAlloc.value }
+  const config = {}
   for (const k of userKeys) config[k] = amounts[k]
   emit('save', config)
 }

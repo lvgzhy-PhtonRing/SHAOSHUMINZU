@@ -1,15 +1,18 @@
 <template>
   <div class="card">
     <div class="card-title">子池资金分配</div>
-    <div class="card-desc">总可用资金 <b class="num-mono">{{ formatMoney(totalAvailable) }}</b></div>
+    <div class="card-desc">
+      总资本 <b class="num-mono">{{ formatMoney(totalCapital) }}</b>
+    </div>
 
     <div class="alloc-list">
       <div class="pool-row">
         <div class="pool-left"><span class="dot" style="background:#0f3460"></span>公共池</div>
-        <span class="alloc-wan num-mono">{{ wan(allocation['公共池'] || 0) }} 万</span>
+        <span class="alloc-wan num-mono">{{ wan(gongyouAlloc) }} 万</span>
         <span class="avl num-mono" :class="{ neg: gongyouAvailable <= 0 }">
           <template v-if="gongyouAvailable <= 0">⚠️ </template>可用 {{ formatMoney(gongyouAvailable) }}
         </span>
+        <span class="mv num-mono">市值 {{ formatMoney(gongyouMv) }}</span>
       </div>
       <div class="pool-row" v-for="u in users" :key="u.key">
         <div class="pool-left"><span class="dot" :style="{ background: u.color }"></span>{{ u.name }}</div>
@@ -17,6 +20,7 @@
         <span class="avl num-mono" :class="{ neg: availableOf(u.key) <= 0 }">
           <template v-if="availableOf(u.key) <= 0">⚠️ </template>可用 {{ formatMoney(availableOf(u.key)) }}
         </span>
+        <span class="mv num-mono">市值 {{ formatMoney(marketValueOf(u.key)) }}</span>
       </div>
     </div>
 
@@ -30,8 +34,9 @@ import { formatMoney } from '@/utils/formatters'
 
 const props = defineProps({
   allocation: { type: Object, default: () => ({}) },
-  poolCosts: { type: Object, default: () => ({}) },
-  totalAvailable: { type: Number, default: 0 }
+  poolFlows: { type: Object, default: () => ({}) },
+  poolMarketValues: { type: Object, default: () => ({}) },
+  totalCapital: { type: Number, default: 0 }
 })
 const emit = defineEmits(['edit'])
 
@@ -43,9 +48,16 @@ const users = [
 ]
 
 const wan = (yuan) => (yuan / 10000).toFixed(1)
-const costOf = (k) => props.poolCosts[k] || 0
-const availableOf = (k) => (props.allocation[k] || 0) - costOf(k)
-const gongyouAvailable = computed(() => (props.allocation['公共池'] || 0) - costOf('公共池'))
+
+const flowOf = (k) => props.poolFlows[k] || { sellIn: 0, buyOut: 0 }
+// 可用 = 初始分配 + 卖出到账 − 买入支出（与 totalAvailable 一致）
+const availableOf = (k) => (props.allocation[k] || 0) + flowOf(k).sellIn - flowOf(k).buyOut
+const marketValueOf = (k) => props.poolMarketValues[k] || 0
+
+const usersTotal = computed(() => users.reduce((s, u) => s + (props.allocation[u.key] || 0), 0))
+const gongyouAlloc = computed(() => props.totalCapital - usersTotal.value)
+const gongyouAvailable = computed(() => gongyouAlloc.value + flowOf('公共池').sellIn - flowOf('公共池').buyOut)
+const gongyouMv = computed(() => props.poolMarketValues['公共池'] || 0)
 </script>
 
 <style scoped>
@@ -61,6 +73,7 @@ const gongyouAvailable = computed(() => (props.allocation['公共池'] || 0) - c
 .alloc-wan { margin-left: auto; font-size: 13px; color: var(--text-primary); }
 .avl { font-size: 11px; color: var(--text-secondary); font-weight: 500; }
 .avl.neg { color: var(--color-fall); }
+.mv { font-size: 11px; color: var(--text-muted); }
 .edit-btn {
   width: 100%; margin-top: 12px; padding: 12px; border: none; border-radius: var(--radius-md);
   background: var(--bg-accent); color: #fff; font-size: 15px; font-weight: 600; cursor: pointer;
