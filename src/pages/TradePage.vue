@@ -744,10 +744,10 @@ function initSellEntries() {
 .sfr-item { display: flex; justify-content: space-between; padding: 3px 0; font-size: 12px; color: var(--text-secondary); }
 .sfr-item .num-mono { font-size: 12px; }
 
-.trade-log-list { display: flex; flex-direction: column; gap: 2px; }
-.log-toggle { text-align: center; padding: 10px 0 2px; font-size: 12px; color: var(--text-secondary); cursor: pointer; }
+.trade-log-list { display: flex; flex-direction: column; gap: 8px; }
+.log-toggle { text-align: center; padding: 14px 0 2px; font-size: 12px; color: var(--text-secondary); cursor: pointer; }
 .log-toggle:active { opacity: 0.6; }
-.trade-log-item { padding: 12px 14px; background: var(--bg-card); display: flex; gap: 8px; align-items: center; }
+.trade-log-item { padding: 12px 14px; background: var(--bg-hover); display: flex; gap: 8px; align-items: center; border-radius: var(--radius-md); }
 .tli-body { flex: 1; min-width: 0; }
 .tli-header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; flex-wrap: wrap; }
 .tli-action { font-size: 14px; font-weight: 600; font-family: var(--font-number); }
