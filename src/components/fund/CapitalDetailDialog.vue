@@ -21,9 +21,8 @@
           </div>
         </template>
 
-        <!-- 主视图：资本增减 + 变动明细 -->
+        <!-- 主视图：增资/减资 + 变动明细 -->
         <template v-else>
-          <div class="section-title">资本增减</div>
           <div class="amount-row">
             <input v-model="deltaAmount" type="number" inputmode="decimal" placeholder="输入金额（元）" class="big-input num-mono" />
           </div>

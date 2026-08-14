@@ -7,38 +7,44 @@
     <LoadingSkeleton v-if="loading" :count="3" />
 
     <template v-else>
-      <!-- 最赚钱 TOP 3 -->
+      <!-- 赚最多（默认前3，可展开全部） -->
       <div class="section-card rank-card rank-card--gain">
         <div class="section-title">
           <span class="title-accent title-accent--rise"></span>
-          最赚钱 TOP 3
+          赚最多
           <span class="subtitle">仅比较已清仓股票</span>
         </div>
-        <div v-if="!topGainers.length" class="rank-empty">暂无已清仓盈利股票</div>
+        <div v-if="!gainRankings.length" class="rank-empty">暂无已清仓盈利股票</div>
         <div v-else class="rank-list">
-          <div v-for="(item, idx) in topGainers" :key="item.stock_code" class="rank-item">
-            <span class="rank-badge" :class="'rank-badge--' + (idx + 1)">{{ idx + 1 }}</span>
+          <div v-for="(item, idx) in gainVisible" :key="item.stock_code" class="rank-item">
+            <span class="rank-badge" :class="idx < 3 ? 'rank-badge--' + (idx + 1) : 'rank-badge--n'">{{ idx + 1 }}</span>
             <span class="rank-stock-name">{{ item.stock_name }}</span>
             <span class="rank-profit rise">{{ formatProfit(item.profit) }}</span>
           </div>
         </div>
+        <button v-if="gainRankings.length > 3" class="rank-toggle" @click="gainExpanded = !gainExpanded">
+          {{ gainExpanded ? '收起' : `展开全部（${gainRankings.length}）` }}
+        </button>
       </div>
 
-      <!-- 亏最多 TOP 3 -->
+      <!-- 亏最多（默认前3，可展开全部） -->
       <div class="section-card rank-card rank-card--loss">
         <div class="section-title">
           <span class="title-accent title-accent--fall"></span>
-          亏最多 TOP 3
+          亏最多
           <span class="subtitle">仅比较已清仓股票</span>
         </div>
-        <div v-if="!topLosers.length" class="rank-empty">暂无已清仓亏损股票</div>
+        <div v-if="!lossRankings.length" class="rank-empty">暂无已清仓亏损股票</div>
         <div v-else class="rank-list">
-          <div v-for="(item, idx) in topLosers" :key="item.stock_code" class="rank-item">
-            <span class="rank-badge" :class="'rank-badge--' + (idx + 1)">{{ idx + 1 }}</span>
+          <div v-for="(item, idx) in lossVisible" :key="item.stock_code" class="rank-item">
+            <span class="rank-badge" :class="idx < 3 ? 'rank-badge--' + (idx + 1) : 'rank-badge--n'">{{ idx + 1 }}</span>
             <span class="rank-stock-name">{{ item.stock_name }}</span>
             <span class="rank-profit fall">{{ formatProfit(item.profit) }}</span>
           </div>
         </div>
+        <button v-if="lossRankings.length > 3" class="rank-toggle" @click="lossExpanded = !lossExpanded">
+          {{ lossExpanded ? '收起' : `展开全部（${lossRankings.length}）` }}
+        </button>
       </div>
 
       <!-- 谁最HARD -->
@@ -192,13 +198,19 @@ const clearedProfitRankings = computed(() => {
     .sort((a, b) => b.profit - a.profit)
 })
 
-const topGainers = computed(() =>
-  clearedProfitRankings.value.filter(r => r.profit > 0).slice(0, 3)
+const gainRankings = computed(() =>
+  clearedProfitRankings.value.filter(r => r.profit > 0)
 )
 
-const topLosers = computed(() =>
-  [...clearedProfitRankings.value].filter(r => r.profit < 0).sort((a, b) => a.profit - b.profit).slice(0, 3)
+const lossRankings = computed(() =>
+  [...clearedProfitRankings.value].filter(r => r.profit < 0).sort((a, b) => a.profit - b.profit)
 )
+
+// 默认显示前3，展开后显示全部
+const gainExpanded = ref(false)
+const lossExpanded = ref(false)
+const gainVisible = computed(() => gainExpanded.value ? gainRankings.value : gainRankings.value.slice(0, 3))
+const lossVisible = computed(() => lossExpanded.value ? lossRankings.value : lossRankings.value.slice(0, 3))
 
 function formatProfit(profit) {
   const abs = Math.abs(Math.round(profit))
@@ -428,6 +440,19 @@ onMounted(async () => {
 .rank-badge--1 { color: var(--color-rise); }
 .rank-badge--2 { color: var(--text-secondary); }
 .rank-badge--3 { color: var(--text-muted); }
+.rank-badge--n { color: var(--text-muted); }
+.rank-toggle {
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px;
+  border: 1px dashed rgba(255,255,255,0.14);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+}
+.rank-toggle:active { background: rgba(255,255,255,0.04); }
 .rank-stock-name {
   flex: 1;
   font-size: 15px;

@@ -4,7 +4,7 @@
       <div class="search-input-wrapper">
         <van-field
           v-model="query"
-          placeholder="名称首字母/代码"
+          placeholder="要买入股票的首字母/代码"
           maxlength="20"
           :border="false"
           class="code-input"

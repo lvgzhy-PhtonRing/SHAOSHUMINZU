@@ -1,8 +1,8 @@
 <!-- src/components/dashboard/AccountSummary.vue -->
 <template>
   <div class="account-section">
-    <div class="total-asset">{{ formatMoney(totalAsset) }}</div>
     <div class="asset-meta">账户资产（元）</div>
+    <div class="total-asset">{{ formatMoney(totalAsset) }}</div>
     <div class="asset-grid">
       <div class="asset-item">
         <div class="asset-label">总市值</div>
@@ -49,6 +49,7 @@ defineProps({
   font-family: var(--font-number);
   letter-spacing: -1px;
   line-height: 1.1;
+  margin-bottom: 8px;
 }
 .asset-meta {
   font-size: 11px;
