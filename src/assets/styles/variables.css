@@ -6,6 +6,7 @@
                 radial-gradient(90% 50% at 92% 0%, rgba(0,240,168,.14), transparent 55%),
                 linear-gradient(180deg, #181631 0%, #120f26 100%);
   --bg-card: rgba(255,255,255,0.055);
+  --bg-solid: #1e1b3a; /* 弹层/下拉等不透明面板底（--bg-card 是半透明玻璃，不能用于弹层） */
   --bg-accent: #6f4dff;
   --bg-hover: rgba(255,255,255,0.07);
   --bg-glass-border: rgba(255,255,255,0.12);

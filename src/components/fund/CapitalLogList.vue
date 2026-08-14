@@ -218,7 +218,7 @@ function doDelete() {
   display: flex; align-items: center; justify-content: center; z-index: 9999; padding: 20px;
 }
 .dialog {
-  background: var(--bg-card); border-radius: var(--radius-lg); padding: 20px;
+  background: var(--bg-solid); border-radius: var(--radius-lg); padding: 20px;
   width: 100%; max-width: 360px;
 }
 .dlg-title { font-size: 17px; font-weight: 700; margin-bottom: 16px; }

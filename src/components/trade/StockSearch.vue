@@ -191,7 +191,7 @@ async function search() {
   right: 0;
   max-height: 220px;
   overflow-y: auto;
-  background: var(--bg-card);
+  background: var(--bg-solid);
   border: 1px solid rgba(255,255,255,0.08);
   border-radius: 0 0 var(--radius-md) var(--radius-md);
   box-shadow: 0 6px 16px rgba(0,0,0,0.4);

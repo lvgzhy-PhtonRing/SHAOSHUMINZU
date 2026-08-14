@@ -170,7 +170,7 @@ function doSave() {
   display: flex; align-items: center; justify-content: center;
 }
 .editor {
-  width: 100%; height: 100%; background: var(--bg-card);
+  width: 100%; height: 100%; background: var(--bg-solid);
   display: flex; flex-direction: column; padding: 16px; box-sizing: border-box; overflow-y: auto;
 }
 .ed-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }

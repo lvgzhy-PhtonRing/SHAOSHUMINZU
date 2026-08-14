@@ -88,7 +88,7 @@ function submit() {
   display: flex; align-items: center; justify-content: center; z-index: 9999; padding: 20px;
 }
 .dialog {
-  background: var(--bg-card); border-radius: var(--radius-lg); padding: 20px;
+  background: var(--bg-solid); border-radius: var(--radius-lg); padding: 20px;
   width: 100%; max-width: 420px; max-height: 80vh; display: flex; flex-direction: column;
 }
 .dlg-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }

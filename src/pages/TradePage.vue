@@ -706,7 +706,7 @@ function initSellEntries() {
 .filter-input :deep(.van-field__control) { font-size: 13px; }
 .filter-clear { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 14px; color: var(--text-muted); padding: 4px; cursor: pointer; z-index: 2; }
 .filter-clear:active { opacity: 0.6; }
-.filter-dropdown { position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 20; background: #1c1c22; border: 1px solid rgba(255,255,255,0.12); border-radius: var(--radius-md); overflow: hidden; box-shadow: 0 6px 20px rgba(0,0,0,0.4); max-height: 240px; overflow-y: auto; }
+.filter-dropdown { position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 20; background: var(--bg-solid); border: 1px solid rgba(255,255,255,0.12); border-radius: var(--radius-md); overflow: hidden; box-shadow: 0 6px 20px rgba(0,0,0,0.4); max-height: 240px; overflow-y: auto; }
 .filter-sugg-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; cursor: pointer; }
 .filter-sugg-item:active { background: rgba(255,255,255,0.06); }
 .fs-name { font-size: 13px; font-weight: 600; flex: 0 0 auto; max-width: 55%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -763,7 +763,7 @@ function initSellEntries() {
 .swipe-del-btn { width: 70px; border: none; background: var(--color-fall); color: #fff; font-size: 13px; font-weight: 500; cursor: pointer; }
 
 .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 9999; padding: 20px; }
-.dialog { background: var(--bg-card); border-radius: var(--radius-lg); padding: 20px; width: 100%; max-width: 360px; }
+.dialog { background: var(--bg-solid); border-radius: var(--radius-lg); padding: 20px; width: 100%; max-width: 360px; }
 .dlg-title { font-size: 17px; font-weight: 700; margin-bottom: 16px; }
 .dlg-field { margin-bottom: 12px; }
 .dlg-row-flex { display: flex; gap: 12px; margin-bottom: 12px; }
