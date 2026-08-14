@@ -1,5 +1,5 @@
 <template>
-  <div class="pool-pos-card" :class="{ wide }" :style="{ borderLeftColor: color }">
+  <div class="pool-pos-card" :class="{ wide }">
     <div class="pos-header">
       <span class="pos-label">{{ name }}</span>
       <span class="pos-percent num-mono">{{ percent.toFixed(1) }}%</span>
@@ -31,14 +31,13 @@ const props = defineProps({
   totalPoolAsset: { type: Number, default: 0 },
   capitalAlloc: { type: Number, default: 0 },
   poolAvailable: { type: Number, default: 0 },
-  color: { type: String, default: '#4d9fff' },
   wide: { type: Boolean, default: false }
 })
 </script>
 
 <style scoped>
 .pool-pos-card {
-  background: var(--bg-card); border-radius: var(--radius-lg); padding: 12px 14px; border-left: 3px solid;
+  background: var(--bg-card); border-radius: var(--radius-lg); padding: 12px 14px;
 }
 .wide .pos-percent { font-size: 26px; }
 .pos-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }

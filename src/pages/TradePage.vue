@@ -7,6 +7,11 @@
     <!-- 买入表单 -->
     <template v-if="!isSell">
       <div class="section-card edge-rise">
+        <div class="section-title buy-head">
+          <span class="title-accent title-accent--rise"></span>
+          买入股票
+          <span class="buy-head-hint">卖出股票请从持仓首页卖出</span>
+        </div>
         <StockSearch @stock-selected="onStockSelected" @buy-clicked="onBuyClicked" />
         <div v-if="formError" class="form-err">{{ formError }}</div>
       </div>
@@ -682,6 +687,8 @@ function initSellEntries() {
 <style scoped>
 .search-section-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; }
 .buy-section-label { font-size: 17px; font-weight: 700; color: var(--color-rise); margin-bottom: 10px; text-align: center; }
+.buy-head { font-size: 15px; font-weight: 700; }
+.buy-head-hint { font-size: 11px; color: var(--text-muted); font-weight: 400; }
 .preset-name { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
 .preset-code { font-size: 13px; color: var(--text-secondary); font-weight: 400; }
 .preset-info { display: flex; justify-content: space-between; font-size: 13px; color: var(--text-secondary); }

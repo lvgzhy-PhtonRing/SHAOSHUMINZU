@@ -10,6 +10,7 @@
     <template v-else>
       <!-- 总仓位模块 -->
       <div class="section-card edge-accent">
+        <div class="section-title"><span class="title-accent title-accent--accent"></span>总体仓位</div>
         <DonutChart
           :segments="chartSegments"
           :total-percent="totalPositionRatio"
@@ -35,7 +36,7 @@
 
       <!-- 各子池仓位模块 -->
       <div class="section-card edge-warn">
-        <div class="section-title"><span class="title-accent title-accent--warn"></span>各子池仓位</div>
+        <div class="section-title"><span class="title-accent title-accent--warn"></span>子池仓位</div>
         <!-- 共有占整行 -->
         <div class="pos-gongyou" v-if="poolPositionData.length">
           <PoolPositionCard
@@ -45,7 +46,6 @@
             :total-pool-asset="poolPositionData[0].totalPoolAsset"
             :capital-alloc="poolPositionData[0].poolCapital"
             :pool-available="poolPositionData[0].poolAvailable"
-            :color="poolPositionData[0].color"
             wide
           />
         </div>
@@ -60,7 +60,6 @@
             :total-pool-asset="item.totalPoolAsset"
             :capital-alloc="item.poolCapital"
             :pool-available="item.poolAvailable"
-            :color="item.color"
           />
         </div>
       </div>

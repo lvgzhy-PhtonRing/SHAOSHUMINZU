@@ -1,5 +1,9 @@
 <template>
-  <div class="capital-summary edge-accent">
+  <div class="capital-summary">
+    <div class="cs-header">
+      <span class="title-accent title-accent--accent"></span>
+      <span class="cs-title">资本总览</span>
+    </div>
     <div class="cs-row">
       <span class="cs-label">初期投入</span>
       <span class="cs-amount num-mono">{{ formatMoney(totalCapital) }}</span>
@@ -40,6 +44,7 @@ const pnlText = computed(() => (cumPnl.value >= 0 ? `+${formatMoney(cumPnl.value
 
 <style scoped>
 .capital-summary {
+  position: relative;
   margin-bottom: 16px;
   padding: 16px;
   background: var(--bg-card);
@@ -48,6 +53,29 @@ const pnlText = computed(() => (cumPnl.value >= 0 ? `+${formatMoney(cumPnl.value
   display: flex;
   flex-direction: column;
   gap: 14px;
+}
+/* 左侧色弧装饰（椭圆弧带，紫色渐变 + 辉光） */
+.capital-summary::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 14px;
+  height: 90%;
+  background: linear-gradient(180deg, rgba(111,77,255,.70), rgba(177,140,255,.35));
+  border-radius: 0 999px 999px 0;
+  box-shadow: 3px 0 14px rgba(111,77,255,.30);
+  pointer-events: none;
+}
+.cs-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cs-title {
+  font-size: 15px;
+  font-weight: 700;
 }
 .cs-row { display: flex; justify-content: space-between; align-items: baseline; }
 .cs-label { font-size: 13px; color: var(--text-secondary); }
