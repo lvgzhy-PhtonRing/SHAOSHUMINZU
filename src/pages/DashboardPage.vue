@@ -15,53 +15,48 @@
         :market-value="summary.totalMarketValue"
         :available="summary.totalAvailable"
         :position-ratio="summary.positionRatio"
-      />
-    </div>
-
-    <!-- 盈亏概览模块 -->
-    <div class="section-card edge-warn">
-      <LoadingSkeleton v-if="loading" :count="1" />
-      <ProfitCard
-        v-else
         :float-pnl="summary.floatPnl"
         :daily-pnl="summary.dailyPnl"
       />
     </div>
 
-    <PoolSelector
-      :pools="poolStore.pools"
-      :current="poolStore.currentPoolId"
-      @select="poolStore.setCurrentPool"
-    />
-
-    <div class="section-title">
-      <span class="section-title-left">
-        <span class="title-accent title-accent--accent"></span>
-        <span>持仓股票</span>
-        <span class="swipe-hint">◀ 左滑卖出</span>
-      </span>
-      <span class="stock-count">{{ displayHoldings.length }} 只</span>
-    </div>
-
-    <LoadingSkeleton v-if="loading" :count="3" />
-
-    <EmptyState
-      v-else-if="!displayHoldings.length"
-      icon="&#x1F4ED;"
-      text="暂无持仓"
-    />
-
-    <template v-else>
-      <HoldingCard
-        v-for="h in displayHoldings"
-        :key="h.merged ? 'merged-' + h.stock_code : `${h.pool_id}-${h.stock_code}`"
-        :stock="h"
-        :pool-name="h.merged ? '' : (poolNameMap[h.pool_id] || '')"
-        :pool-color="h.merged ? '#888888' : (poolColorMap[h.pool_id] || '#4d9fff')"
-        :pool-tags="h.merged ? h.poolNames : []"
-        @sell="onSellStock"
+    <!-- 持仓模块（池筛选 + 持仓股票列表） -->
+    <div class="section-card holdings-module edge-accent">
+      <PoolSelector
+        :pools="poolStore.pools"
+        :current="poolStore.currentPoolId"
+        @select="poolStore.setCurrentPool"
       />
-    </template>
+
+      <div class="section-title">
+        <span class="section-title-left">
+          <span class="title-accent title-accent--accent"></span>
+          <span>持仓股票</span>
+          <span class="swipe-hint">◀ 左滑卖出</span>
+        </span>
+        <span class="stock-count">{{ displayHoldings.length }} 只</span>
+      </div>
+
+      <LoadingSkeleton v-if="loading" :count="3" />
+
+      <EmptyState
+        v-else-if="!displayHoldings.length"
+        icon="&#x1F4ED;"
+        text="暂无持仓"
+      />
+
+      <template v-else>
+        <HoldingCard
+          v-for="h in displayHoldings"
+          :key="h.merged ? 'merged-' + h.stock_code : `${h.pool_id}-${h.stock_code}`"
+          :stock="h"
+          :pool-name="h.merged ? '' : (poolNameMap[h.pool_id] || '')"
+          :pool-color="h.merged ? '#888888' : (poolColorMap[h.pool_id] || '#4d9fff')"
+          :pool-tags="h.merged ? h.poolNames : []"
+          @sell="onSellStock"
+        />
+      </template>
+    </div>
   </div>
 
 </template>
@@ -75,7 +70,6 @@ import { usePriceStore } from '@/stores/prices'
 import { useFundStore } from '@/stores/funds'
 import { calcProfit, calcPositionRatio } from '@/utils/calculators'
 import AccountSummary from '@/components/dashboard/AccountSummary.vue'
-import ProfitCard from '@/components/dashboard/ProfitCard.vue'
 import HoldingCard from '@/components/dashboard/HoldingCard.vue'
 import PoolSelector from '@/components/common/PoolSelector.vue'
 import LoadingSkeleton from '@/components/common/LoadingSkeleton.vue'
@@ -226,6 +220,14 @@ const summary = computed(() => {
   const totalCost = holdings.reduce((s, h) => s + h.cost_price * h.quantity, 0)
   const floatPnl = totalMarketValue - totalCost
 
+  // 总仓位与仓位页定义一致：全局市值 / 全局总资产（不受当前池筛选影响）
+  const globalMarketValue = holdingStore.holdings.reduce((s, h) => {
+    const price = priceStore.prices[h.stock_code]?.price || 0
+    return s + price * h.quantity
+  }, 0)
+  const globalTotalAsset = globalMarketValue + fundStore.totalAvailable
+  const positionRatio = calcPositionRatio(globalMarketValue, globalTotalAsset)
+
   const currentPoolId = poolStore.currentPoolId
   let totalAvailable
   if (currentPoolId !== null) {
@@ -252,7 +254,7 @@ const summary = computed(() => {
     totalAsset,
     totalMarketValue,
     totalAvailable,
-    positionRatio: calcPositionRatio(totalMarketValue, totalAsset),
+    positionRatio,
     floatPnl,
     dailyPnl: holdings.reduce((s, h) => {
       const prevClose = priceStore.prices[h.stock_code]?.prev_close

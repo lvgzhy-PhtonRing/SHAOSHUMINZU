@@ -17,17 +17,21 @@
         <div class="asset-value num-mono">{{ positionRatio.toFixed(1) }}%</div>
       </div>
     </div>
+    <ProfitCard :float-pnl="floatPnl" :daily-pnl="dailyPnl" />
   </div>
 </template>
 
 <script setup>
 import { formatMoney } from '@/utils/formatters'
+import ProfitCard from './ProfitCard.vue'
 
 defineProps({
   totalAsset: { type: Number, default: 0 },
   marketValue: { type: Number, default: 0 },
   available: { type: Number, default: 0 },
   positionRatio: { type: Number, default: 0 },
+  floatPnl: { type: Number, default: 0 },
+  dailyPnl: { type: Number, default: 0 },
   priceUpdateTime: { type: String, default: '' }
 })
 </script>
@@ -66,6 +70,7 @@ defineProps({
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
 }
+.profit-grid { margin-top: 10px; }
 .asset-item {
   background: var(--bg-hover);
   border-radius: var(--radius-md);

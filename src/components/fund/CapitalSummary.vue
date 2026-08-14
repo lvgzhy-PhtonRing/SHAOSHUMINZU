@@ -1,5 +1,5 @@
 <template>
-  <div class="capital-summary">
+  <div class="capital-summary edge-accent">
     <div class="cs-header">
       <span class="title-accent title-accent--accent"></span>
       <span class="cs-title">资本总览</span>
@@ -44,29 +44,17 @@ const pnlText = computed(() => (cumPnl.value >= 0 ? `+${formatMoney(cumPnl.value
 
 <style scoped>
 .capital-summary {
-  position: relative;
   margin-bottom: 16px;
   padding: 16px;
   background: var(--bg-card);
-  border: 1px solid var(--bg-glass-border);
+  /* 左缘用全局 edge-accent 类（同券商APP校对的 edge-warn，仅颜色不同），故此处不写 border-left 以免盖掉 */
+  border-top: 1px solid var(--bg-glass-border);
+  border-right: 1px solid var(--bg-glass-border);
+  border-bottom: 1px solid var(--bg-glass-border);
   border-radius: var(--radius-lg);
   display: flex;
   flex-direction: column;
   gap: 14px;
-}
-/* 左侧色弧装饰（椭圆左缘弧形描边，紫色 + 辉光） */
-.capital-summary::before {
-  content: '';
-  position: absolute;
-  left: 2px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 32px;
-  height: 84%;
-  border-left: 3px solid rgba(111,77,255,.80);
-  border-radius: 50%;
-  filter: drop-shadow(0 0 5px rgba(111,77,255,.40));
-  pointer-events: none;
 }
 .cs-header {
   display: flex;
