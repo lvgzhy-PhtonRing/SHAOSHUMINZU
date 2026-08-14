@@ -67,6 +67,25 @@ body {
 }
 .section-card.compact { padding: 12px 14px; margin-bottom: 8px; }
 
+/* ===== 模块彩色左边缘 + 标题竖线（榜单"赚最多"风格，全站模块统一） ===== */
+.edge-rise { border-left: 3px solid rgba(255,77,109,0.40); }
+.edge-fall { border-left: 3px solid rgba(0,240,168,0.40); }
+.edge-warn { border-left: 3px solid rgba(255,210,63,0.40); }
+.edge-accent { border-left: 3px solid rgba(111,77,255,0.45); }
+.edge-gongyou { border-left: 3px solid rgba(77,159,255,0.45); }
+
+.title-accent {
+  display: inline-block;
+  width: 3px; height: 14px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.title-accent--rise { background: var(--color-rise); }
+.title-accent--fall { background: var(--color-fall); }
+.title-accent--warn { background: var(--color-warn); }
+.title-accent--accent { background: var(--bg-accent); }
+.title-accent--gongyou { background: var(--pool-gongyou); }
+
 /* ===== Vant 组件暗色适配（修复白弹窗/白输入混深色页） ===== */
 .van-dialog {
   background: #1e1b3a;

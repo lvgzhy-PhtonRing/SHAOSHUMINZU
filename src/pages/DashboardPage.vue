@@ -7,7 +7,7 @@
     </div>
 
     <!-- 账户总资产模块（渐变高光签名卡） -->
-    <div class="section-card account-hero">
+    <div class="section-card account-hero edge-accent">
       <LoadingSkeleton v-if="loading" :count="1" />
       <AccountSummary
         v-else
@@ -19,7 +19,7 @@
     </div>
 
     <!-- 盈亏概览模块 -->
-    <div class="section-card">
+    <div class="section-card edge-warn">
       <LoadingSkeleton v-if="loading" :count="1" />
       <ProfitCard
         v-else
@@ -36,6 +36,7 @@
 
     <div class="section-title">
       <span class="section-title-left">
+        <span class="title-accent title-accent--accent"></span>
         <span>持仓股票</span>
         <span class="swipe-hint">◀ 左滑卖出</span>
       </span>

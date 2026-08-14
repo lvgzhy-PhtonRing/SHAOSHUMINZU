@@ -1,6 +1,6 @@
 <template>
-  <div class="card">
-    <div class="card-title">子池资金分配</div>
+  <div class="card edge-gongyou">
+    <div class="card-title"><span class="title-accent title-accent--gongyou"></span>子池资金分配</div>
     <div class="card-desc">
       总资本 <b class="num-mono">{{ formatMoney(totalCapital) }}</b>
     </div>
@@ -62,7 +62,7 @@ const gongyouMv = computed(() => props.poolMarketValues['公共池'] || 0)
 
 <style scoped>
 .card { background: var(--bg-card); border-radius: var(--radius-lg); padding: 16px; margin-bottom: 12px; }
-.card-title { font-size: 15px; font-weight: 700; margin-bottom: 2px; }
+.card-title { display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 700; margin-bottom: 2px; }
 .card-desc { font-size: 12px; color: var(--text-secondary); margin-bottom: 12px; }
 .card-desc b { color: #fff; }
 .alloc-list { border-top: 1px solid rgba(255,255,255,0.06); }

@@ -8,7 +8,7 @@
 
     <template v-else>
       <!-- 赚最多（默认前3，可展开全部） -->
-      <div class="section-card rank-card rank-card--gain">
+      <div class="section-card rank-card edge-rise">
         <div class="section-title">
           <span class="title-accent title-accent--rise"></span>
           赚最多
@@ -28,7 +28,7 @@
       </div>
 
       <!-- 亏最多（默认前3，可展开全部） -->
-      <div class="section-card rank-card rank-card--loss">
+      <div class="section-card rank-card edge-fall">
         <div class="section-title">
           <span class="title-accent title-accent--fall"></span>
           亏最多
@@ -48,7 +48,7 @@
       </div>
 
       <!-- 谁最HARD -->
-      <div class="section-card hard-card">
+      <div class="section-card hard-card edge-warn">
         <div class="section-title">
           <span class="title-accent title-accent--hard"></span>
           谁最HARD
@@ -77,7 +77,7 @@
       </div>
 
       <!-- 趋势总览（仓位+资产合并，日期强制对齐） -->
-      <div class="section-card">
+      <div class="section-card edge-accent">
         <div class="section-title">
           <span class="title-accent title-accent--trend"></span>
           趋势总览
@@ -407,9 +407,6 @@ onMounted(async () => {
 .title-accent--trend { background: var(--bg-accent); }
 
 /* ===== 盈亏排行 ===== */
-.rank-card { border-left: 3px solid transparent; }
-.rank-card--gain { border-left-color: rgba(233,69,96,0.3); }
-.rank-card--loss { border-left-color: rgba(0,210,161,0.3); }
 .rank-empty {
   padding: 24px 0;
   text-align: center;

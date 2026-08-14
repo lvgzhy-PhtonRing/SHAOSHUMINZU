@@ -1,6 +1,6 @@
 <template>
-  <div class="card">
-    <div class="card-title">券商APP校对</div>
+  <div class="card edge-warn">
+    <div class="card-title"><span class="title-accent title-accent--warn"></span>券商APP校对</div>
     <div class="card-desc">输入券商APP显示的「账户资产」，系统自动计算差额并记录。只调可用资金/总资产，不计入总资本</div>
 
     <div v-if="tradingLocked" class="lock-banner">
@@ -198,7 +198,7 @@ function formatDate(isoStr) {
 
 <style scoped>
 .card { background: var(--bg-card); border-radius: var(--radius-lg); padding: 16px; margin-bottom: 12px; }
-.card-title { font-size: 15px; font-weight: 700; margin-bottom: 2px; }
+.card-title { display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 700; margin-bottom: 2px; }
 .card-desc { font-size: 12px; color: var(--text-secondary); margin-bottom: 12px; }
 
 .lock-banner {

@@ -6,7 +6,7 @@
 
     <!-- 买入表单 -->
     <template v-if="!isSell">
-      <div class="section-card">
+      <div class="section-card edge-rise">
         <StockSearch @stock-selected="onStockSelected" @buy-clicked="onBuyClicked" />
         <div v-if="formError" class="form-err">{{ formError }}</div>
       </div>
@@ -14,14 +14,14 @@
 
     <!-- 卖出表单（多池联动滑块） -->
     <template v-if="isSell">
-      <div class="section-card preset-section">
+      <div class="section-card preset-section edge-fall">
         <div class="preset-name">{{ stockName }} <span class="preset-code">{{ stockCode }}</span></div>
         <div class="preset-info">
           <span>现价 {{ formatPrice(currentPrice) }}</span>
           <span>总持仓 {{ sellTotalHolding }} 股</span>
         </div>
       </div>
-      <div class="section-card">
+      <div class="section-card edge-fall">
         <div class="sell-price-row">
           <label class="spr-label">卖出单价</label>
           <input v-model.number="sellPrice" type="number" inputmode="decimal" step="0.01" class="spr-price-input num-mono" />
@@ -36,7 +36,7 @@
           <div class="stl-estimate" v-if="sellTotalQty > 0">≈ {{ formatMoney(sellTotalQty * sellPrice) }}</div>
         </div>
         <div v-if="sellTotalQty > 0" class="sell-pools-section">
-          <div class="section-title">各池分配</div>
+          <div class="section-title"><span class="title-accent title-accent--fall"></span>各池分配</div>
           <div v-for="entry in sellEntries" :key="entry.pool_id" class="sell-pool-row">
             <div class="spr-header">
               <span class="spr-pool-name" :style="{ color: poolColor(entry.pool_name) }">{{ entry.pool_name }}</span>
@@ -73,8 +73,9 @@
     </template>
 
     <!-- 历史买卖记录 -->
-    <div class="section-card" v-if="!isSell && tradeLogs.length">
+    <div class="section-card edge-accent" v-if="!isSell && tradeLogs.length">
       <div class="section-title trade-rec-title">
+        <span class="title-accent title-accent--accent"></span>
         股票交易记录
         <span class="swipe-hint">◀ 左滑编辑</span>
       </div>
@@ -681,12 +682,11 @@ function initSellEntries() {
 <style scoped>
 .search-section-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; }
 .buy-section-label { font-size: 17px; font-weight: 700; color: var(--color-rise); margin-bottom: 10px; text-align: center; }
-.preset-section { border-left: 3px solid var(--color-fall); }
 .preset-name { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
 .preset-code { font-size: 13px; color: var(--text-secondary); font-weight: 400; }
 .preset-info { display: flex; justify-content: space-between; font-size: 13px; color: var(--text-secondary); }
 .form-err { color: var(--color-fall); font-size: 13px; text-align: center; margin-top: 8px; }
-.section-title { font-size: 13px; font-weight: 600; padding: 0 0 10px; }
+.section-title { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; padding: 0 0 10px; }
 
 /* ===== 交易记录过滤 ===== */
 .trade-rec-title { display: flex; align-items: center; gap: 8px; }

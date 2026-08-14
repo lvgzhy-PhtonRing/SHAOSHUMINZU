@@ -1,5 +1,5 @@
 <template>
-  <div class="capital-summary">
+  <div class="capital-summary edge-accent">
     <div class="cs-row">
       <span class="cs-label">初期投入</span>
       <span class="cs-amount num-mono">{{ formatMoney(totalCapital) }}</span>
@@ -43,6 +43,7 @@ const pnlText = computed(() => (cumPnl.value >= 0 ? `+${formatMoney(cumPnl.value
   margin-bottom: 16px;
   padding: 16px;
   background: var(--bg-card);
+  border: 1px solid var(--bg-glass-border);
   border-radius: var(--radius-lg);
   display: flex;
   flex-direction: column;

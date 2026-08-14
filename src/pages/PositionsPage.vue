@@ -9,7 +9,7 @@
 
     <template v-else>
       <!-- 总仓位模块 -->
-      <div class="section-card">
+      <div class="section-card edge-accent">
         <DonutChart
           :segments="chartSegments"
           :total-percent="totalPositionRatio"
@@ -34,8 +34,8 @@
       </div>
 
       <!-- 各子池仓位模块 -->
-      <div class="section-card">
-        <div class="section-title">各子池仓位</div>
+      <div class="section-card edge-warn">
+        <div class="section-title"><span class="title-accent title-accent--warn"></span>各子池仓位</div>
         <!-- 共有占整行 -->
         <div class="pos-gongyou" v-if="poolPositionData.length">
           <PoolPositionCard
@@ -227,7 +227,7 @@ onMounted(async () => {
 .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
 .legend-label { font-size: 12px; color: var(--text-secondary); }
 .legend-value { font-size: 12px; font-weight: 600; font-family: var(--font-number); }
-.section-title { padding: 0 0 10px; font-size: 13px; font-weight: 600; }
+.section-title { display: flex; align-items: center; gap: 6px; padding: 0 0 10px; font-size: 13px; font-weight: 600; }
 .section-title .subtitle { font-size: 11px; color: var(--text-secondary); font-weight: 400; }
 .pos-gongyou { margin-bottom: 8px; }
 .pos-users-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
