@@ -50,6 +50,11 @@ defineProps({
   letter-spacing: -1px;
   line-height: 1.1;
   margin-bottom: 8px;
+  /* 霓虹渐变签名：主数字白→淡紫 */
+  background: linear-gradient(120deg, #ffffff, #c9b8ff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 .asset-meta {
   font-size: 11px;

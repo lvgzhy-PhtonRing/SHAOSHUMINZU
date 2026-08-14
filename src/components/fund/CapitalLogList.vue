@@ -186,7 +186,7 @@ function doDelete() {
 .log-title { font-size: 14px; font-weight: 600; }
 .swipe-hint {
   font-size: 11px;
-  background: linear-gradient(135deg, #e94560, #ff6b6b);
+  background: linear-gradient(135deg, var(--color-rise), #ff8a9a);
   color: #fff;
   padding: 3px 10px;
   border-radius: 12px;

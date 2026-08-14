@@ -1,27 +1,31 @@
 /* src/assets/styles/variables.css */
 :root {
-  /* 主题色 */
-  --bg-primary: #1a1a2e;
-  --bg-card: #16213e;
-  --bg-accent: #0f3460;
-  --bg-hover: rgba(255,255,255,0.06);
+  /* 主题色（方案C：灵动霓虹 — 深靛蓝底 + 顶部极光 + 玻璃卡片） */
+  --bg-primary: radial-gradient(120% 60% at 50% -8%, rgba(141,111,255,.30), transparent 60%),
+                radial-gradient(90% 50% at 8% 0%, rgba(255,77,109,.16), transparent 55%),
+                radial-gradient(90% 50% at 92% 0%, rgba(0,240,168,.14), transparent 55%),
+                linear-gradient(180deg, #181631 0%, #120f26 100%);
+  --bg-card: rgba(255,255,255,0.055);
+  --bg-accent: #6f4dff;
+  --bg-hover: rgba(255,255,255,0.07);
+  --bg-glass-border: rgba(255,255,255,0.12);
 
   /* 涨跌色（A股习惯：涨=红，跌=绿） */
-  --color-rise: #e94560;
-  --color-fall: #00d2a1;
-  --color-warn: #ffc107;
+  --color-rise: #ff4d6d;
+  --color-fall: #00f0a8;
+  --color-warn: #ffd23f;
 
   /* 子池颜色 */
-  --pool-gongyou: #5b8def;
-  --pool-chun: #e94560;
-  --pool-wei: #00d2a1;
-  --pool-dui: #ffc107;
-  --pool-hui: #7c4dff;
+  --pool-gongyou: #4d9fff;
+  --pool-chun: #ff4d6d;
+  --pool-wei: #00f0a8;
+  --pool-dui: #ffd23f;
+  --pool-hui: #b18cff;
 
   /* 文字色 */
-  --text-primary: #ffffff;
-  --text-secondary: #888888;
-  --text-muted: #666666;
+  --text-primary: #f4f2ff;
+  --text-secondary: #a7a3c8;
+  --text-muted: #6f6b8f;
 
   /* 间距 */
   --spacing-xs: 4px;
@@ -37,5 +41,5 @@
   --radius-round: 999px;
 
   /* 字体 */
-  --font-number: 'SF Mono', 'Fira Code', 'Courier New', monospace;
+  --font-number: 'Cascadia Code', 'SF Mono', 'JetBrains Mono', 'Fira Code', 'Consolas', 'Courier New', monospace;
 }

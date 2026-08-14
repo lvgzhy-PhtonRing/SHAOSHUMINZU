@@ -279,7 +279,7 @@ const capitalDetailList = computed(() => {
 })
 
 // ===== 子池硬度 =====
-const POOL_COLORS = { '春': '#e94560', '维': '#00d2a1', '队': '#ffc107', '回': '#7c4dff' }
+const POOL_COLORS = { '春': '#ff4d6d', '维': '#00f0a8', '队': '#ffd23f', '回': '#b18cff' }
 const POOL_ORDER = ['春', '维', '队', '回']
 const SUB_POOL_INIT = 110000
 
@@ -403,7 +403,7 @@ onMounted(async () => {
 }
 .title-accent--rise { background: var(--color-rise); }
 .title-accent--fall { background: var(--color-fall); }
-.title-accent--hard { background: linear-gradient(180deg, #ffc107, #ff9800); }
+.title-accent--hard { background: linear-gradient(180deg, #ffd23f, #ff9f45); }
 .title-accent--trend { background: var(--bg-accent); }
 
 /* ===== 盈亏排行 ===== */
@@ -528,7 +528,7 @@ onMounted(async () => {
   min-width: 2px;
 }
 .bar-fill--ratio {
-  background: linear-gradient(90deg, var(--bg-accent), rgba(15,52,96,0.4));
+  background: linear-gradient(90deg, var(--bg-accent), rgba(111,77,255,0.35));
 }
 .bar-fill--asset {
   background: linear-gradient(90deg, var(--color-rise), rgba(233,69,96,0.25));
@@ -627,7 +627,7 @@ onMounted(async () => {
   display: flex; align-items: center; justify-content: center;
   font-size: 10px; font-weight: 700; color: #fff; margin-bottom: 4px;
 }
-.hard-col-rank--1 { background: linear-gradient(135deg, #ffc107, #ff9800); }
+.hard-col-rank--1 { background: linear-gradient(135deg, #ffd23f, #ff9f45); }
 .hard-col-rank--2 { background: linear-gradient(135deg, #90a4ae, #78909c); }
 .hard-col-rank--3 { background: linear-gradient(135deg, #a1887f, #8d6e63); }
 .hard-col-rank--4 { background: linear-gradient(135deg, #b0bec5, #90a4ae); }
@@ -654,7 +654,7 @@ onMounted(async () => {
 }
 .hard-col-crown {
   position: absolute; top: -6px; right: -2px;
-  font-size: 16px; color: #ffc107;
+  font-size: 16px; color: #ffd23f;
   animation: crown-bounce 1.5s ease-in-out infinite;
 }
 @keyframes crown-bounce {

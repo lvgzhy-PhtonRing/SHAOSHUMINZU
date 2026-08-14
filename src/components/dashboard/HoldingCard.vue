@@ -60,7 +60,7 @@ import { formatMoney, formatPrice, formatQuantity, formatChange } from '@/utils/
 const props = defineProps({
   stock: { type: Object, required: true },
   poolName: { type: String, default: '' },
-  poolColor: { type: String, default: '#0f3460' },
+  poolColor: { type: String, default: '#4d9fff' },
   poolTags: { type: Array, default: () => [] }
 })
 
@@ -76,6 +76,7 @@ const costReturn = computed(() => {
 <style scoped>
 .holding-card {
   background: var(--bg-card);
+  border: 1px solid var(--bg-glass-border);
   border-radius: var(--radius-lg);
   padding: 14px 16px;
   margin-bottom: 6px;
@@ -124,7 +125,7 @@ const costReturn = computed(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #e94560;
+  background: var(--color-rise);
   color: #fff;
   font-size: 15px;
   font-weight: 600;

@@ -6,8 +6,8 @@
       <span class="price-time" v-if="lastUpdated">非实时市值，更新于 {{ lastUpdated }}</span>
     </div>
 
-    <!-- 账户总资产模块 -->
-    <div class="section-card">
+    <!-- 账户总资产模块（渐变高光签名卡） -->
+    <div class="section-card account-hero">
       <LoadingSkeleton v-if="loading" :count="1" />
       <AccountSummary
         v-else
@@ -56,7 +56,7 @@
         :key="h.merged ? 'merged-' + h.stock_code : `${h.pool_id}-${h.stock_code}`"
         :stock="h"
         :pool-name="h.merged ? '' : (poolNameMap[h.pool_id] || '')"
-        :pool-color="h.merged ? '#888888' : (poolColorMap[h.pool_id] || '#0f3460')"
+        :pool-color="h.merged ? '#888888' : (poolColorMap[h.pool_id] || '#4d9fff')"
         :pool-tags="h.merged ? h.poolNames : []"
         @sell="onSellStock"
       />
@@ -92,7 +92,7 @@ const router = useRouter()
 
 const poolNameMap = {}
 const poolColorMap = {}
-const colorList = ['#5b8def', '#e94560', '#00d2a1', '#ffc107', '#7c4dff']
+const colorList = ['#4d9fff', '#ff4d6d', '#00f0a8', '#ffd23f', '#b18cff']
 
 onMounted(async () => {
   try {
@@ -264,6 +264,11 @@ const summary = computed(() => {
 
 <style scoped>
 .price-time { font-size: 10px; color: var(--text-muted); }
+.account-hero {
+  background: linear-gradient(150deg, rgba(143,111,255,.16), rgba(255,77,109,.08) 60%, rgba(255,255,255,.04));
+  border: 1px solid rgba(255,255,255,.16);
+  box-shadow: 0 10px 30px rgba(0,0,0,.25);
+}
 .section-title {
   display: flex; justify-content: space-between;
   padding: 8px 0 6px; font-size: 13px; font-weight: 600;
@@ -272,7 +277,7 @@ const summary = computed(() => {
 .stock-count { font-size: 12px; color: var(--text-secondary); font-weight: 400; }
 .swipe-hint {
   font-size: 11px;
-  background: linear-gradient(135deg, #e94560, #ff6b6b);
+  background: linear-gradient(135deg, var(--color-rise), #ff8a9a);
   color: #fff;
   padding: 3px 10px;
   border-radius: 12px;

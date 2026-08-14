@@ -223,7 +223,7 @@ function formatDate(isoStr) {
   font-size: 15px; font-weight: 600; cursor: pointer;
 }
 .act-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-.act-btn.gen { background: #7c4dff; color: #fff; }
+.act-btn.gen { background: var(--bg-accent); color: #fff; }
 
 .diff-preview {
   font-size: 12px; color: var(--text-secondary); margin-top: 10px;
@@ -240,7 +240,7 @@ function formatDate(isoStr) {
 .log-title { font-size: 14px; font-weight: 600; }
 .swipe-hint {
   font-size: 11px;
-  background: linear-gradient(135deg, #e94560, #ff6b6b);
+  background: linear-gradient(135deg, var(--color-rise), #ff8a9a);
   color: #fff;
   padding: 3px 10px;
   border-radius: 12px;
@@ -294,7 +294,7 @@ function formatDate(isoStr) {
   flex: 2; padding: 10px; border: none; border-radius: var(--radius-md);
   font-size: 14px; font-weight: 600; cursor: pointer; color: #fff;
 }
-.d-ok.add { background: #7c4dff; }
+.d-ok.add { background: var(--bg-accent); }
 .d-ok.remove { background: #ff6b35; }
 .d-ok.del { background: var(--color-fall); }
 .dlg-rows { margin-bottom: 8px; }

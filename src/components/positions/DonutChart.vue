@@ -22,7 +22,7 @@
       <text :x="center" :y="center - 8" text-anchor="middle" fill="#fff" font-size="32" font-weight="700" font-family="var(--font-number)">
         {{ totalPercent.toFixed(1) }}%
       </text>
-      <text :x="center" :y="center + 16" text-anchor="middle" fill="#888" font-size="13">
+      <text :x="center" :y="center + 16" text-anchor="middle" fill="#a7a3c8" font-size="13">
         总仓位
       </text>
     </svg>

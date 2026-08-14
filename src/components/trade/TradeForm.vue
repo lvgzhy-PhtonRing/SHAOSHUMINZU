@@ -63,7 +63,7 @@
           block
           type="primary"
           :loading="submitting"
-          :color="isBuy ? '#e94560' : '#00d2a1'"
+          :color="isBuy ? 'var(--color-rise)' : 'var(--color-fall)'"
           @click="onSubmit"
         >
           {{ isBuy ? '📝 录入买入' : '📝 录入卖出' }}

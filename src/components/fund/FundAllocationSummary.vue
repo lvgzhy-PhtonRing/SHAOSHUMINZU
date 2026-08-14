@@ -7,7 +7,7 @@
 
     <div class="alloc-list">
       <div class="pool-row">
-        <div class="pool-left"><span class="dot" style="background:#0f3460"></span>公共池</div>
+        <div class="pool-left"><span class="dot" style="background:#4d9fff"></span>公共池</div>
         <span class="alloc-wan num-mono">{{ wan(gongyouAlloc) }} 万</span>
         <span class="avl num-mono" :class="{ neg: gongyouAvailable <= 0 }">
           <template v-if="gongyouAvailable <= 0">⚠️ </template>可用 {{ formatMoney(gongyouAvailable) }}
@@ -41,10 +41,10 @@ const props = defineProps({
 const emit = defineEmits(['edit'])
 
 const users = [
-  { key: '春', name: '春', color: '#e94560' },
-  { key: '维', name: '维', color: '#00d2a1' },
-  { key: '队', name: '队', color: '#ffc107' },
-  { key: '回', name: '回', color: '#7c4dff' }
+  { key: '春', name: '春', color: '#ff4d6d' },
+  { key: '维', name: '维', color: '#00f0a8' },
+  { key: '队', name: '队', color: '#ffd23f' },
+  { key: '回', name: '回', color: '#b18cff' }
 ]
 
 const wan = (yuan) => (yuan / 10000).toFixed(1)

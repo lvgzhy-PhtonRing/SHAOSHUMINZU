@@ -26,9 +26,10 @@ body {
 .text-rise { color: var(--color-rise); }
 .text-fall { color: var(--color-fall); }
 
-/* 卡片 */
+/* 卡片（玻璃质感：半透明 + 细描边） */
 .card {
   background: var(--bg-card);
+  border: 1px solid var(--bg-glass-border);
   border-radius: var(--radius-lg);
   padding: var(--spacing-md);
 }
@@ -56,11 +57,45 @@ body {
 }
 .page-title { font-size: 17px; font-weight: 700; }
 
-/* 统一模块卡片 */
+/* 统一模块卡片（玻璃质感） */
 .section-card {
   background: var(--bg-card);
+  border: 1px solid var(--bg-glass-border);
   border-radius: var(--radius-lg);
   padding: 14px 16px;
   margin-bottom: 10px;
 }
 .section-card.compact { padding: 12px 14px; margin-bottom: 8px; }
+
+/* ===== Vant 组件暗色适配（修复白弹窗/白输入混深色页） ===== */
+.van-dialog {
+  background: #1e1b3a;
+}
+.van-dialog__header {
+  color: var(--text-primary);
+}
+.van-dialog__message {
+  color: var(--text-secondary);
+}
+.van-dialog__cancel {
+  color: var(--text-secondary);
+}
+.van-dialog__confirm {
+  color: #b18cff;
+}
+.van-button--primary {
+  background: var(--bg-accent);
+  border-color: var(--bg-accent);
+}
+.van-button--default {
+  color: var(--text-secondary);
+}
+.van-field__label {
+  color: var(--text-secondary);
+}
+.van-field__control {
+  color: var(--text-primary);
+}
+.van-field__control::placeholder {
+  color: var(--text-muted);
+}

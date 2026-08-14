@@ -4,7 +4,7 @@
     <div class="main-content">
       <router-view />
     </div>
-    <van-tabbar v-model="active" active-color="#0f3460" inactive-color="#888" border>
+    <van-tabbar v-model="active" :border="false">
       <van-tabbar-item icon="diamond-o" @click="go('dashboard')">持仓</van-tabbar-item>
       <van-tabbar-item icon="bar-chart-o" @click="go('positions')">仓位</van-tabbar-item>
       <van-tabbar-item icon="exchange" @click="go('trade')">交易</van-tabbar-item>
@@ -46,5 +46,27 @@ watch(() => route.name, (name) => {
   flex: 1;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+}
+/* 玻璃悬浮 dock tab 栏 */
+.main-layout :deep(.van-tabbar) {
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 24px);
+  height: 54px;
+  border-radius: 20px;
+  background: rgba(24,22,49,.60);
+  border: 1px solid rgba(255,255,255,.14);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 8px 24px rgba(0,0,0,.35);
+}
+.main-layout :deep(.van-tabbar-item) {
+  color: var(--text-secondary);
+}
+.main-layout :deep(.van-tabbar-item--active) {
+  color: #b18cff;
+  font-weight: 600;
+  text-shadow: 0 0 12px rgba(177,140,255,.55);
 }
 </style>

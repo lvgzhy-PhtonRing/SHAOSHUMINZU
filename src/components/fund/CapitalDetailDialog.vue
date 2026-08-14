@@ -112,8 +112,8 @@ function submit() {
   font-size: 15px; font-weight: 600; cursor: pointer;
 }
 .act-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-.act-btn.add { background: #00d2a1; color: #1a1a2e; }
-.act-btn.remove { background: #e94560; color: #fff; }
+.act-btn.add { background: var(--color-fall); color: #10131f; }
+.act-btn.remove { background: var(--color-rise); color: #fff; }
 
 .divider { height: 1px; background: rgba(255,255,255,0.06); margin: 16px 0 12px; }
 
@@ -141,6 +141,6 @@ function submit() {
   flex: 2; padding: 10px; border: none; border-radius: var(--radius-md);
   font-size: 14px; font-weight: 600; cursor: pointer; color: #fff;
 }
-.d-ok.add { background: #00d2a1; color: #1a1a2e; }
-.d-ok.remove { background: #e94560; }
+.d-ok.add { background: var(--color-fall); color: #10131f; }
+.d-ok.remove { background: var(--color-rise); }
 </style>

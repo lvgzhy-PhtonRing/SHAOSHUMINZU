@@ -89,7 +89,7 @@ const loading = ref(true)
 const allocConfig = ref(null)
 const totalCapital = computed(() => fundStore.totalCapital)
 
-const colorList = ['#5b8def', '#e94560', '#00d2a1', '#ffc107', '#7c4dff']
+const colorList = ['#4d9fff', '#ff4d6d', '#00f0a8', '#ffd23f', '#b18cff']
 
 const totalCost = computed(() => {
   return holdingStore.holdings.reduce((s, h) => s + h.cost_price * h.quantity, 0)

@@ -31,7 +31,7 @@ const props = defineProps({
   totalPoolAsset: { type: Number, default: 0 },
   capitalAlloc: { type: Number, default: 0 },
   poolAvailable: { type: Number, default: 0 },
-  color: { type: String, default: '#0f3460' },
+  color: { type: String, default: '#4d9fff' },
   wide: { type: Boolean, default: false }
 })
 </script>

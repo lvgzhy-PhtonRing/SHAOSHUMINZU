@@ -186,7 +186,7 @@ async function doLogin() {
   max-width: 280px;
   margin-top: 24px;
   padding: 14px;
-  background: rgba(15,52,96,0.3);
+  background: rgba(111,77,255,0.28);
   border: none;
   border-radius: var(--radius-lg);
   color: var(--text-secondary);

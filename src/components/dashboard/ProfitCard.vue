@@ -32,10 +32,10 @@ defineProps({
   border-radius: var(--radius-md);
 }
 .profit-item.fall {
-  background: rgba(0,210,161,0.08);
+  background: rgba(0,240,168,0.10);
 }
 .profit-item.rise {
-  background: rgba(233,69,96,0.08);
+  background: rgba(255,77,109,0.10);
 }
 .profit-unit { font-size: 10px; color: var(--text-muted); font-weight: 400; }
 .profit-label {

@@ -33,7 +33,7 @@
           </template>
         </div>
       </div>
-      <van-button size="small" color="#e94560" @click="onBuyClick" :loading="searching" class="buy-btn">
+      <van-button size="small" color="#ff4d6d" @click="onBuyClick" :loading="searching" class="buy-btn">
         买入股票
       </van-button>
     </div>

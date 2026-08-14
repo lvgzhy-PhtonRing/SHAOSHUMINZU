@@ -69,10 +69,10 @@ const emit = defineEmits(['close', 'save'])
 
 const STEP = 10000
 const users = [
-  { key: '春', name: '春', color: '#e94560' },
-  { key: '维', name: '维', color: '#00d2a1' },
-  { key: '队', name: '队', color: '#ffc107' },
-  { key: '回', name: '回', color: '#7c4dff' }
+  { key: '春', name: '春', color: '#ff4d6d' },
+  { key: '维', name: '维', color: '#00f0a8' },
+  { key: '队', name: '队', color: '#ffd23f' },
+  { key: '回', name: '回', color: '#b18cff' }
 ]
 const userKeys = users.map(u => u.key)
 
@@ -185,7 +185,7 @@ function doSave() {
   padding: 4px 12px; border: 1px solid rgba(255,255,255,0.15); border-radius: var(--radius-round);
   background: transparent; color: var(--text-secondary); font-size: 12px; cursor: pointer;
 }
-.link-btn.on { color: #00d2a1; border-color: #00d2a1; }
+.link-btn.on { color: var(--color-fall); border-color: var(--color-fall); }
 
 .slider-row { margin-bottom: 18px; }
 .sr-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }

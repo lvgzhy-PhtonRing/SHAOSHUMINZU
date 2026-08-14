@@ -441,7 +441,7 @@ function resetSell() {
   sellTotalQty.value = 0; sellPrice.value = 0; sellEntries.value = []; stockCode.value = ''; stockName.value = ''; currentPrice.value = 0; formError.value = ''
 }
 
-function poolColor(name) { const map = { '公共池': '#0f3460', '春': '#e94560', '维': '#00d2a1', '队': '#ffc107', '回': '#7c4dff' }; return map[name] || '#0f3460' }
+function poolColor(name) { const map = { '公共池': '#4d9fff', '春': '#ff4d6d', '维': '#00f0a8', '队': '#ffd23f', '回': '#b18cff' }; return map[name] || '#4d9fff' }
 
 // ===== 交易记录 =====
 const showAllLogs = ref(false)
@@ -692,14 +692,14 @@ function initSellEntries() {
 .trade-rec-title { display: flex; align-items: center; gap: 8px; }
 .swipe-hint {
   font-size: 11px;
-  background: linear-gradient(135deg, #e94560, #ff6b6b);
+  background: linear-gradient(135deg, var(--color-rise), #ff8a9a);
   color: #fff;
   padding: 3px 10px;
   border-radius: 12px;
   font-weight: 600;
 }
 .rec-all-tag { font-size: 11px; padding: 2px 10px; border-radius: 10px; color: var(--text-secondary); background: rgba(255,255,255,0.06); cursor: pointer; flex: 0 0 auto; }
-.rec-all-tag.active { color: var(--color-rise); background: rgba(233,69,96,0.12); font-weight: 600; }
+.rec-all-tag.active { color: var(--color-rise); background: rgba(255,77,109,0.14); font-weight: 600; }
 .filter-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
 .filter-input-wrap { position: relative; flex: 1; min-width: 0; }
 .filter-input { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-md); padding: 0 34px 0 4px; }

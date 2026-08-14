@@ -37,7 +37,7 @@
         <div class="group-title">关于</div>
         <div class="settings-item">
           <div class="item-left"><span class="item-icon">ℹ️</span><span>版本</span></div>
-          <span class="item-value">v2.9.84</span>
+          <span class="item-value">v3.0.0</span>
         </div>
         <div class="settings-item">
           <div class="item-left"><span class="item-icon">🏛️</span><span>数据存储</span></div>
@@ -47,7 +47,7 @@
     </div>
 
     <div class="logout-section">
-      <van-button round block plain hairline color="#e94560" @click="doLogout">退出登录</van-button>
+      <van-button round block plain hairline color="#ff4d6d" @click="doLogout">退出登录</van-button>
     </div>
 
     <!-- 密码弹窗 -->
@@ -191,6 +191,6 @@ function doLogout() {
 .item-arrow { color: var(--text-muted); font-size: 14px; }
 .item-value { color: var(--text-secondary); font-size: 13px; }
 .item-status { font-size: 12px; padding: 2px 8px; border-radius: 4px; }
-.item-status.sync-ok { background: rgba(0,210,161,0.1); color: var(--color-rise); }
+.item-status.sync-ok { background: rgba(0,240,168,0.12); color: var(--color-fall); }
 .logout-section { padding: 24px 0; }
 </style>
