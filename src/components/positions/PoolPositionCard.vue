@@ -1,7 +1,7 @@
 <template>
   <div class="pool-pos-card" :class="{ wide }">
     <div class="pos-header">
-      <span class="pos-label">{{ name }}</span>
+      <span class="pool-tag" :style="{ background: color + '22', color: color }">{{ name }}</span>
       <span class="pos-percent num-mono">{{ percent.toFixed(1) }}%</span>
     </div>
     <div class="pos-ratio-line">
@@ -31,6 +31,7 @@ const props = defineProps({
   totalPoolAsset: { type: Number, default: 0 },
   capitalAlloc: { type: Number, default: 0 },
   poolAvailable: { type: Number, default: 0 },
+  color: { type: String, default: '#4d9fff' },
   wide: { type: Boolean, default: false }
 })
 </script>
@@ -40,8 +41,8 @@ const props = defineProps({
   background: var(--bg-card); border-radius: var(--radius-lg); padding: 12px 14px;
 }
 .wide .pos-percent { font-size: 26px; }
-.pos-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
-.pos-label { font-size: 12px; color: var(--text-secondary); }
+.pos-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.pool-tag { font-size: 12px; padding: 2px 8px; border-radius: 4px; font-weight: 500; }
 .pos-percent { font-size: 20px; font-weight: 700; font-family: var(--font-number); }
 .pos-ratio-line {
   display: flex; align-items: baseline; gap: 4px; flex-wrap: wrap;

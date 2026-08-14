@@ -46,6 +46,7 @@
             :total-pool-asset="poolPositionData[0].totalPoolAsset"
             :capital-alloc="poolPositionData[0].poolCapital"
             :pool-available="poolPositionData[0].poolAvailable"
+            :color="poolPositionData[0].color"
             wide
           />
         </div>
@@ -60,6 +61,7 @@
             :total-pool-asset="item.totalPoolAsset"
             :capital-alloc="item.poolCapital"
             :pool-available="item.poolAvailable"
+            :color="item.color"
           />
         </div>
       </div>

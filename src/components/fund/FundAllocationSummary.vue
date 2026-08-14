@@ -1,6 +1,6 @@
 <template>
   <div class="card edge-gongyou">
-    <div class="card-title"><span class="title-accent title-accent--gongyou"></span>子池资金分配</div>
+    <div class="card-title"><span class="title-accent title-accent--gongyou"></span>子池分配</div>
     <div class="card-desc">
       总资本 <b class="num-mono">{{ formatMoney(totalCapital) }}</b>
     </div>

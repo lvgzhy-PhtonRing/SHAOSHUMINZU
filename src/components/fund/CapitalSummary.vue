@@ -54,18 +54,18 @@ const pnlText = computed(() => (cumPnl.value >= 0 ? `+${formatMoney(cumPnl.value
   flex-direction: column;
   gap: 14px;
 }
-/* 左侧色弧装饰（椭圆弧带，紫色渐变 + 辉光） */
+/* 左侧色弧装饰（椭圆左缘弧形描边，紫色 + 辉光） */
 .capital-summary::before {
   content: '';
   position: absolute;
-  left: 0;
+  left: 2px;
   top: 50%;
   transform: translateY(-50%);
-  width: 14px;
-  height: 90%;
-  background: linear-gradient(180deg, rgba(111,77,255,.70), rgba(177,140,255,.35));
-  border-radius: 0 999px 999px 0;
-  box-shadow: 3px 0 14px rgba(111,77,255,.30);
+  width: 32px;
+  height: 84%;
+  border-left: 3px solid rgba(111,77,255,.80);
+  border-radius: 50%;
+  filter: drop-shadow(0 0 5px rgba(111,77,255,.40));
   pointer-events: none;
 }
 .cs-header {
