@@ -16,6 +16,10 @@
       <span class="cs-label" :class="pnlClass">{{ pnlLabel }}</span>
       <span class="cs-amount num-mono" :class="pnlClass">{{ pnlText }}</span>
     </div>
+    <div class="cs-row">
+      <span class="cs-label" :class="pnlClass">{{ pnlPctLabel }}</span>
+      <span class="cs-amount num-mono" :class="pnlClass">{{ pnlPctText }}</span>
+    </div>
     <div class="cs-btns">
       <button class="cs-btn" @click="$emit('open-detail')">资本明细</button>
     </div>
@@ -40,6 +44,13 @@ const cumPnl = computed(() => totalAsset.value - props.totalCapital)
 const pnlClass = computed(() => (cumPnl.value >= 0 ? 'rise' : 'fall'))
 const pnlLabel = computed(() => (cumPnl.value >= 0 ? '累计盈利' : '累计亏损'))
 const pnlText = computed(() => (cumPnl.value >= 0 ? `+${formatMoney(cumPnl.value)}` : formatMoney(cumPnl.value)))
+// 盈利/亏损幅度 = (现在资产 − 初期投入) / 初期投入
+const pnlPct = computed(() => (props.totalCapital > 0 ? (cumPnl.value / props.totalCapital) * 100 : null))
+const pnlPctLabel = computed(() => (cumPnl.value >= 0 ? '盈利幅度' : '亏损幅度'))
+const pnlPctText = computed(() => {
+  if (pnlPct.value === null) return '—'
+  return pnlPct.value >= 0 ? `+${pnlPct.value.toFixed(1)}%` : `${pnlPct.value.toFixed(1)}%`
+})
 </script>
 
 <style scoped>
