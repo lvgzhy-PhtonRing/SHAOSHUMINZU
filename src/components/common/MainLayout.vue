@@ -29,7 +29,7 @@
       :close-on-click-overlay="true"
       closeable
       close-icon="cross"
-      close-icon-position="top-left"
+          close-icon-position="top-right"
       :close-icon-color="'#a7a3c8'"
     >
       <SettingsPage :in-drawer="true" @close="showDrawer = false" />
@@ -107,6 +107,8 @@ watch(() => route.name, (name) => {
 }
 .main-layout :deep(.van-popup) {
   background: var(--bg-primary);
+  --van-popup-close-icon-size: 30px;
+  --van-popup-close-icon-margin: 8px;
 }
 .main-layout :deep(.van-overlay) {
   background: rgba(0,0,0,.45);

@@ -2,8 +2,7 @@
 <template>
   <div class="page dashboard-page">
     <div class="page-header">
-      <span class="page-title">持仓总览<span class="title-en">Holdings Overview</span></span>
-      <span class="price-time" v-if="lastUpdated">非实时市值，更新于 {{ lastUpdated }}</span>
+      <h1>持仓总览</h1>
     </div>
 
     <!-- 账户总资产模块（渐变高光签名卡） -->
