@@ -128,3 +128,10 @@ body {
 .van-field__control::placeholder {
   color: var(--text-muted);
 }
+
+/* 关闭按钮必须绝对定位于弹层：Vant 基础类的 position 一旦被其他样式表
+   （如同名 .van-icon/.van-badge__wrapper 规则）以相同特异性后置覆盖，
+   X 会掉回文档流被内容推到弹层底部，此处用更高特异性固定 */
+.van-popup .van-popup__close-icon {
+  position: absolute;
+}

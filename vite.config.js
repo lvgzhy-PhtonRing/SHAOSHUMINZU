@@ -14,7 +14,9 @@ export default defineConfig({
       dts: 'src/auto-imports.d.ts'
     }),
     Components({
-      resolvers: [VantResolver()],
+      // main.js 已全量引入 vant/lib/index.css，这里关闭按需样式注入，
+      // 避免同一批 Vant 规则被拆进异步 chunk 重复打包，以不同加载顺序产生层叠覆盖
+      resolvers: [VantResolver({ importStyle: false })],
       dts: 'src/components.d.ts'
     })
   ],
