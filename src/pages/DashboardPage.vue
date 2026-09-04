@@ -16,6 +16,7 @@
         :position-ratio="summary.positionRatio"
         :float-pnl="summary.floatPnl"
         :daily-pnl="summary.dailyPnl"
+        :price-update-time="priceTimeText"
       />
     </div>
 
@@ -80,7 +81,6 @@ const holdingStore = useHoldingStore()
 const priceStore = usePriceStore()
 const fundStore = useFundStore()
 const loading = ref(true)
-const lastUpdated = ref('')
 
 // 子池名称/颜色映射
 const router = useRouter()
@@ -112,15 +112,16 @@ onMounted(async () => {
   } catch (e) {
     console.error('Dashboard load error:', e)
   } finally {
-    updateTime()
     loading.value = false
   }
 })
 
-function updateTime() {
-  const now = new Date()
-  lastUpdated.value = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`
-}
+// 真实行情更新时间（价格拉取完成时刻）
+const priceTimeText = computed(() => {
+  if (!priceStore.lastUpdated) return ''
+  const d = new Date(priceStore.lastUpdated)
+  return `${d.getMonth() + 1}月${d.getDate()}日${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+})
 
 function onSellStock(stock) {
   // 合并持仓：选择该股票持仓量最大的子池作为卖出池
@@ -271,7 +272,6 @@ const summary = computed(() => {
 </script>
 
 <style scoped>
-.price-time { font-size: 10px; color: var(--text-muted); }
 .account-hero {
   background: linear-gradient(150deg, rgba(143,111,255,.16), rgba(255,77,109,.08) 60%, rgba(255,255,255,.04));
   border: 1px solid rgba(255,255,255,.16);

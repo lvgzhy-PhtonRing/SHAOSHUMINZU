@@ -3,7 +3,7 @@
   <div class="account-section">
     <div class="asset-meta">
       <span>账户资产（元）</span>
-      <span class="asset-meta-note">非实时市值</span>
+      <span class="asset-meta-note">非实时市值<template v-if="priceUpdateTime">，更新于 {{ priceUpdateTime }}</template></span>
     </div>
     <div class="total-asset">{{ formatMoney(totalAsset) }}</div>
     <div class="asset-grid">
