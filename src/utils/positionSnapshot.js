@@ -3,7 +3,45 @@
 import { useFundStore } from '@/stores/funds'
 import { useHoldingStore } from '@/stores/holdings'
 import { usePriceStore } from '@/stores/prices'
-import { savePositionSnapshot } from '@/api/supabase'
+import { savePositionSnapshot, fetchPositionSnapshots } from '@/api/supabase'
+
+// 判断某日是否为周五或本月最后一个工作日（周一~周五）
+function isPeriodicDay(date) {
+  const dow = date.getDay()
+  if (dow === 0 || dow === 6) return false
+  if (dow === 5) return true
+  // 是否为本月最后一个工作日：下一天起直到月末全为周末
+  const y = date.getFullYear()
+  const m = date.getMonth()
+  const lastDay = new Date(y, m + 1, 0).getDate()
+  let d = date.getDate() + 1
+  while (d <= lastDay) {
+    const next = new Date(y, m, d)
+    const w = next.getDay()
+    if (w !== 0 && w !== 6) return false
+    d++
+  }
+  return true
+}
+
+// 若今天为周五或本月最后一个工作日且当日尚无快照，则补存当日快照
+export async function ensurePeriodicSnapshot() {
+  const today = new Date()
+  if (!isPeriodicDay(today)) return
+  const todayStr = today.toISOString().slice(0, 10)
+  const recent = await fetchPositionSnapshots(30)
+  if (recent.some(s => s.date === todayStr)) return
+  const fundStore = useFundStore()
+  const holdingStore = useHoldingStore()
+  const priceStore = usePriceStore()
+  await Promise.all([
+    fundStore.loadCapitalLogs(),
+    holdingStore.loadHoldings()
+  ])
+  const codes = holdingStore.stockCodes
+  if (codes.length) await priceStore.loadPrices(codes)
+  await saveCurrentPositionSnapshot()
+}
 
 export async function saveCurrentPositionSnapshot() {
   const fundStore = useFundStore()

@@ -2,7 +2,7 @@
 <template>
   <div class="page dashboard-page">
     <div class="page-header">
-      <span class="page-title">持仓总览</span>
+      <span class="page-title">持仓总览<span class="title-en">Holdings Overview</span></span>
       <span class="price-time" v-if="lastUpdated">非实时市值，更新于 {{ lastUpdated }}</span>
     </div>
 
@@ -68,6 +68,7 @@ import { usePoolStore } from '@/stores/pools'
 import { useHoldingStore } from '@/stores/holdings'
 import { usePriceStore } from '@/stores/prices'
 import { useFundStore } from '@/stores/funds'
+import { loadPoolAllocation } from '@/api/supabase'
 import { calcProfit, calcPositionRatio } from '@/utils/calculators'
 import AccountSummary from '@/components/dashboard/AccountSummary.vue'
 import HoldingCard from '@/components/dashboard/HoldingCard.vue'
@@ -91,6 +92,7 @@ const colorList = ['#4d9fff', '#ff4d6d', '#00f0a8', '#ffd23f', '#b18cff']
 
 onMounted(async () => {
   try {
+    try { allocConfig.value = await loadPoolAllocation() } catch (e) {}
     await Promise.all([
       poolStore.loadPools(),
       holdingStore.loadHoldings(),
@@ -208,11 +210,11 @@ const displayHoldings = computed(() => {
       profit: calcProfit(currentPrice, avgCost, m.totalQty),
       pool_id: null  // 无对应单子池
     }
-  }).sort((a, b) => b.marketValue - a.marketValue)
+}).sort((a, b) => b.marketValue - a.marketValue)
 })
 
-const SUB_POOL_INIT = 110000
 const totalCapital = computed(() => fundStore.totalCapital)
+const allocConfig = ref(null)
 
 const summary = computed(() => {
   const holdings = displayHoldings.value
@@ -233,9 +235,13 @@ const summary = computed(() => {
   if (currentPoolId !== null) {
     // 单池模式：按池过滤现金流 + 池初始分配
     const pool = poolStore.pools.find(p => p.id === currentPoolId)
+    // 四人合计分配：从 allocConfig 读取，未配置时为 0（避免错误写入 44w 固定值）
+    const fourAlloc = poolStore.pools
+      .filter(p => p.name !== '公共池')
+      .reduce((sum, p) => sum + (allocConfig.value?.[p.name] ?? 0), 0)
     const poolInitial = pool?.name === '公共池'
-      ? totalCapital.value - SUB_POOL_INIT * (poolStore.pools.length - 1)
-      : SUB_POOL_INIT
+      ? totalCapital.value - fourAlloc
+      : (allocConfig.value?.[pool.name] ?? 0)
     const poolSellIn = fundStore.capitalLogs
       .filter(l => l.pool_id === currentPoolId && l.type === 'add')
       .reduce((s, l) => s + l.amount, 0)

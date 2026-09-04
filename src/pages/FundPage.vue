@@ -1,7 +1,7 @@
 <template>
   <div class="page fund-page">
     <div class="page-header">
-      <span class="page-title">资本管理</span>
+      <span class="page-title">资本管理<span class="title-en">Capital Management</span></span>
     </div>
 
     <CapitalSummary

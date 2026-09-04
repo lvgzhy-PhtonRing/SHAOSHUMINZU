@@ -1,8 +1,7 @@
 <template>
   <div class="page positions-page">
     <div class="page-header">
-      <span class="page-title">仓位分析</span>
-      <span class="total-asset-label">总资产 {{ formatMoney(totalAsset) }}</span>
+      <span class="page-title">仓位分析<span class="title-en">Position Analysis</span></span>
     </div>
 
     <LoadingSkeleton v-if="loading" :count="2" />
@@ -108,8 +107,8 @@ const floatPnl = computed(() => totalMarketValue.value - totalCost.value)
 const totalAvailable = computed(() => fundStore.totalAvailable)
 // 总资产 = 总市值 + 总可用资金（真实资产 = 持仓价值 + 现金）
 const totalAsset = computed(() => totalMarketValue.value + totalAvailable.value)
-// 四个子池初始分配：各 110,000（公共池 = 总资金 - 四人合计）
-const SUB_POOL_INIT = 110000
+// 四个子池初始分配：从 allocConfig 读取（未配置时不写死 11w，避免公共池计算错误）
+// 若未配置，public pool 由 totalCapital - 0 = totalCapital 表示，避免错误写入 44w 固定值
 
 const totalPositionRatio = computed(() => {
   return totalAsset.value > 0 ? (totalMarketValue.value / totalAsset.value) * 100 : 0
@@ -135,14 +134,14 @@ const poolPositionData = computed(() => {
   const fourAlloc = {}
   for (const p of poolStore.pools) {
     if (p.name !== '公共池') {
-      fourAlloc[p.id] = allocConfig.value?.[p.name] ?? SUB_POOL_INIT
+      fourAlloc[p.id] = allocConfig.value?.[p.name] ?? 0
     }
   }
   const fourSum = Object.values(fourAlloc).reduce((s, v) => s + v, 0)
   for (const p of poolStore.pools) {
     poolInitial[p.id] = p.name === '公共池'
       ? totalCapital.value - fourSum
-      : (fourAlloc[p.id] ?? SUB_POOL_INIT)
+      : fourAlloc[p.id]
   }
 
   // 从 capital_log 实际流水计算每个子池可用资金
@@ -220,7 +219,6 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.total-asset-label { font-size: 12px; color: var(--text-secondary); }
 .legend {
   display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; padding: 0 0 12px;
 }

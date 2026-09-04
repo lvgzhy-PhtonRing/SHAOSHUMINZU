@@ -39,6 +39,13 @@ const router = useRouter()
 const input = ref('')
 const error = ref(false)
 
+// 开发模式（npm run dev）自动登录，方便测试，生产构建不受影响
+import.meta.env.DEV && (async () => {
+  localStorage.setItem('pwd', '1111')
+  localStorage.setItem('auth', 'true')
+  router.replace({ name: 'dashboard' })
+})()
+
 function press(n) {
   if (input.value.length >= 4) return
   error.value = false
@@ -58,9 +65,13 @@ async function doLogin() {
   let serverOk = false, serverReachable = true
   try {
     const { verifyPassword } = await import('@/api/supabase')
-    serverOk = await verifyPassword(pwd)
+    // 服务器验证加 3 秒超时，避免不可达时请求挂起导致登录卡死
+    serverOk = await Promise.race([
+      verifyPassword(pwd),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('verify timeout')), 3000))
+    ])
   } catch {
-    serverReachable = false // 网络不可用，回退本地
+    serverReachable = false // 网络不可用/超时，回退本地
   }
 
   if (serverOk) {

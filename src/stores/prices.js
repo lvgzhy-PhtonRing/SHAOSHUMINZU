@@ -17,7 +17,17 @@ export const usePriceStore = defineStore('prices', {
       this.error = null
       try {
         const data = await fetchStockPrices(codes)
-        this.prices = { ...this.prices, ...data }
+        // 实时行情缺失/失败的股票 → 从缓存兜底（无网络时用导入的 stock_cache 价格）
+        const missing = codes.filter(c => !data[c]?.price)
+        if (missing.length) {
+          await this.loadFromCache(missing)
+        }
+        // 合并时仅采用 data 中的有效价格，避免 null 覆盖兜底值
+        const validData = {}
+        for (const c of codes) {
+          if (data[c] && data[c].price != null) validData[c] = data[c]
+        }
+        this.prices = { ...this.prices, ...validData }
         this.lastUpdated = Date.now()
         for (const code of codes) {
           if (data[code]) {
@@ -41,11 +51,12 @@ export const usePriceStore = defineStore('prices', {
         this.loading = false
       }
     },
-    async loadFromCache() {
+    async loadFromCache(codes) {
       this.error = null
       try {
         const cached = await fetchStockCache()
         for (const item of cached) {
+          if (codes && !codes.includes(item.stock_code)) continue
           this.prices[item.stock_code] = {
             price: item.price,
             change_pct: item.change_pct,

@@ -1,6 +1,6 @@
 <template>
-  <div class="page settings-page">
-    <div class="page-header">
+  <div class="page settings-page" :class="{ 'in-drawer': inDrawer }">
+    <div class="page-header" v-if="!inDrawer">
       <span class="page-title">软件设置</span>
     </div>
     <div class="settings-section">
@@ -18,11 +18,11 @@
           <div class="item-left"><span class="item-icon">📤</span><span>导出数据</span></div>
           <span class="item-arrow">{{ exporting ? '导出中…' : '↓' }}</span>
         </div>
-        <div class="settings-item" @click="triggerImport">
+        <label class="settings-item" for="import-file">
           <div class="item-left"><span class="item-icon">📥</span><span>导入数据</span></div>
           <span class="item-arrow">↑</span>
-        </div>
-        <input ref="fileInput" type="file" accept=".json" style="display:none" @change="onFileSelected" />
+        </label>
+        <input id="import-file" ref="fileInput" type="file" accept=".json,application/json,text/plain,text/json" style="display:none" @change="onFileSelected" />
       </div>
 
       <div class="settings-group">
@@ -37,7 +37,7 @@
         <div class="group-title">关于</div>
         <div class="settings-item">
           <div class="item-left"><span class="item-icon">ℹ️</span><span>版本</span></div>
-          <span class="item-value">v3.0.6</span>
+          <span class="item-value">v3.2.1</span>
         </div>
         <div class="settings-item">
           <div class="item-left"><span class="item-icon">🏛️</span><span>数据存储</span></div>
@@ -68,7 +68,13 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { supabase } from '@/api/supabase'
+import { isMockMode } from '@/api/mockDb'
 import { hashPassword, isHashed } from '@/utils/crypto'
+
+const props = defineProps({
+  inDrawer: { type: Boolean, default: false }
+})
+const emit = defineEmits(['close'])
 
 const router = useRouter()
 const showPwdDialog = ref(false)
@@ -77,7 +83,6 @@ const newPwd = ref('')
 const confirmPwd = ref('')
 const exporting = ref(false)
 const showImportConfirm = ref(false)
-const fileInput = ref(null)
 let pendingImportData = null
 
 const TABLES = ['pools', 'holdings', 'transactions', 'capital_log', 'stock_cache', 'app_config']
@@ -87,10 +92,15 @@ async function exportData() {
   exporting.value = true
   try {
     const backup = { _export_at: new Date().toISOString(), _version: 1 }
-    for (const table of TABLES) {
-      const { data, error } = await supabase.from(table).select('*')
-      if (error) throw new Error(`${table}: ${error.message}`)
-      backup[table] = data || []
+    if (isMockMode()) {
+      const { getTable } = await import('@/api/mockDb')
+      for (const table of TABLES) backup[table] = getTable(table)
+    } else {
+      for (const table of TABLES) {
+        const { data, error } = await supabase.from(table).select('*')
+        if (error) throw new Error(`${table}: ${error.message}`)
+        backup[table] = data || []
+      }
     }
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
@@ -107,10 +117,6 @@ async function exportData() {
 }
 
 // ========== 导入 ==========
-function triggerImport() {
-  fileInput.value?.click()
-}
-
 function onFileSelected(e) {
   const file = e.target.files?.[0]
   if (!file) return
@@ -130,27 +136,34 @@ function onFileSelected(e) {
 async function doImport() {
   if (!pendingImportData) return
   try {
-    for (const table of TABLES) {
-      const rows = pendingImportData[table]
-      // 先查出当前表中所有记录ID，逐条删除
-      const { data: current } = await supabase.from(table).select(table === 'stock_cache' ? 'stock_code' : table === 'app_config' ? 'key' : 'id')
-      if (current && current.length) {
-        for (const item of current) {
-          if (table === 'stock_cache') await supabase.from(table).delete().eq('stock_code', item.stock_code)
-          else if (table === 'app_config') await supabase.from(table).delete().eq('key', item.key)
-          else await supabase.from(table).delete().eq('id', item.id)
+    if (isMockMode()) {
+      // 测试版（无 Supabase 凭据）：导入到本地 mock 数据库
+      const { loadBackup } = await import('@/api/mockDb')
+      loadBackup(pendingImportData)
+      alert('✅ 数据已导入本地测试库！请刷新页面查看')
+    } else {
+      for (const table of TABLES) {
+        const rows = pendingImportData[table]
+        // 先查出当前表中所有记录ID，逐条删除
+        const { data: current } = await supabase.from(table).select(table === 'stock_cache' ? 'stock_code' : table === 'app_config' ? 'key' : 'id')
+        if (current && current.length) {
+          for (const item of current) {
+            if (table === 'stock_cache') await supabase.from(table).delete().eq('stock_code', item.stock_code)
+            else if (table === 'app_config') await supabase.from(table).delete().eq('key', item.key)
+            else await supabase.from(table).delete().eq('id', item.id)
+          }
+        }
+        // 插入备份数据（保留原始 ID 以维持外键关联）
+        if (rows && rows.length) {
+          for (const row of rows) {
+            const { updated_at, ...clean } = row
+            const { error } = await supabase.from(table).insert(clean)
+            if (error) console.warn(`${table} row insert error:`, error.message)
+          }
         }
       }
-      // 插入备份数据（保留原始 ID 以维持外键关联）
-      if (rows && rows.length) {
-        for (const row of rows) {
-          const { updated_at, ...clean } = row
-          const { error } = await supabase.from(table).insert(clean)
-          if (error) console.warn(`${table} row insert error:`, error.message)
-        }
-      }
+      alert('✅ 数据导入成功！请刷新页面查看')
     }
-    alert('✅ 数据导入成功！请刷新页面查看')
   } catch (e) {
     console.error('Import error:', e)
     alert('❌ 导入失败：' + e.message)
@@ -193,4 +206,6 @@ function doLogout() {
 .item-status { font-size: 12px; padding: 2px 8px; border-radius: 4px; }
 .item-status.sync-ok { background: rgba(0,240,168,0.12); color: var(--color-fall); }
 .logout-section { padding: 24px 0; }
+.in-drawer { padding: 56px 0 0; }
+.in-drawer .logout-section { padding: 12px 0; }
 </style>

@@ -1,7 +1,7 @@
 <template>
   <div class="page trends-page">
     <div class="page-header">
-      <span class="page-title">硬度榜单</span>
+      <span class="page-title">硬度榜单<span class="title-en">Hard Ranking</span></span>
     </div>
 
     <LoadingSkeleton v-if="loading" :count="3" />
@@ -76,66 +76,6 @@
         </div>
       </div>
 
-      <!-- 趋势总览（仓位+资产合并，日期强制对齐） -->
-      <div class="section-card edge-accent">
-        <div class="section-title">
-          <span class="title-accent title-accent--trend"></span>
-          趋势总览
-          <span class="subtitle">近15交易日</span>
-        </div>
-        <div v-if="!trendData.length" class="trend-empty">暂无数据</div>
-        <div v-else class="trend-table">
-          <!-- 表头 -->
-          <div class="trend-header">
-            <span class="th-label">日期</span>
-            <span class="th-col">仓位比例</span>
-            <span class="th-col">总资产</span>
-          </div>
-          <!-- 数据行 -->
-          <div v-for="(d, i) in trendData" :key="i" class="trend-row"
-            :class="{ 'trend-row--week-start': i > 0 && d.label.startsWith('周一') }">
-            <span class="tr-label">{{ d.label }}</span>
-            <!-- 仓位比例列 -->
-            <div class="tr-col">
-              <div class="bar-track">
-                <div class="bar-fill bar-fill--ratio" :style="{ width: ratioBarPct(d.ratio) + '%' }"></div>
-              </div>
-              <span class="bar-value">{{ d.ratio.toFixed(1) }}%</span>
-              <span v-if="i > 0" class="bar-delta" :class="d.ratio >= trendData[i-1].ratio ? 'rise' : 'fall'">
-                {{ d.ratio >= trendData[i-1].ratio ? '▲' : '▼' }}
-              </span>
-              <span v-else class="bar-delta-spacer"></span>
-            </div>
-            <!-- 总资产列 -->
-            <div class="tr-col">
-              <div class="bar-track">
-                <div class="bar-fill bar-fill--asset" :style="{ width: assetBarPct(d.asset) + '%' }"></div>
-              </div>
-              <span class="bar-value">{{ formatCompact(d.asset) }}</span>
-              <span v-if="i > 0" class="bar-delta" :class="d.asset >= trendData[i-1].asset ? 'rise' : 'fall'">
-                {{ d.asset >= trendData[i-1].asset ? '▲' : '▼' }}
-              </span>
-              <span v-else class="bar-delta-spacer"></span>
-              <span v-if="d.capitalChange !== 0" class="capchg-tag"
-                :class="d.capitalChange > 0 ? 'rise' : 'fall'">!</span>
-              <span v-else class="capchg-slot"></span>
-            </div>
-          </div>
-        </div>
-
-        <!-- 增资减资明细 -->
-        <div v-if="capitalDetailList.length" class="capchg-detail">
-          <div class="capchg-detail-title">资金变动明细</div>
-          <div v-for="(c, i) in capitalDetailList" :key="i" class="capchg-detail-item">
-            <span class="cd-date">{{ c.label }}</span>
-            <span class="cd-type" :class="c.type === '增资' ? 'rise' : 'fall'">{{ c.type }}</span>
-            <span v-if="c.note" class="cd-note">{{ c.note }}</span>
-            <span class="cd-amount" :class="c.type === '增资' ? 'rise' : 'fall'">
-              {{ c.type === '增资' ? '+' : '-' }}{{ formatMoney(Math.abs(c.amount)) }}
-            </span>
-          </div>
-        </div>
-      </div>
     </template>
   </div>
 </template>
@@ -147,13 +87,9 @@ import { useHoldingStore } from '@/stores/holdings'
 import { usePriceStore } from '@/stores/prices'
 import { useFundStore } from '@/stores/funds'
 import { useTransactionStore } from '@/stores/transactions'
-import { fetchPositionSnapshots, fetchAllTransactions } from '@/api/supabase'
-import { saveCurrentPositionSnapshot } from '@/utils/positionSnapshot'
-import { formatMoney } from '@/utils/formatters'
+import { fetchAllTransactions, loadPoolAllocation } from '@/api/supabase'
 
 const loading = ref(true)
-const WEEKDAY = ['日', '一', '二', '三', '四', '五', '六']
-const trendData = ref([])
 
 const poolStore = usePoolStore()
 const holdingStore = useHoldingStore()
@@ -218,70 +154,11 @@ function formatProfit(profit) {
   return `-${abs.toLocaleString('zh-CN')}`
 }
 
-// ===== 趋势图 =====
-const maxRatio = computed(() => {
-  if (!trendData.value.length) return 100
-  return Math.max(...trendData.value.map(d => d.ratio), 1)
-})
-const minRatio = computed(() => {
-  if (!trendData.value.length) return 0
-  return Math.min(...trendData.value.map(d => d.ratio), 100)
-})
-const maxAsset = computed(() => {
-  if (!trendData.value.length) return 1000000
-  return Math.max(...trendData.value.map(d => d.asset), 1)
-})
-const minAsset = computed(() => {
-  if (!trendData.value.length) return 0
-  return Math.min(...trendData.value.map(d => d.asset))
-})
-
-function ratioBarPct(ratio) {
-  const range = maxRatio.value - minRatio.value
-  if (range < 0.01) return 100
-  return ((ratio - minRatio.value) / range) * 100
-}
-function assetBarPct(asset) {
-  const range = maxAsset.value - minAsset.value
-  if (range < 0.01) return 100
-  return ((asset - minAsset.value) / range) * 100
-}
-
-function formatCompact(v) {
-  if (v >= 100000000) return (v / 100000000).toFixed(2) + '亿'
-  if (v >= 10000) return (v / 10000).toFixed(1) + '万'
-  return Math.round(v).toLocaleString('zh-CN')
-}
-
-// ===== 资金变动明细（趋势总览底部文字列表，对应每行"!"） =====
-const capitalDetailList = computed(() => {
-  if (!trendData.value.length) return []
-  const minDate = trendData.value[0].date
-  const maxDate = trendData.value[trendData.value.length - 1].date
-  return fundStore.capitalLogs
-    .filter(l => l.pool_id === null && l.note !== '初始' && l.category !== 'adjust' && l.created_at)
-    .filter(l => {
-      const d = l.created_at.slice(0, 10)
-      return d >= minDate && d <= maxDate
-    })
-    .slice()
-    .sort((a, b) => a.created_at.localeCompare(b.created_at))
-    .map(l => {
-      const dStr = l.created_at.slice(0, 10)
-      const d = new Date(dStr + 'T00:00:00')
-      return {
-        label: formatTrendLabel(d),
-        type: l.type === 'add' ? '增资' : '减资',
-        note: l.note || '',
-        amount: l.amount
-      }
-    })
-})
-
 // ===== 子池硬度 =====
 const POOL_COLORS = { '春': '#ff4d6d', '维': '#00f0a8', '队': '#ffd23f', '回': '#b18cff' }
 const POOL_ORDER = ['春', '维', '队', '回']
-const SUB_POOL_INIT = 110000
+const allocConfig = ref(null)
+// 公共池初始分配：从 allocConfig 读取，未配置时不写死 11w
 
 const hardData = computed(() => {
   return POOL_ORDER.map(name => {
@@ -289,14 +166,16 @@ const hardData = computed(() => {
     if (!pool) return null
     const adds = fundStore.capitalLogs.filter(l => l.pool_id === pool.id && l.type === 'add').reduce((s, l) => s + l.amount, 0)
     const removes = fundStore.capitalLogs.filter(l => l.pool_id === pool.id && l.type === 'remove').reduce((s, l) => s + l.amount, 0)
-    const poolAvailable = SUB_POOL_INIT + adds - removes
+    // 从 allocConfig 读取该池的初始分配，未配置时为 0
+    const poolAlloc = allocConfig.value?.[pool.name] ?? 0
+    const poolAvailable = poolAlloc + adds - removes
     const holdings = holdingStore.holdings.filter(h => h.pool_id === pool.id)
     const mv = holdings.reduce((s, h) => {
       return s + (priceStore.prices[h.stock_code]?.price || 0) * h.quantity
     }, 0)
     const totalAsset = poolAvailable + mv
-    const ratio = (totalAsset / SUB_POOL_INIT) * 100
-    return { name, alloc: SUB_POOL_INIT, mv, totalAsset, ratio, color: POOL_COLORS[name] }
+    const ratio = poolAlloc > 0 ? (totalAsset / poolAlloc) * 100 : 0
+    return { name, alloc: poolAlloc, mv, totalAsset, ratio, color: POOL_COLORS[name] }
   }).filter(Boolean)
 })
 
@@ -319,23 +198,9 @@ function hardBarHeight(ratio) {
 }
 
 // ===== 加载 =====
-function isWeekend(dateStr) {
-  const d = new Date(dateStr + 'T00:00:00')
-  return d.getDay() === 0 || d.getDay() === 6
-}
-function toDateStr(d) {
-  return d.getFullYear() + '-' +
-    String(d.getMonth() + 1).padStart(2, '0') + '-' +
-    String(d.getDate()).padStart(2, '0')
-}
-function formatTrendLabel(d) {
-  return '周' + WEEKDAY[d.getDay()] + ' ' +
-    String(d.getMonth() + 1).padStart(2, '0') + '/' +
-    String(d.getDate()).padStart(2, '0')
-}
-
 onMounted(async () => {
   try {
+    try { allocConfig.value = await loadPoolAllocation() } catch (e) {}
     await Promise.all([
       poolStore.loadPools(),
       holdingStore.loadHoldings(),
@@ -347,39 +212,6 @@ onMounted(async () => {
 
     const codes = holdingStore.stockCodes
     if (codes.length) await priceStore.loadPrices(codes)
-
-    await saveCurrentPositionSnapshot()
-
-    // 拉取较多快照，用于对缺失的交易日顺延补数据
-    const snaps = await fetchPositionSnapshots(60)
-    const snapByDate = {}
-    for (const s of snaps) snapByDate[s.date] = s
-
-    const dates = Object.keys(snapByDate).sort()
-    if (dates.length) {
-      const end = new Date(dates[dates.length - 1] + 'T00:00:00')
-      const start = new Date(end)
-      start.setDate(start.getDate() - 30)  // 30 日历日足够覆盖 15 个交易日
-
-      const filled = []
-      let lastData = null
-      const cursor = new Date(start)
-      while (cursor <= end) {
-        const dateStr = toDateStr(cursor)
-        if (!isWeekend(dateStr)) {
-          const snap = snapByDate[dateStr]
-          if (snap) {
-            lastData = { ratio: snap.ratio, asset: snap.asset || 0, capitalChange: snap.capitalChange || 0 }
-            filled.push({ label: formatTrendLabel(cursor), date: dateStr, ...lastData })
-          } else if (lastData) {
-            // 交易日无快照 → 用最近一个已知快照顺延补上，资金变动归 0
-            filled.push({ label: formatTrendLabel(cursor), date: dateStr, ...lastData, capitalChange: 0 })
-          }
-        }
-        cursor.setDate(cursor.getDate() + 1)
-      }
-      trendData.value = filled.slice(-15)
-    }
   } catch (e) {
     console.error('Trends page load error:', e)
   } finally {
@@ -404,7 +236,6 @@ onMounted(async () => {
 .title-accent--rise { background: var(--color-rise); }
 .title-accent--fall { background: var(--color-fall); }
 .title-accent--hard { background: linear-gradient(180deg, #ffd23f, #ff9f45); }
-.title-accent--trend { background: var(--bg-accent); }
 
 /* ===== 盈亏排行 ===== */
 .rank-empty {
@@ -463,141 +294,6 @@ onMounted(async () => {
 }
 .rank-profit.rise { color: var(--color-rise); }
 .rank-profit.fall { color: var(--color-fall); }
-
-/* ===== 趋势总览（合并表格，日期强制对齐） ===== */
-.trend-table {
-  display: flex;
-  flex-direction: column;
-}
-.trend-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 0 6px;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
-  margin-bottom: 4px;
-}
-.th-label {
-  width: 72px; flex-shrink: 0;
-  font-size: 10px; color: var(--text-muted); text-align: left;
-}
-.th-col {
-  flex: 1;
-  font-size: 10px; color: var(--text-muted);
-}
-.trend-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 0;
-}
-.trend-row--week-start {
-  border-top: 1px dashed rgba(255,255,255,0.14);
-  margin-top: 4px;
-  padding-top: 8px;
-}
-.tr-label {
-  width: 72px; flex-shrink: 0;
-  font-size: 11px; font-weight: 600;
-  color: var(--text-secondary);
-  text-align: left;
-  white-space: nowrap;
-}
-.tr-col {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-}
-.bar-track {
-  flex: 1;
-  height: 18px;
-  background: rgba(255,255,255,0.04);
-  border-radius: 3px;
-  overflow: hidden;
-  min-width: 20px;
-}
-.bar-fill {
-  height: 100%;
-  border-radius: 3px;
-  transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-  min-width: 2px;
-}
-.bar-fill--ratio {
-  background: linear-gradient(90deg, var(--bg-accent), rgba(111,77,255,0.35));
-}
-.bar-fill--asset {
-  background: linear-gradient(90deg, var(--color-rise), rgba(233,69,96,0.25));
-}
-.bar-value {
-  font-size: 11px;
-  font-weight: 700;
-  font-family: var(--font-number);
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-.bar-delta {
-  width: 14px;
-  font-size: 11px;
-  text-align: center;
-  flex-shrink: 0;
-}
-.bar-delta-spacer {
-  width: 14px;
-  flex-shrink: 0;
-}
-.bar-delta.rise { color: var(--color-rise); }
-.bar-delta.fall { color: var(--color-fall); }
-
-.capchg-tag {
-  font-size: 9px;
-  font-weight: 600;
-  padding: 0 4px;
-  border-radius: 3px;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-.capchg-tag.rise { color: var(--color-rise); background: rgba(233,69,96,0.1); }
-.capchg-tag.fall { color: var(--color-fall); background: rgba(0,210,161,0.1); }
-.capchg-slot {
-  display: inline-block; width: 0; height: 0;
-  flex-shrink: 0;
-}
-
-/* 资金变动明细 */
-.capchg-detail {
-  margin-top: 12px;
-  border-top: 1px solid rgba(255,255,255,0.06);
-  padding-top: 10px;
-}
-.capchg-detail-title {
-  font-size: 11px;
-  color: var(--text-muted);
-  margin-bottom: 6px;
-}
-.capchg-detail-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 3px 0;
-  font-size: 11px;
-}
-.cd-date { width: 72px; flex-shrink: 0; color: var(--text-secondary); font-weight: 600; }
-.cd-type { font-weight: 700; flex-shrink: 0; }
-.cd-type.rise { color: var(--color-rise); }
-.cd-type.fall { color: var(--color-fall); }
-.cd-note { flex: 1; min-width: 0; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.cd-amount { font-family: var(--font-number); font-weight: 700; flex-shrink: 0; }
-.cd-amount.rise { color: var(--color-rise); }
-.cd-amount.fall { color: var(--color-fall); }
-
-.trend-empty {
-  height: 80px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 12px;
-  color: var(--text-muted);
-}
 
 /* ===== 子池硬度 ===== */
 .hard-card { padding-bottom: 20px; }

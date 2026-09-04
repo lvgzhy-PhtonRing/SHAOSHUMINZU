@@ -1,7 +1,7 @@
 <template>
   <div class="page trade-page">
     <div class="page-header">
-      <span class="page-title">{{ isSell ? '录入卖出' : '交易管理' }}</span>
+      <span class="page-title">{{ isSell ? '录入卖出' : '交易管理' }}<span class="title-en">{{ isSell ? 'Sell Entry' : 'Trade Management' }}</span></span>
     </div>
 
     <!-- 买入表单 -->

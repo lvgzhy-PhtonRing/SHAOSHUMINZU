@@ -38,6 +38,12 @@ const routes = [
         meta: { title: '交易' }
       },
       {
+        path: 'trend',
+        name: 'trend',
+        component: () => import('@/pages/TrendPage.vue'),
+        meta: { title: '趋势' }
+      },
+      {
         path: 'fund',
         name: 'fund',
         component: () => import('@/pages/FundPage.vue'),
