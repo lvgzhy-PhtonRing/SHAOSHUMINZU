@@ -63,6 +63,7 @@ export const usePriceStore = defineStore('prices', {
             stock_name: item.stock_name
           }
         }
+        this.lastUpdated = Date.now()
       } catch (e) {
         this.error = e.message
         console.error('Load from cache error:', e)
