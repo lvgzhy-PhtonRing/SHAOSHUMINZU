@@ -139,7 +139,13 @@ function openKLine(h) {
   const cost = totalQty > 0
     ? rows.reduce((s, x) => s + x.cost_price * x.quantity, 0) / totalQty
     : (h.cost_price || 0)
-  klineStock.value = { ...h, cost_price: cost }
+  const priceData = priceStore.prices[h.stock_code] || {}
+  klineStock.value = {
+    ...h,
+    cost_price: cost,
+    currentPrice: priceData.price || h.currentPrice || 0,
+    changePct: priceData.change_pct || h.changePct || 0
+  }
 }
 
 function onSellStock(stock) {

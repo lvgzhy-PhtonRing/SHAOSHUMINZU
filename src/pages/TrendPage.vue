@@ -115,7 +115,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { useHoldingStore } from '@/stores/holdings'
 import { usePriceStore } from '@/stores/prices'
 import { useFundStore } from '@/stores/funds'
@@ -168,10 +168,21 @@ function dateStrAddDays(dateStr, days) {
 const monthPanels = ref([])
 const currentMonthLabel = ref('')
 const currentHint = ref('右滑查看上月 →')
-const swipeHeight = computed(() => {
-  const rows = Math.max(...monthPanels.value.map(p => p.weeks.length), 6)
-  return rows * 66
-})
+const swipeHeight = ref(396)
+
+// 动态测量周卡片总高，保证 swipe 高度贴合实际内容（空白周等高后不裁剪/不留过多空白）
+function updateSwipeHeight() {
+  const panels = document.querySelectorAll('.cal-panel')
+  let maxH = 0
+  panels.forEach(p => {
+    const blocks = p.querySelectorAll('.week-block')
+    if (!blocks.length) return
+    let h = 0
+    blocks.forEach((b, i) => { h += b.offsetHeight + (i < blocks.length - 1 ? 6 : 0) })
+    maxH = Math.max(maxH, h)
+  })
+  swipeHeight.value = Math.max(maxH, 320)
+}
 
 function onSwipeChange(idx) {
   if (monthPanels.value[idx]) {
@@ -422,6 +433,7 @@ onMounted(async () => {
 
     buildMonthPanels()
     buildYearPnls()
+    nextTick(updateSwipeHeight)
 
     // 趋势总览（近15交易日，缺失顺延补数）
     const dates = sortedDates.value
@@ -499,6 +511,8 @@ onMounted(async () => {
   border-radius: 10px;
   padding: 6px 8px;
   margin-bottom: 6px;
+  min-height: 58px;
+  box-sizing: border-box;
 }
 .week-block:last-child { margin-bottom: 0; }
 .week-block-dates {

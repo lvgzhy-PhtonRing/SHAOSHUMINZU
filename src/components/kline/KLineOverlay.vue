@@ -11,7 +11,8 @@
       <div class="kline-title">
         <span class="kline-name">{{ stock.stock_name }}</span>
         <span class="kline-code">{{ stock.stock_code }}</span>
-        <span v-if="costLabel" class="kline-cost">持仓成本{{ costLabel }}元</span>
+        <span class="kline-cost" v-if="costLabel">持仓成本{{ costLabel }}元</span>
+        <span class="kline-price" v-if="priceLabel" :style="{ background: priceBg }">现价{{ priceLabel }}元</span>
       </div>
       <div class="kline-tabs">
         <button
@@ -36,7 +37,7 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { init, dispose } from 'klinecharts'
-import { fetchKLine } from '@/api/stock'
+import { fetchKLine, refreshStockPrice } from '@/api/stock'
 
 const PERIODS = [
   { key: 'day', label: '日K' },
@@ -187,11 +188,30 @@ const period = ref('day')
 const loading = ref(false)
 const error = ref('')
 let chart = null
+let priceTimer = null
 
 const costLabel = computed(() => {
   const c = Number(props.stock.cost_price)
   return c > 0 ? c.toFixed(3) : ''
 })
+
+const currentPrice = ref(Number(props.stock.currentPrice) || 0)
+const changePct = ref(Number(props.stock.changePct) || 0)
+const priceLabel = computed(() => currentPrice.value > 0 ? currentPrice.value.toFixed(2) : '')
+const priceBg = computed(() => {
+  if (changePct.value > 0) return 'var(--color-rise)'
+  if (changePct.value < 0) return 'var(--color-fall)'
+  return 'rgba(167, 163, 200, 0.28)'
+})
+
+// 定时实时刷新现价（绕过行情缓存）
+async function refreshPrice() {
+  const d = await refreshStockPrice(props.stock.stock_code)
+  if (d && d.price) {
+    currentPrice.value = d.price
+    changePct.value = Number(d.change_pct) || 0
+  }
+}
 
 function close() {
   emit('close')
@@ -302,11 +322,17 @@ onMounted(() => {
     initChart()
     resizeChart()
   })
+  refreshPrice()
+  priceTimer = setInterval(refreshPrice, 30 * 1000)
   window.addEventListener('resize', resizeChart)
   window.addEventListener('orientationchange', resizeChart)
 })
 
 onBeforeUnmount(() => {
+  if (priceTimer) {
+    clearInterval(priceTimer)
+    priceTimer = null
+  }
   window.removeEventListener('resize', resizeChart)
   window.removeEventListener('orientationchange', resizeChart)
   if (chart) {
@@ -377,11 +403,25 @@ onBeforeUnmount(() => {
 
 .kline-cost {
   font-size: 11px;
-  color: var(--text-secondary);
+  font-weight: 700;
+  color: #fff;
   font-family: var(--font-number);
-  padding: 3px 8px;
-  border: 1px solid rgba(244, 242, 255, 0.32);
-  border-radius: 10px;
+  padding: 4px 10px;
+  background: linear-gradient(135deg, #6f4dff, #9d7bff);
+  border: none;
+  border-radius: 12px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.kline-price {
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  font-family: var(--font-number);
+  padding: 4px 10px;
+  border: none;
+  border-radius: 12px;
   white-space: nowrap;
   flex-shrink: 0;
 }

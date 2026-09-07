@@ -214,6 +214,22 @@ export function clearPriceCache() {
   cacheTime = {}; priceCache = {}
 }
 
+// 强制刷新单只现价（绕过缓存），供 K线弹窗等场景实时取价；成功时更新缓存并返回
+export async function refreshStockPrice(code) {
+  if (!/^\d{6}$/.test(code)) return null
+  let fresh = await fetchViaEdge([code]).catch(() => ({}))
+  if (Object.keys(fresh).length === 0) {
+    fresh = await fetchSinaJSONP([code]).catch(() => ({}))
+  }
+  const d = fresh[code]
+  if (d && d.price) {
+    priceCache[code] = d
+    cacheTime[code] = Date.now()
+    return d
+  }
+  return null
+}
+
 // ========== K线数据（新浪 JSONP） ==========
 // 端点：jsonp_v2.php/{callback}/CN_MarketDataService.getKLineData
 // 非 JSONP 的 json_v2.php 无 CORS 头，浏览器只能走 script 标签
