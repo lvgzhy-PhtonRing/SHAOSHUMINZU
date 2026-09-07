@@ -243,7 +243,7 @@ function buildMonthPanel(year, month) {
     }
     weeks.push({
       days,
-      pnl
+      pnl: pnl ?? 0
     })
     // cursor 目前已移动到周六(或月末)，下次 while 循环将从下一周开始
   }
