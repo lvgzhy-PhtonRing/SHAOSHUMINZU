@@ -202,8 +202,6 @@ function buildMonthPanel(year, month) {
   const weeks = []
   let cursor = new Date(firstMonday)
   while (cursor <= lastDate) {
-    // 保存本周的周一日期，用于后面计算周盈亏
-    const weekMonday = new Date(cursor)
     const days = []
     for (let i = 0; i < 7; i++) {
       days.push({
@@ -213,27 +211,18 @@ function buildMonthPanel(year, month) {
       })
       cursor.setDate(cursor.getDate() + 1)
     }
-    // 计算本周周盈亏：周末(周五/最新快照)资产 − 周一资产 − 区间内外部增资
-    const weekFriday = new Date(weekMonday)
-    weekFriday.setDate(weekFriday.getDate() + 4) // Friday
+    // 本周盈亏 = 该周块"入月日"区间的资产变动 − 区间内外部增资
+    // 入月日区间在各周块间首尾相接，逐周求和恰好抵消为月度盈亏（与月视图口径闭环）
     const today = new Date()
     const todayStr = toDateStr(today)
-    const mondayStr = toDateStr(weekMonday)
     let pnl = null
-    if (weekFriday <= today) {
-      // 完整周：周一到周五收盘对比
-      const curDate = snapDateAtOrBefore(toDateStr(weekFriday))
-      const prevDate = snapDateAtOrBefore(mondayStr)
-      if (curDate && prevDate) {
-        const cur = snapByDate.value[curDate].asset
-        const prev = snapByDate.value[prevDate].asset
-        const netIn = externalNetIn(prevDate, curDate)
-        pnl = Math.round(cur - prev - netIn)
-      }
-    } else {
-      // 当前周：周一至今实时盈亏
-      const curDate = snapDateAtOrBefore(todayStr)
-      const prevDate = snapDateAtOrBefore(mondayStr)
+    const inMonthDates = days.filter(d => d.inMonth).map(d => toDateStr(d.date))
+    if (inMonthDates.length && inMonthDates[0] <= todayStr) {
+      const curEnd = inMonthDates[inMonthDates.length - 1] < todayStr
+        ? inMonthDates[inMonthDates.length - 1]
+        : todayStr
+      const curDate = snapDateAtOrBefore(curEnd)
+      const prevDate = snapDateAtOrBefore(dateStrAddDays(inMonthDates[0], -1))
       if (curDate && prevDate) {
         const cur = snapByDate.value[curDate].asset
         const prev = snapByDate.value[prevDate].asset

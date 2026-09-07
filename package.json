@@ -1,7 +1,7 @@
 {
   "name": "structured-position-plan",
   "private": true,
-  "version": "3.2.2",
+  "version": "3.5.2",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,6 +12,7 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.43.0",
     "@vant/use": "^1.6.0",
+    "klinecharts": "^10.0.3",
     "pinia": "^2.1.0",
     "vant": "^4.8.0",
     "vue": "^3.4.0",
