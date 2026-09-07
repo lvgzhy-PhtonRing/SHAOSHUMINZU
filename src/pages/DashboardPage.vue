@@ -53,10 +53,17 @@
           :pool-name="h.merged ? '' : (poolNameMap[h.pool_id] || '')"
           :pool-color="h.merged ? '#888888' : (poolColorMap[h.pool_id] || '#4d9fff')"
           :pool-tags="h.merged ? h.poolNames : []"
+          @tap="openKLine(h)"
           @sell="onSellStock"
         />
       </template>
     </div>
+
+    <KLineOverlay
+      v-if="klineStock"
+      :stock="klineStock"
+      @close="klineStock = null"
+    />
   </div>
 
 </template>
@@ -75,12 +82,14 @@ import HoldingCard from '@/components/dashboard/HoldingCard.vue'
 import PoolSelector from '@/components/common/PoolSelector.vue'
 import LoadingSkeleton from '@/components/common/LoadingSkeleton.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
+import KLineOverlay from '@/components/kline/KLineOverlay.vue'
 
 const poolStore = usePoolStore()
 const holdingStore = useHoldingStore()
 const priceStore = usePriceStore()
 const fundStore = useFundStore()
 const loading = ref(true)
+const klineStock = ref(null)
 
 // 子池名称/颜色映射
 const router = useRouter()
@@ -122,6 +131,16 @@ const priceTimeText = computed(() => {
   const d = new Date(priceStore.lastUpdated)
   return `${d.getMonth() + 1}月${d.getDate()}日${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 })
+
+// 打开 K 线：成本线统一取跨池加权均价，与子池筛选无关
+function openKLine(h) {
+  const rows = holdingStore.holdings.filter(x => x.stock_code === h.stock_code)
+  const totalQty = rows.reduce((s, x) => s + x.quantity, 0)
+  const cost = totalQty > 0
+    ? rows.reduce((s, x) => s + x.cost_price * x.quantity, 0) / totalQty
+    : (h.cost_price || 0)
+  klineStock.value = { ...h, cost_price: cost }
+}
 
 function onSellStock(stock) {
   // 合并持仓：选择该股票持仓量最大的子池作为卖出池

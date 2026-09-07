@@ -17,6 +17,7 @@ declare module 'vue' {
     FundAllocationEditor: typeof import('./components/fund/FundAllocationEditor.vue')['default']
     FundAllocationSummary: typeof import('./components/fund/FundAllocationSummary.vue')['default']
     HoldingCard: typeof import('./components/dashboard/HoldingCard.vue')['default']
+    KLineOverlay: typeof import('./components/kline/KLineOverlay.vue')['default']
     LoadingSkeleton: typeof import('./components/common/LoadingSkeleton.vue')['default']
     MainLayout: typeof import('./components/common/MainLayout.vue')['default']
     PoolPositionCard: typeof import('./components/positions/PoolPositionCard.vue')['default']

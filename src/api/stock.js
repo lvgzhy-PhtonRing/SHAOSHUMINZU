@@ -214,6 +214,78 @@ export function clearPriceCache() {
   cacheTime = {}; priceCache = {}
 }
 
+// ========== K线数据（新浪 JSONP） ==========
+// 端点：jsonp_v2.php/{callback}/CN_MarketDataService.getKLineData
+// 非 JSONP 的 json_v2.php 无 CORS 头，浏览器只能走 script 标签
+const KLINE_MAX_AGE = 30 * 60 * 1000
+const KLINE_SCALE = { day: 240, week: 1200, month: 7200 }
+const KLINE_DATALEN = { day: 500, week: 250, month: 120 }
+let klineCache = {}
+let klineCacheTime = {}
+
+function klineSymbol(code) {
+  // 5/6/9 开头归沪市（含 ETF），其余归深市
+  return /^[569]/.test(code) ? `sh${code}` : `sz${code}`
+}
+
+function fetchKLineJSONP(code, period) {
+  return new Promise((resolve) => {
+    const cb = `kline_cb_${Date.now()}_${Math.floor(Math.random() * 1e6)}`
+    const url = `https://quotes.sina.cn/cn/api/jsonp_v2.php/${cb}/CN_MarketDataService.getKLineData?symbol=${klineSymbol(code)}&scale=${KLINE_SCALE[period]}&ma=no&datalen=${KLINE_DATALEN[period]}`
+    const script = document.createElement('script')
+    let done = false
+
+    function cleanup() {
+      if (done) return
+      done = true
+      clearTimeout(timer)
+      delete window[cb]
+      if (script.parentNode) document.body.removeChild(script)
+    }
+
+    const timer = setTimeout(() => { cleanup(); resolve([]) }, 10000)
+    window[cb] = (data) => { cleanup(); resolve(Array.isArray(data) ? data : []) }
+    script.onerror = () => { cleanup(); resolve([]) }
+    script.src = url
+    document.body.appendChild(script)
+  })
+}
+
+export async function fetchKLine(code, period = 'day') {
+  if (!/^\d{6}$/.test(code)) return []
+  const key = `${code}_${period}`
+  if (klineCache[key] && Date.now() - klineCacheTime[key] < KLINE_MAX_AGE) {
+    return klineCache[key]
+  }
+
+  const raw = await fetchKLineJSONP(code, period)
+  const data = raw
+    .filter(r => r && r.day && r.open)
+    .map(r => {
+      const ts = Date.parse(`${r.day}T00:00:00+08:00`)
+      return {
+        timestamp: isNaN(ts) ? 0 : ts,
+        open: parseFloat(r.open) || 0,
+        high: parseFloat(r.high) || 0,
+        low: parseFloat(r.low) || 0,
+        close: parseFloat(r.close) || 0,
+        volume: parseInt(r.volume) || 0
+      }
+    })
+    .filter(d => d.timestamp > 0)
+    .sort((a, b) => a.timestamp - b.timestamp)
+
+  if (data.length) {
+    klineCache[key] = data
+    klineCacheTime[key] = Date.now()
+  }
+  return data
+}
+
+export function clearKLineCache() {
+  klineCache = {}; klineCacheTime = {}
+}
+
 // ========== 拼音/名称联想 ==========
 const SUGGEST_MAX_AGE = 2 * 60 * 1000
 let suggestCache = {}
