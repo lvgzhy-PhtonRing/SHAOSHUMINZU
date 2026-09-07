@@ -8,7 +8,7 @@
         <div class="group-title">安全</div>
         <div class="settings-item" @click="showPwdDialog = true">
           <div class="item-left"><span class="item-icon">🔑</span><span>修改密码</span></div>
-          <span class="item-arrow">�?/span>
+          <span class="item-arrow">→</span>
         </div>
       </div>
 
@@ -16,20 +16,20 @@
         <div class="group-title">数据备份</div>
         <div class="settings-item" @click="exportData">
           <div class="item-left"><span class="item-icon">📤</span><span>导出数据</span></div>
-          <span class="item-arrow">{{ exporting ? '导出中�? : '�? }}</span>
+          <span class="item-arrow">{{ exporting ? '导出中…' : '↓' }}</span>
         </div>
         <label class="settings-item" for="import-file">
           <div class="item-left"><span class="item-icon">📥</span><span>导入数据</span></div>
-          <span class="item-arrow">�?/span>
+          <span class="item-arrow">↑</span>
         </label>
         <input id="import-file" ref="fileInput" type="file" accept=".json,application/json,text/plain,text/json" style="display:none" @change="onFileSelected" />
       </div>
 
       <div class="settings-group">
-        <div class="group-title">状�?/div>
+        <div class="group-title">状态</div>
         <div class="settings-item">
           <div class="item-left"><span class="item-icon">📊</span><span>数据同步</span></div>
-          <span class="item-status sync-ok">已同�?/span>
+          <span class="item-status sync-ok">已同步</span>
         </div>
       </div>
 
@@ -40,27 +40,27 @@
           <span class="item-value">v3.5.5</span>
         </div>
         <div class="settings-item">
-          <div class="item-left"><span class="item-icon">🏛�?/span><span>数据存储</span></div>
+          <div class="item-left"><span class="item-icon">🏛️</span><span>数据存储</span></div>
           <span class="item-value">Supabase</span>
         </div>
       </div>
     </div>
 
     <div class="logout-section">
-      <van-button round block plain hairline color="#ff4d6d" @click="doLogout">退出登�?/van-button>
+      <van-button round block plain hairline color="#ff4d6d" @click="doLogout">退出登录</van-button>
     </div>
 
     <!-- 密码弹窗 -->
     <van-dialog v-model:show="showPwdDialog" title="修改密码" show-cancel-button @confirm="changePassword">
       <van-form>
-        <van-field v-model="oldPwd" label="旧密�? type="password" maxlength="4" placeholder="输入旧密�? :rules="[{ required: true, message: '请输入旧密码' }]" />
-        <van-field v-model="newPwd" label="新密�? type="password" maxlength="4" placeholder="4位数字新密码" :rules="[{ required: true, message: '请输入新密码' }, { validator: v => /^\d{4}$/.test(v), message: '必须�?位数�? }]" />
-        <van-field v-model="confirmPwd" label="确认密码" type="password" maxlength="4" placeholder="再次输入新密�? :rules="[{ required: true, message: '请确认新密码' }, { validator: v => v === newPwd, message: '两次密码不一�? }]" />
+        <van-field v-model="oldPwd" label="旧密码" type="password" maxlength="4" placeholder="输入旧密码" :rules="[{ required: true, message: '请输入旧密码' }]" />
+        <van-field v-model="newPwd" label="新密码" type="password" maxlength="4" placeholder="4位数字新密码" :rules="[{ required: true, message: '请输入新密码' }, { validator: v => /^\d{4}$/.test(v), message: '必须为4位数字' }]" />
+        <van-field v-model="confirmPwd" label="确认密码" type="password" maxlength="4" placeholder="再次输入新密码" :rules="[{ required: true, message: '请确认新密码' }, { validator: v => v === newPwd, message: '两次密码不一致' }]" />
       </van-form>
     </van-dialog>
 
     <!-- 导入确认弹窗 -->
-    <van-dialog v-model:show="showImportConfirm" title="确认导入" message="导入将覆盖现有数据，确认继续�? show-cancel-button @confirm="doImport" />
+    <van-dialog v-model:show="showImportConfirm" title="确认导入" message="导入将覆盖现有数据，确认继续？" show-cancel-button @confirm="doImport" />
   </div>
 </template>
 
@@ -137,10 +137,10 @@ async function doImport() {
   if (!pendingImportData) return
   try {
     if (isMockMode()) {
-      // 测试版（�?Supabase 凭据）：导入到本�?mock 数据�?
+      // 测试版（无 Supabase 凭据）：导入到本地 mock 数据库
       const { loadBackup } = await import('@/api/mockDb')
       loadBackup(pendingImportData)
-      alert('�?数据已导入本地测试库！请刷新页面查看')
+      alert('✅ 数据已导入本地测试库！请刷新页面查看')
     } else {
       for (const table of TABLES) {
         const rows = pendingImportData[table]
@@ -153,7 +153,7 @@ async function doImport() {
             else await supabase.from(table).delete().eq('id', item.id)
           }
         }
-        // 插入备份数据（保留原�?ID 以维持外键关联）
+        // 插入备份数据（保留原始 ID 以维持外键关联）
         if (rows && rows.length) {
           for (const row of rows) {
             const { updated_at, ...clean } = row
@@ -162,11 +162,11 @@ async function doImport() {
           }
         }
       }
-      alert('�?数据导入成功！请刷新页面查看')
+      alert('✅ 数据导入成功！请刷新页面查看')
     }
   } catch (e) {
     console.error('Import error:', e)
-    alert('�?导入失败�? + e.message)
+    alert('❌ 导入失败：' + e.message)
   } finally {
     pendingImportData = null
     showImportConfirm.value = false
@@ -182,7 +182,7 @@ async function changePassword() {
   if (!isValid) return false
   const hashed = await hashPassword(newPwd.value)
   localStorage.setItem('pwd', hashed)
-  // 同步到服务器（跨设备�?
+  // 同步到服务器（跨设备）
   const { updatePassword } = await import('@/api/supabase')
   updatePassword(newPwd.value).catch(e => console.error('Sync password to server:', e))
   return true
