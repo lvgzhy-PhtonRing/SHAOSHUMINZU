@@ -16,10 +16,11 @@
         </div>
         <div v-if="!gainRankings.length" class="rank-empty">暂无已清仓盈利股票</div>
         <div v-else class="rank-list">
-          <div v-for="(item, idx) in gainVisible" :key="item.stock_code" class="rank-item">
+          <div v-for="(item, idx) in gainVisible" :key="item.stock_code" class="rank-item" @click="openStockDetail(item)">
             <span class="rank-badge" :class="idx < 3 ? 'rank-badge--' + (idx + 1) : 'rank-badge--n'">{{ idx + 1 }}</span>
             <span class="rank-stock-name">{{ item.stock_name }}</span>
             <span class="rank-profit rise">{{ formatProfit(item.profit) }}</span>
+            <span class="rank-arrow">›</span>
           </div>
         </div>
         <button v-if="gainRankings.length > 3" class="rank-toggle" @click="gainExpanded = !gainExpanded">
@@ -36,10 +37,11 @@
         </div>
         <div v-if="!lossRankings.length" class="rank-empty">暂无已清仓亏损股票</div>
         <div v-else class="rank-list">
-          <div v-for="(item, idx) in lossVisible" :key="item.stock_code" class="rank-item">
+          <div v-for="(item, idx) in lossVisible" :key="item.stock_code" class="rank-item" @click="openStockDetail(item)">
             <span class="rank-badge" :class="idx < 3 ? 'rank-badge--' + (idx + 1) : 'rank-badge--n'">{{ idx + 1 }}</span>
             <span class="rank-stock-name">{{ item.stock_name }}</span>
             <span class="rank-profit fall">{{ formatProfit(item.profit) }}</span>
+            <span class="rank-arrow">›</span>
           </div>
         </div>
         <button v-if="lossRankings.length > 3" class="rank-toggle" @click="lossExpanded = !lossExpanded">
@@ -76,6 +78,46 @@
         </div>
       </div>
 
+      <!-- 已清仓股票详情弹窗 -->
+      <van-popup
+        v-model:show="detailShow"
+        position="center"
+        round
+        :style="{ width: '86%', maxWidth: '360px' }"
+        :close-on-click-overlay="true"
+      >
+        <div class="stock-detail-panel">
+          <div class="sd-header">
+            <span class="sd-name">{{ detail.stockName }}</span>
+            <span class="sd-code">{{ detail.stockCode }}</span>
+          </div>
+          <div class="dp-divider"></div>
+          <div class="sd-row sd-row--buy">
+            <span class="sd-label">买入</span>
+            <span class="sd-meta">{{ detail.buyRange }} · {{ detail.buyQty }}股</span>
+            <span class="sd-avg num-mono">{{ detail.buyAvgPrice.toFixed(2) }}</span>
+          </div>
+          <div class="sd-row sd-row--sell">
+            <span class="sd-label">卖出</span>
+            <span class="sd-meta">{{ detail.sellRange }} · {{ detail.sellQty }}股</span>
+            <span class="sd-avg num-mono">{{ detail.sellAvgPrice.toFixed(2) }}</span>
+          </div>
+          <div class="dp-divider"></div>
+          <div class="sd-profit-row">
+            <span class="sd-profit-label">净利</span>
+            <span class="sd-profit num-mono" :class="detail.profit >= 0 ? 'sd-up' : 'sd-down'">
+              {{ formatProfit(detail.profit) }}
+            </span>
+            <span class="sd-profit-pct" :class="detail.profit >= 0 ? 'sd-up' : 'sd-down'">
+              ({{ detail.profitPct >= 0 ? '+' : '' }}{{ detail.profitPct.toFixed(1) }}%)
+            </span>
+          </div>
+          <div v-if="detail.cycleCount > 1" class="sd-hint">
+            共 {{ detail.cycleCount }} 次完整买卖，均价为加权合计
+          </div>
+        </div>
+      </van-popup>
+
     </template>
   </div>
 </template>
@@ -110,29 +152,75 @@ const clearedProfitRankings = computed(() => {
         buyQty: 0,
         sellQty: 0,
         buyAmount: 0,
-        sellAmount: 0
+        sellAmount: 0,
+        buyDates: [],
+        sellDates: [],
+        txs: []
       }
     }
     const entry = byStock[tx.stock_code]
+    entry.txs.push(tx)
     if (tx.type === 'buy') {
       entry.buyQty += tx.quantity
       entry.buyAmount += tx.actual_amount || tx.amount
+      if (tx.trade_date) entry.buyDates.push(tx.trade_date)
     } else {
       entry.sellQty += tx.quantity
       entry.sellAmount += tx.actual_amount || tx.amount
+      if (tx.trade_date) entry.sellDates.push(tx.trade_date)
     }
   }
 
   return Object.values(byStock)
     .filter(s => s.buyQty > 0 && s.buyQty === s.sellQty)
-    .map(s => ({
-      stock_code: s.stock_code,
-      stock_name: s.stock_name,
-      profit: s.sellAmount - s.buyAmount,
-      totalQty: s.buyQty
-    }))
+    .map(s => {
+      const sorted = [...s.txs].sort((a, b) =>
+        (a.trade_date || '').localeCompare(b.trade_date || '')
+      )
+      return {
+        stock_code: s.stock_code,
+        stock_name: s.stock_name,
+        buyQty: s.buyQty,
+        sellQty: s.sellQty,
+        buyAmount: s.buyAmount,
+        sellAmount: s.sellAmount,
+        buyDates: s.buyDates,
+        sellDates: s.sellDates,
+        buyAvgPrice: s.buyQty > 0 ? s.buyAmount / s.buyQty : 0,
+        sellAvgPrice: s.sellQty > 0 ? s.sellAmount / s.sellQty : 0,
+        profit: s.sellAmount - s.buyAmount,
+        cycleCount: countCycles(sorted)
+      }
+    })
     .sort((a, b) => b.profit - a.profit)
 })
+
+function countCycles(txs) {
+  let balance = 0, cycles = 0, wasPositive = false
+  for (const tx of txs) {
+    balance += tx.type === 'buy' ? tx.quantity : -tx.quantity
+    if (balance > 0) wasPositive = true
+    if (balance === 0 && wasPositive) {
+      cycles++
+      wasPositive = false
+    }
+  }
+  return cycles
+}
+
+function dateRange(dates) {
+  const valid = (dates || []).filter(d => d).sort()
+  if (!valid.length) return ''
+  const first = new Date(valid[0])
+  const last = new Date(valid[valid.length - 1])
+  if (isNaN(first.getTime()) || isNaN(last.getTime())) return ''
+  const m = d => d.getMonth() + 1
+  if (first.getFullYear() !== last.getFullYear())
+    return `${first.getFullYear()}.${m(first)}月-${last.getFullYear()}.${m(last)}月`
+  if (first.getMonth() === last.getMonth())
+    return `${first.getFullYear()}.${m(first)}月`
+  return `${first.getFullYear()}.${m(first)}-${m(last)}月`
+}
 
 const gainRankings = computed(() =>
   clearedProfitRankings.value.filter(r => r.profit > 0)
@@ -152,6 +240,39 @@ function formatProfit(profit) {
   const abs = Math.abs(Math.round(profit))
   if (profit >= 0) return `+${abs.toLocaleString('zh-CN')}`
   return `-${abs.toLocaleString('zh-CN')}`
+}
+
+// ===== 已清仓股票详情弹窗 =====
+const detailShow = ref(false)
+const detail = ref({
+  stockName: '',
+  stockCode: '',
+  buyRange: '',
+  sellRange: '',
+  buyQty: 0,
+  sellQty: 0,
+  buyAvgPrice: 0,
+  sellAvgPrice: 0,
+  profit: 0,
+  profitPct: 0,
+  cycleCount: 1
+})
+
+function openStockDetail(item) {
+  detail.value = {
+    stockName: item.stock_name,
+    stockCode: item.stock_code,
+    buyRange: dateRange(item.buyDates),
+    sellRange: dateRange(item.sellDates),
+    buyQty: item.buyQty,
+    sellQty: item.sellQty,
+    buyAvgPrice: item.buyAvgPrice,
+    sellAvgPrice: item.sellAvgPrice,
+    profit: item.profit,
+    profitPct: item.buyAmount > 0 ? (item.profit / item.buyAmount) * 100 : 0,
+    cycleCount: item.cycleCount
+  }
+  detailShow.value = true
 }
 
 // ===== 子池硬度 =====
@@ -256,6 +377,16 @@ onMounted(async () => {
   padding: 10px 12px;
   background: var(--bg-card);
   border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.rank-item:hover { background: var(--bg-hover); }
+.rank-arrow {
+  font-size: 14px;
+  color: var(--text-muted);
+  font-weight: 400;
+  margin-left: 2px;
+  flex-shrink: 0;
 }
 .rank-badge {
   width: 24px;
@@ -353,5 +484,93 @@ onMounted(async () => {
 @keyframes crown-bounce {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-4px); }
+}
+
+/* ===== 已清仓股票详情弹窗 ===== */
+.stock-detail-panel {
+  background: var(--bg-solid);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  color: var(--text-primary);
+  min-height: 140px;
+}
+.sd-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-bottom: 12px;
+}
+.sd-name {
+  font-size: 15px;
+  font-weight: 700;
+}
+.sd-code {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: var(--font-number);
+}
+.dp-divider {
+  height: 1px;
+  background: rgba(255,255,255,0.08);
+  margin-bottom: 8px;
+}
+.sd-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0 8px 10px;
+  border-left: 3px solid transparent;
+  border-radius: 0 6px 6px 0;
+  margin-bottom: 2px;
+}
+.sd-row--buy { border-left-color: var(--color-rise); }
+.sd-row--sell { border-left-color: var(--color-fall); }
+.sd-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+  width: 28px;
+}
+.sd-meta {
+  flex: 1;
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-family: var(--font-number);
+}
+.sd-avg {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+.sd-profit-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  justify-content: center;
+  padding: 10px 0 4px;
+}
+.sd-profit-label {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.sd-profit {
+  font-size: 22px;
+  font-weight: 700;
+}
+.sd-profit-pct {
+  font-size: 13px;
+  font-weight: 600;
+}
+.sd-up { color: var(--color-rise); }
+.sd-down { color: var(--color-fall); }
+.sd-hint {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: center;
 }
 </style>
