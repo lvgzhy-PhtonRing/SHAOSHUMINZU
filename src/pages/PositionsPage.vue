@@ -8,8 +8,11 @@
 
     <template v-else>
       <!-- 总仓位模块 -->
-      <div class="section-card edge-accent">
-        <div class="section-title"><span class="title-accent title-accent--accent"></span>总体仓位</div>
+      <div class="section-card edge-accent clickable-section" @click="openTotalDetail">
+        <div class="section-title">
+          <span class="title-accent title-accent--accent"></span>总体仓位
+          <span class="title-hint">详情 ›</span>
+        </div>
         <DonutChart
           :segments="chartSegments"
           :total-percent="totalPositionRatio"
@@ -47,6 +50,7 @@
             :pool-available="poolPositionData[0].poolAvailable"
             :color="poolPositionData[0].color"
             wide
+            @click="openPoolDetail(poolPositionData[0])"
           />
         </div>
         <!-- 四人两排两列 -->
@@ -61,9 +65,38 @@
             :capital-alloc="item.poolCapital"
             :pool-available="item.poolAvailable"
             :color="item.color"
+            @click="openPoolDetail(item)"
           />
         </div>
       </div>
+
+      <!-- 详情弹窗 -->
+      <van-popup
+        v-model:show="detailShow"
+        position="center"
+        round
+        :style="{ width: '86%', maxWidth: '360px' }"
+        :close-on-click-overlay="true"
+      >
+        <div class="detail-panel">
+          <div class="dp-header">
+            <span class="dp-dot" :style="{ background: detail.color }"></span>
+            <span class="dp-title">{{ detail.title }}</span>
+            <span class="dp-percent num-mono">{{ detail.percent.toFixed(1) }}%</span>
+          </div>
+          <div class="dp-divider"></div>
+          <div v-if="detail.items.length === 0" class="dp-empty">暂无持仓</div>
+          <div v-else class="dp-list">
+            <div v-for="(it, i) in detail.items" :key="i" class="dp-item">
+              <span class="dp-label">{{ it.name }}</span>
+              <span class="dp-value num-mono">{{ it.percent.toFixed(1) }}%</span>
+            </div>
+          </div>
+          <div class="dp-footer">
+            分母：{{ detail.denominator }} {{ formatMoney(detail.denominatorValue) }}
+          </div>
+        </div>
+      </van-popup>
 
     </template>
   </div>
@@ -200,6 +233,51 @@ const chartSegments = computed(() => {
   })
 })
 
+// ===== 详情弹窗 =====
+const detailShow = ref(false)
+const detail = ref({
+  title: '',
+  percent: 0,
+  color: '#4d9fff',
+  items: [],
+  denominator: '',
+  denominatorValue: 0
+})
+
+function openTotalDetail() {
+  detail.value = {
+    title: '总体仓位',
+    percent: totalPositionRatio.value,
+    color: '#4d9fff',
+    items: poolShares.value.map(s => ({ name: s.name, percent: s.share })),
+    denominator: '总资产',
+    denominatorValue: totalAsset.value
+  }
+  detailShow.value = true
+}
+
+function openPoolDetail(pool) {
+  const poolHoldings = holdingStore.holdings.filter(h => h.pool_id === pool.id)
+  const items = poolHoldings.map(h => {
+    const price = priceStore.prices[h.stock_code]?.price || 0
+    const mv = price * h.quantity
+    const name = priceStore.prices[h.stock_code]?.stock_name || h.stock_name || h.stock_code
+    return {
+      name,
+      percent: pool.totalPoolAsset > 0 ? (mv / pool.totalPoolAsset) * 100 : 0
+    }
+  }).sort((a, b) => b.percent - a.percent)
+  detail.value = {
+    title: `${pool.name}仓位`,
+    percent: pool.percent,
+    color: pool.color,
+    items,
+    denominator: '子池资产',
+    denominatorValue: pool.totalPoolAsset
+  }
+  detailShow.value = true
+}
+
 onMounted(async () => {
   try {
     try { allocConfig.value = await loadPoolAllocation() } catch (e) {}
@@ -228,6 +306,9 @@ onMounted(async () => {
 .legend-value { font-size: 12px; font-weight: 600; font-family: var(--font-number); }
 .section-title { display: flex; align-items: center; gap: 6px; padding: 0 0 10px; font-size: 13px; font-weight: 600; }
 .section-title .subtitle { font-size: 11px; color: var(--text-secondary); font-weight: 400; }
+.title-hint { font-size: 10px; color: var(--text-muted); font-weight: 400; margin-left: auto; }
+.clickable-section { cursor: pointer; transition: background 0.15s; }
+.clickable-section:hover { background: var(--bg-hover); }
 .pos-gongyou { margin-bottom: 8px; }
 .pos-users-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .legend-horizontal {
@@ -277,5 +358,75 @@ onMounted(async () => {
 @keyframes slogan-bounce {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.15); }
+}
+
+/* 详情弹窗 */
+.detail-panel {
+  background: var(--bg-solid);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  color: var(--text-primary);
+  min-height: 120px;
+}
+.dp-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 12px;
+}
+.dp-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  flex-shrink: 0;
+}
+.dp-title {
+  font-size: 14px;
+  font-weight: 600;
+  flex: 1;
+}
+.dp-percent {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.dp-divider {
+  height: 1px;
+  background: rgba(255,255,255,0.08);
+  margin-bottom: 8px;
+}
+.dp-empty {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+  padding: 16px 0;
+}
+.dp-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+.dp-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 0;
+}
+.dp-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.dp-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.dp-footer {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: center;
 }
 </style>

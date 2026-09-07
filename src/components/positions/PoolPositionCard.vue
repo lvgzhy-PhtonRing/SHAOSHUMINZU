@@ -1,8 +1,8 @@
 <template>
-  <div class="pool-pos-card" :class="{ wide }">
+  <div class="pool-pos-card" :class="{ wide }" @click="$emit('click')">
     <div class="pos-header">
       <span class="pool-tag" :style="{ background: color + '22', color: color }">{{ name }}</span>
-      <span class="pos-percent num-mono">{{ percent.toFixed(1) }}%</span>
+      <span class="pos-percent num-mono">{{ percent.toFixed(1) }}%<span class="pos-arrow">›</span></span>
     </div>
     <div class="pos-ratio-line">
       <span class="pr-label">市值</span>
@@ -22,8 +22,8 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
 import { formatMoney } from '@/utils/formatters'
+defineEmits(['click'])
 const props = defineProps({
   name: { type: String, required: true },
   percent: { type: Number, default: 0 },
@@ -39,11 +39,22 @@ const props = defineProps({
 <style scoped>
 .pool-pos-card {
   background: var(--bg-card); border-radius: var(--radius-lg); padding: 12px 14px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.pool-pos-card:hover {
+  background: var(--bg-hover);
 }
 .wide .pos-percent { font-size: 26px; }
 .pos-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
 .pool-tag { font-size: 12px; padding: 2px 8px; border-radius: 4px; font-weight: 500; }
 .pos-percent { font-size: 20px; font-weight: 700; font-family: var(--font-number); }
+.pos-arrow {
+  font-size: 14px; font-weight: 400;
+  color: var(--text-muted);
+  margin-left: 4px;
+  font-family: -apple-system, sans-serif;
+}
 .pos-ratio-line {
   display: flex; align-items: baseline; gap: 4px; flex-wrap: wrap;
 }
