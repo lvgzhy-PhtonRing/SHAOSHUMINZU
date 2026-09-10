@@ -13,6 +13,22 @@
       </div>
 
       <div class="settings-group">
+        <div class="group-title">自动备份</div>
+        <div class="settings-item" @click="triggerAutoBackup">
+          <div class="item-left"><span class="item-icon">⏰</span><span>立即备份</span></div>
+          <span class="item-arrow">{{ autoBacking ? '备份中…' : '▶' }}</span>
+        </div>
+        <div class="settings-item" @click="showBackupList = true">
+          <div class="item-left"><span class="item-icon">📋</span><span>备份列表</span></div>
+          <span class="item-arrow">→</span>
+        </div>
+        <div class="settings-item">
+          <div class="item-left"><span class="item-icon">🔄</span><span>自动备份</span></div>
+          <span class="item-status sync-ok">每日 11:00</span>
+        </div>
+      </div>
+
+      <div class="settings-group">
         <div class="group-title">数据备份</div>
         <div class="settings-item" @click="exportData">
           <div class="item-left"><span class="item-icon">📤</span><span>导出数据</span></div>
@@ -37,7 +53,7 @@
         <div class="group-title">关于</div>
         <div class="settings-item">
           <div class="item-left"><span class="item-icon">ℹ️</span><span>版本</span></div>
-          <span class="item-value">v4.0.4</span>
+          <span class="item-value">v4.0.5</span>
         </div>
         <div class="settings-item">
           <div class="item-left"><span class="item-icon">🏛️</span><span>数据存储</span></div>
@@ -60,7 +76,35 @@
     </van-dialog>
 
     <!-- 导入确认弹窗 -->
-    <van-dialog v-model:show="showImportConfirm" title="确认导入" message="导入将覆盖现有数据，确认继续？" show-cancel-button @confirm="doImport" />
+    <van-dialog v-model:show="showImportConfirm" :title="exportedBeforeImport ? '确认导入' : '导入前请先导出'" :message="exportedBeforeImport ? '导出完成，确认导入？导入将覆盖现有数据。' : '导入将覆盖现有数据。请先导出当前数据到本地，确认导出成功后再导入。'" show-cancel-button @confirm="doImport">
+      <div class="import-dialog-actions" v-if="!exportedBeforeImport">
+        <van-button size="small" plain color="#4d9fff" :loading="exporting" @click="exportThenConfirm">📤 先导出当前数据</van-button>
+      </div>
+      <div class="import-dialog-actions" v-else>
+        <span class="import-dialog-hint">✅ 已导出备份文件</span>
+      </div>
+    </van-dialog>
+
+    <!-- 备份列表弹窗 -->
+    <van-popup v-model:show="showBackupList" position="bottom" :style="{ height: '60%' }" round @opened="loadBackupList">
+      <div class="backup-list-popup">
+        <div class="popup-header">
+          <span>自动备份列表</span>
+          <span class="popup-close" @click="showBackupList = false">✕</span>
+        </div>
+        <div v-if="loadingBackups" class="popup-loading">加载中…</div>
+        <div v-else-if="!backups.length" class="popup-empty">暂无备份</div>
+        <div v-else class="backup-list">
+          <div v-for="b in backups" :key="b.filename" class="backup-item">
+            <div class="backup-info">
+              <div class="backup-date">{{ formatDate(b.created_at) }}</div>
+              <div class="backup-size">{{ formatSize(b.size) }}</div>
+            </div>
+            <van-button size="small" plain color="#4d9fff" :loading="restoring === b.filename" @click="restoreBackup(b.filename)">恢复</van-button>
+          </div>
+        </div>
+      </div>
+    </van-popup>
   </div>
 </template>
 
@@ -83,6 +127,12 @@ const newPwd = ref('')
 const confirmPwd = ref('')
 const exporting = ref(false)
 const showImportConfirm = ref(false)
+const exportedBeforeImport = ref(false)
+const showBackupList = ref(false)
+const autoBacking = ref(false)
+const loadingBackups = ref(false)
+const backups = ref([])
+const restoring = ref(null)
 let pendingImportData = null
 
 const TABLES = ['pools', 'holdings', 'transactions', 'capital_log', 'stock_cache', 'app_config']
@@ -109,11 +159,101 @@ async function exportData() {
     a.download = `etf-backup-${new Date().toISOString().split('T')[0]}.json`
     a.click()
     URL.revokeObjectURL(url)
+    return true
   } catch (e) {
     console.error('Export error:', e)
+    return false
   } finally {
     exporting.value = false
   }
+}
+
+// ========== 自动备份（Edge Function） ==========
+async function triggerAutoBackup() {
+  if (isMockMode()) { alert('测试版不支持自动备份'); return }
+  autoBacking.value = true
+  try {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+    const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+    const res = await fetch(`${supabaseUrl}/functions/v1/backup`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${anonKey}`,
+        'apikey': anonKey,
+        'Content-Type': 'application/json',
+      }
+    })
+    const data = await res.json()
+    if (data.success) {
+      alert(`✅ 备份成功\n文件: ${data.filename}\n清理旧备份: ${data.deleted_old} 个`)
+    } else {
+      alert('❌ 备份失败: ' + (data.error || '未知错误'))
+    }
+  } catch (e) {
+    alert('❌ 备份失败: ' + e.message)
+  } finally {
+    autoBacking.value = false
+  }
+}
+
+async function loadBackupList() {
+  if (isMockMode()) { backups.value = []; return }
+  loadingBackups.value = true
+  try {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+    const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+    const res = await fetch(`${supabaseUrl}/functions/v1/backup/list`, {
+      headers: {
+        'Authorization': `Bearer ${anonKey}`,
+        'apikey': anonKey,
+      }
+    })
+    const data = await res.json()
+    backups.value = data.backups || []
+  } catch (e) {
+    console.error('Load backup list error:', e)
+    backups.value = []
+  } finally {
+    loadingBackups.value = false
+  }
+}
+
+async function restoreBackup(filename) {
+  if (isMockMode()) { alert('测试版不支持恢复'); return }
+  restoring.value = filename
+  try {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+    const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+    const res = await fetch(`${supabaseUrl}/functions/v1/backup/restore?file=${encodeURIComponent(filename)}`, {
+      headers: {
+        'Authorization': `Bearer ${anonKey}`,
+        'apikey': anonKey,
+      }
+    })
+    const data = await res.json()
+    if (data.error) throw new Error(data.error)
+    pendingImportData = data
+    exportedBeforeImport.value = false
+    showBackupList.value = false
+    showImportConfirm.value = true
+  } catch (e) {
+    alert('❌ 获取备份失败: ' + e.message)
+  } finally {
+    restoring.value = null
+  }
+}
+
+function formatDate(iso) {
+  if (!iso) return ''
+  const d = new Date(iso)
+  return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+
+function formatSize(bytes) {
+  if (!bytes) return ''
+  if (bytes < 1024) return bytes + 'B'
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + 'KB'
+  return (bytes / 1024 / 1024).toFixed(1) + 'MB'
 }
 
 // ========== 导入 ==========
@@ -124,6 +264,7 @@ function onFileSelected(e) {
   reader.onload = (ev) => {
     try {
       pendingImportData = JSON.parse(ev.target.result)
+      exportedBeforeImport.value = false
       showImportConfirm.value = true
     } catch {
       alert('文件格式错误，请选择正确的备份JSON文件')
@@ -131,6 +272,15 @@ function onFileSelected(e) {
   }
   reader.readAsText(file)
   e.target.value = ''
+}
+
+async function exportThenConfirm() {
+  const ok = await exportData()
+  if (ok) {
+    exportedBeforeImport.value = true
+  } else {
+    alert('导出失败，请检查网络后重试。未导出的数据导入后将丢失！')
+  }
 }
 
 async function doImport() {
@@ -208,4 +358,15 @@ function doLogout() {
 .logout-section { padding: 24px 0; }
 .in-drawer { padding: 56px 0 0; }
 .in-drawer .logout-section { padding: 12px 0; }
+.import-dialog-actions { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: 8px; }
+.import-dialog-hint { font-size: 12px; color: var(--color-fall); font-weight: 600; }
+.backup-list-popup { padding: 16px; display: flex; flex-direction: column; height: 100%; }
+.popup-header { display: flex; justify-content: space-between; align-items: center; font-size: 15px; font-weight: 600; margin-bottom: 12px; }
+.popup-close { cursor: pointer; color: var(--text-muted); font-size: 16px; }
+.popup-loading, .popup-empty { text-align: center; color: var(--text-muted); padding: 40px 0; font-size: 13px; }
+.backup-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+.backup-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--bg-card); border-radius: var(--radius-md); }
+.backup-info { display: flex; flex-direction: column; gap: 2px; }
+.backup-date { font-size: 13px; font-weight: 600; }
+.backup-size { font-size: 11px; color: var(--text-muted); }
 </style>
