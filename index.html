@@ -6,6 +6,28 @@
   <meta name="theme-color" content="#1a1a2e">
   <title>结构化动态仓位配置亏损计划</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <script>
+    // 诊断层：JS 出错/未捕获 Promise 时把错误画到屏幕上，方便移动端 Chrome 卡蓝时看到真实原因
+    (function () {
+      function show(kind, msg, stack) {
+        var el = document.getElementById('app');
+        if (!el) return;
+        var d = document.createElement('div');
+        d.setAttribute('style', 'position:fixed;inset:0;padding:20px 16px;background:#150b2e;color:#ff6b6b;font:12px/1.55 Consolas,monospace;white-space:pre-wrap;overflow:auto;z-index:2147483647;word-break:break-word;');
+        d.textContent = '[' + kind + ']\n\n' + (msg || '(no message)') + '\n\n' + (stack || '');
+        el.innerHTML = ''; el.appendChild(d);
+      }
+      window.__errOverlay = show;
+      window.addEventListener('error', function (e) {
+        var err = e.error || e;
+        show('ERROR ' + (e.lineno || '?') + ':' + (e.colno || '?'), err && err.message || e.message || String(e), err && err.stack || '');
+      });
+      window.addEventListener('unhandledrejection', function (e) {
+        var r = e.reason;
+        show('REJECTION', r && (r.message || String(r)) || String(r), r && r.stack || '');
+      });
+    })();
+  </script>
 </head>
 <body>
   <div id="app"></div>

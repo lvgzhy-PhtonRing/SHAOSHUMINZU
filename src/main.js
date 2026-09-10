@@ -26,6 +26,11 @@ async function bootstrapMockSeed() {
 async function bootstrap() {
   await bootstrapMockSeed()
   const app = createApp(App)
+  // Vue 渲染期错误也送到诊断层
+  app.config.errorHandler = (err, instance, info) => {
+    console.error('[Vue error]', err, info)
+    if (window.__errOverlay) window.__errOverlay('VUE', err && err.message, (err && err.stack || '') + '\n[info] ' + (info || ''))
+  }
   app.use(createPinia())
   app.use(router)
   app.use(Vant)
