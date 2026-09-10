@@ -32,10 +32,10 @@ const routes = [
         meta: { title: '趋势' }
       },
       {
-        path: 'trade',
-        name: 'trade',
-        component: () => import('@/pages/TradePage.vue'),
-        meta: { title: '交易' }
+        path: 'netvalue',
+        name: 'netvalue',
+        component: () => import('@/pages/NetValuePage.vue'),
+        meta: { title: '净值走势' }
       },
       {
         path: 'trend',

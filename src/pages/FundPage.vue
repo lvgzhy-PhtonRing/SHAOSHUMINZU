@@ -6,9 +6,6 @@
 
     <CapitalSummary
       :total-capital="totalCapital"
-      :market-value="totalMarketValue"
-      :total-available="totalAvailable"
-      @open-change="showChangeDialog = true"
       @open-detail="showDetailDialog = true"
     />
 
@@ -70,22 +67,6 @@ const loading = ref(true)
 const showDetailDialog = ref(false)
 const totalCapital = computed(() => fundStore.totalCapital)
 
-// 各子池持仓成本（用于计算可用资金）
-const poolCosts = computed(() => {
-  const map = {}
-  for (const h of holdingStore.holdings) {
-    const pool = poolStore.pools.find(p => p.id === h.pool_id)
-    if (pool) map[pool.name] = (map[pool.name] || 0) + h.cost_price * h.quantity
-  }
-  return map
-})
-
-const totalCost = computed(() => {
-  return holdingStore.holdings.reduce((s, h) => {
-    return s + h.cost_price * h.quantity
-  }, 0)
-})
-
 const totalMarketValue = computed(() => {
   return holdingStore.holdings.reduce((s, h) => {
     const price = priceStore.prices[h.stock_code]?.price || 0
@@ -93,11 +74,8 @@ const totalMarketValue = computed(() => {
   }, 0)
 })
 
-const floatPnl = computed(() => totalMarketValue.value - totalCost.value)
 // 总可用资金 = 外部总资本 + 所有卖出到账 − 所有买入支出（含已实现盈亏，与 Dashboard 一致）
 const totalAvailable = computed(() => fundStore.totalAvailable)
-// 总资产 = 持仓市值 + 可用资金
-const totalAsset = computed(() => totalMarketValue.value + totalAvailable.value)
 
 // ===== 子池资金分配（只读结果 + 全屏编辑） =====
 const STEP = 10000

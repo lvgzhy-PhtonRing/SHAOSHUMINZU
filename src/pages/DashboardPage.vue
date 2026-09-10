@@ -2,7 +2,7 @@
 <template>
   <div class="page dashboard-page">
     <div class="page-header">
-      <h1>持仓总览</h1>
+      <span class="page-title">持仓总览<span class="title-en">Holdings Overview</span></span>
     </div>
 
     <!-- 账户总资产模块（渐变高光签名卡） -->
@@ -20,6 +20,12 @@
       />
     </div>
 
+    <!-- 快捷入口 -->
+    <div class="action-bar">
+      <button class="act-btn" @click="showBuySheet = true">买入股票</button>
+      <button class="act-btn" @click="showRecordsSheet = true">交易记录</button>
+    </div>
+
     <!-- 持仓模块（池筛选 + 持仓股票列表） -->
     <div class="section-card holdings-module edge-accent">
       <PoolSelector
@@ -33,6 +39,7 @@
           <span class="title-accent title-accent--accent"></span>
           <span>持仓股票</span>
           <span class="swipe-hint">◀ 左滑卖出</span>
+          <button v-if="displayHoldings.length" class="kline-hint" @click="openKLine(displayHoldings[0])">⛶ 点看K线</button>
         </span>
         <span class="stock-count">{{ displayHoldings.length }} 只</span>
       </div>
@@ -64,13 +71,16 @@
       :stock="klineStock"
       @close="klineStock = null"
     />
+
+    <BuySheet v-model="showBuySheet" @changed="onTradeChanged" />
+    <SellSheet v-model="showSellSheet" :stock="sellStock" @changed="onTradeChanged" />
+    <TradeRecordsSheet v-model="showRecordsSheet" @changed="onTradeChanged" />
   </div>
 
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
 import { usePoolStore } from '@/stores/pools'
 import { useHoldingStore } from '@/stores/holdings'
 import { usePriceStore } from '@/stores/prices'
@@ -83,6 +93,9 @@ import PoolSelector from '@/components/common/PoolSelector.vue'
 import LoadingSkeleton from '@/components/common/LoadingSkeleton.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import KLineOverlay from '@/components/kline/KLineOverlay.vue'
+import BuySheet from '@/components/trade/BuySheet.vue'
+import SellSheet from '@/components/trade/SellSheet.vue'
+import TradeRecordsSheet from '@/components/trade/TradeRecordsSheet.vue'
 
 const poolStore = usePoolStore()
 const holdingStore = useHoldingStore()
@@ -90,10 +103,12 @@ const priceStore = usePriceStore()
 const fundStore = useFundStore()
 const loading = ref(true)
 const klineStock = ref(null)
+const showBuySheet = ref(false)
+const showSellSheet = ref(false)
+const showRecordsSheet = ref(false)
+const sellStock = ref(null)
 
 // 子池名称/颜色映射
-const router = useRouter()
-
 const poolNameMap = {}
 const poolColorMap = {}
 const colorList = ['#4d9fff', '#ff4d6d', '#00f0a8', '#ffd23f', '#b18cff']
@@ -129,7 +144,7 @@ onMounted(async () => {
 const priceTimeText = computed(() => {
   if (!priceStore.lastUpdated) return ''
   const d = new Date(priceStore.lastUpdated)
-  return `${d.getMonth() + 1}月${d.getDate()}日${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+    return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 })
 
 // 打开 K 线：成本线统一取跨池加权均价，与子池筛选无关
@@ -148,31 +163,30 @@ function openKLine(h) {
   }
 }
 
+// 快捷入口：三个半屏弹层，承载原交易页的买入/卖出/记录三个流程
 function onSellStock(stock) {
-  // 合并持仓：选择该股票持仓量最大的子池作为卖出池
-  let poolId = stock.pool_id
-  let poolName = poolNameMap[poolId] || ''
-
-  if (stock.merged) {
-    const best = holdingStore.holdings
-      .filter(h => h.stock_code === stock.stock_code)
-      .sort((a, b) => b.quantity - a.quantity)[0]
-    if (best) {
-      poolId = best.pool_id
-      poolName = poolNameMap[poolId] || ''
-    }
+  sellStock.value = {
+    code: stock.stock_code,
+    name: stock.stock_name,
+    price: stock.currentPrice || stock.cost_price
   }
+  showSellSheet.value = true
+}
 
-  router.push({
-    name: 'trade',
-    query: {
-      code: stock.stock_code,
-      name: stock.stock_name,
-      price: stock.currentPrice || stock.cost_price,
-      poolId,
-      poolName
+async function onTradeChanged() {
+  try {
+    await Promise.all([holdingStore.loadHoldings(), fundStore.loadCapitalLogs()])
+    const codes = holdingStore.stockCodes
+    if (codes.length) {
+      await priceStore.loadPrices(codes)
+    } else {
+      await priceStore.loadFromCache()
     }
-  })
+    const { saveCurrentPositionSnapshot } = await import('@/utils/positionSnapshot')
+    await saveCurrentPositionSnapshot().catch(e => console.error('Snapshot:', e))
+  } catch (e) {
+    console.error('Trade changed refresh error:', e)
+  }
 }
 
 const displayHoldings = computed(() => {
@@ -298,9 +312,33 @@ const summary = computed(() => {
 
 <style scoped>
 .account-hero {
+  padding: 12px 16px;
   background: linear-gradient(150deg, rgba(143,111,255,.16), rgba(255,77,109,.08) 60%, rgba(255,255,255,.04));
   border: 1px solid rgba(255,255,255,.16);
   box-shadow: 0 10px 30px rgba(0,0,0,.25);
+}
+.action-bar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.act-btn {
+  flex: 1;
+  height: 36px;
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: var(--radius-md);
+  background: rgba(255,255,255,0.06);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.act-btn:active {
+  background: rgba(255,255,255,0.12);
 }
 .section-title {
   display: flex; justify-content: space-between;
@@ -321,5 +359,21 @@ const summary = computed(() => {
 @keyframes hint-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.7; }
+}
+.kline-hint {
+  font-size: 11px;
+  font-family: inherit;
+  line-height: 1.2;
+  color: #b18cff;
+  background: rgba(111,77,255,0.14);
+  border: 1px solid rgba(177,140,255,0.4);
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.kline-hint:active {
+  background: rgba(111,77,255,0.3);
 }
 </style>

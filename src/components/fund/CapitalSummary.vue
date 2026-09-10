@@ -5,52 +5,23 @@
       <span class="cs-title">资本总览</span>
     </div>
     <div class="cs-row">
-      <span class="cs-label">初期投入</span>
+      <span class="cs-label">资本总投入</span>
       <span class="cs-amount num-mono">{{ formatMoney(totalCapital) }}</span>
     </div>
-    <div class="cs-row">
-      <span class="cs-label">现在资产</span>
-      <span class="cs-amount num-mono">{{ formatMoney(totalAsset) }}</span>
-    </div>
-    <div class="cs-row">
-      <span class="cs-label" :class="pnlClass">{{ pnlLabel }}</span>
-      <span class="cs-amount num-mono" :class="pnlClass">{{ pnlText }}</span>
-    </div>
-    <div class="cs-row">
-      <span class="cs-label" :class="pnlClass">{{ pnlPctLabel }}</span>
-      <span class="cs-amount num-mono" :class="pnlClass">{{ pnlPctText }}</span>
-    </div>
+    <div class="cs-desc">2026-06-01 初始转户时市值 + 2026-07-29 长鑫卖出转户完成增资</div>
     <div class="cs-btns">
-      <button class="cs-btn" @click="$emit('open-detail')">资本明细</button>
+      <button class="cs-btn" @click="$emit('open-detail')">资本流水明细</button>
     </div>
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue'
 import { formatMoney } from '@/utils/formatters'
 
-const props = defineProps({
-  totalCapital: { type: Number, default: 0 },
-  marketValue: { type: Number, default: 0 },
-  totalAvailable: { type: Number, default: 0 }
+defineProps({
+  totalCapital: { type: Number, default: 0 }
 })
 defineEmits(['open-detail'])
-
-// 现在资产 = 持仓首页的账户资产口径 = 总市值 + 总可用资金
-const totalAsset = computed(() => props.marketValue + props.totalAvailable)
-// 累计盈利 = 现在资产 − 初期投入
-const cumPnl = computed(() => totalAsset.value - props.totalCapital)
-const pnlClass = computed(() => (cumPnl.value >= 0 ? 'rise' : 'fall'))
-const pnlLabel = computed(() => (cumPnl.value >= 0 ? '累计盈利' : '累计亏损'))
-const pnlText = computed(() => (cumPnl.value >= 0 ? `+${formatMoney(cumPnl.value)}` : formatMoney(cumPnl.value)))
-// 盈利/亏损幅度 = (现在资产 − 初期投入) / 初期投入
-const pnlPct = computed(() => (props.totalCapital > 0 ? (cumPnl.value / props.totalCapital) * 100 : null))
-const pnlPctLabel = computed(() => (cumPnl.value >= 0 ? '盈利幅度' : '亏损幅度'))
-const pnlPctText = computed(() => {
-  if (pnlPct.value === null) return '—'
-  return pnlPct.value >= 0 ? `+${pnlPct.value.toFixed(1)}%` : `${pnlPct.value.toFixed(1)}%`
-})
 </script>
 
 <style scoped>
@@ -79,10 +50,7 @@ const pnlPctText = computed(() => {
 .cs-row { display: flex; justify-content: space-between; align-items: baseline; }
 .cs-label { font-size: 13px; color: var(--text-secondary); }
 .cs-amount { font-size: 22px; font-weight: 700; font-family: var(--font-number); }
-.cs-amount.rise { color: var(--color-rise); }
-.cs-amount.fall { color: var(--color-fall); }
-.cs-label.rise { color: var(--color-rise); }
-.cs-label.fall { color: var(--color-fall); }
+.cs-desc { font-size: 11px; color: var(--text-muted); line-height: 1.6; margin-top: -6px; }
 .cs-btns { display: flex; gap: 10px; }
 .cs-btn {
   flex: 1; padding: 12px; border: none; border-radius: var(--radius-md);

@@ -10,12 +10,6 @@ export const useFundStore = defineStore('funds', {
     error: null
   }),
   getters: {
-    // 外部资本变动（增资/减资/初始），排除校对核缺（category='adjust'）
-    capitalAdjustNet: (state) => {
-      return state.capitalLogs
-        .filter(l => l.pool_id === null && l.category === 'adjust')
-        .reduce((sum, l) => sum + (l.type === 'add' ? l.amount : -l.amount), 0)
-    },
     totalCapital: (state) => {
       // 只计外部资金变动（pool_id IS NULL 且非校对核缺），股票买卖不影响总资金池
       return state.capitalLogs

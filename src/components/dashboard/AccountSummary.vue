@@ -3,7 +3,7 @@
   <div class="account-section">
     <div class="asset-meta">
       <span>账户资产（元）</span>
-      <span class="asset-meta-note">非实时市值<template v-if="priceUpdateTime">，更新于 {{ priceUpdateTime }}</template></span>
+      <span class="asset-meta-note">非实时<template v-if="priceUpdateTime"> · 更新于 {{ priceUpdateTime }}</template></span>
     </div>
     <div class="total-asset">{{ formatMoney(totalAsset) }}</div>
     <div class="asset-grid">
@@ -41,7 +41,7 @@ defineProps({
 
 <style scoped>
 .account-section {
-  padding: 0 0 8px;
+  padding: 0 0 4px;
 }
 .account-header {
   margin-bottom: 2px;
@@ -51,12 +51,12 @@ defineProps({
   color: var(--text-muted);
 }
 .total-asset {
-  font-size: 40px;
+  font-size: 34px;
   font-weight: 700;
   font-family: var(--font-number);
   letter-spacing: -1px;
   line-height: 1.1;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   /* 霓虹渐变签名：主数字白→淡紫 */
   background: linear-gradient(120deg, #ffffff, #c9b8ff);
   -webkit-background-clip: text;
@@ -69,7 +69,7 @@ defineProps({
   justify-content: space-between;
   font-size: 11px;
   color: var(--text-muted);
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 .asset-meta-note {
   font-size: 10px;
@@ -82,16 +82,16 @@ defineProps({
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
 }
-.profit-grid { margin-top: 10px; }
+.profit-grid { margin-top: 8px; }
 .asset-item {
   background: var(--bg-hover);
   border-radius: var(--radius-md);
-  padding: 8px 10px;
+  padding: 6px 10px;
 }
 .asset-label {
   font-size: 11px;
   color: var(--text-secondary);
-  margin-bottom: 2px;
+  margin-bottom: 1px;
 }
 .asset-value {
   font-size: 15px;

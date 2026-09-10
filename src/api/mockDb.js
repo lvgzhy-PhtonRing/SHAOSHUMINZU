@@ -9,6 +9,10 @@ export function isMockMode() {
   return !import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY
 }
 
+// json/ 下的正式备份（gitignore，仅测试版存在）：按文件名取最新一份
+const BACKUPS = import.meta.glob('/json/etf-backup-*.json', { eager: true, import: 'default' })
+const NEWEST_BACKUP = Object.keys(BACKUPS).sort().pop()
+
 export function getDB() {
   try {
     return JSON.parse(localStorage.getItem(DB_KEY) || '{}')
@@ -67,6 +71,26 @@ export function loadBackup(backup) {
 
 export function clearDB() {
   localStorage.removeItem(DB_KEY)
+}
+
+// 测试版启动时注入真实数据。同一份备份只注入一次，
+// 记录 _seeded_from 以便换备份文件后自动重新注入，
+// 同时不覆盖测试期间产生的改动（模拟交易等）。
+export function seedFromBackup() {
+  if (!isMockMode() || !NEWEST_BACKUP) return null
+  if (getDB()._seeded_from === NEWEST_BACKUP) return null
+  try {
+    loadBackup(BACKUPS[NEWEST_BACKUP])
+    const db = getDB()
+    db._seeded_from = NEWEST_BACKUP
+    saveDB(db)
+    console.info('[mockDb] 测试数据已注入：', NEWEST_BACKUP)
+    return NEWEST_BACKUP
+  } catch (e) {
+    // 备份损坏时保留当前数据，不让 App 启动崩掉
+    console.warn('[mockDb] 备份注入失败，保留当前数据：', e)
+    return null
+  }
 }
 
 // ===== 表级增删改查（供 supabase.js mock 分支复用） =====

@@ -15,10 +15,19 @@
     </div>
     <van-tabbar v-model="active" :border="false">
       <van-tabbar-item icon="diamond-o" @click="go('dashboard')">持仓</van-tabbar-item>
-      <van-tabbar-item icon="bar-chart-o" @click="go('positions')">仓位</van-tabbar-item>
-      <van-tabbar-item icon="exchange" @click="go('trade')">交易</van-tabbar-item>
+      <van-tabbar-item @click="go('positions')">
+        <template #icon>
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+            <circle cx="6.5" cy="6.5" r="2.5" />
+            <circle cx="17.5" cy="17.5" r="2.5" />
+            <line x1="19" y1="5" x2="5" y2="19" />
+          </svg>
+        </template>
+        仓位
+      </van-tabbar-item>
+      <van-tabbar-item icon="chart-trending-o" @click="go('netvalue')">净值</van-tabbar-item>
+      <van-tabbar-item icon="clock-o" @click="go('trend')">趋势</van-tabbar-item>
       <van-tabbar-item icon="fire-o" @click="go('trends')">榜单</van-tabbar-item>
-      <van-tabbar-item icon="chart-trending-o" @click="go('trend')">趋势</van-tabbar-item>
       <van-tabbar-item icon="gold-coin-o" @click="go('fund')">资本</van-tabbar-item>
     </van-tabbar>
 
@@ -51,7 +60,7 @@ onMounted(() => {
   ensurePeriodicSnapshot().catch(e => console.error('ensurePeriodicSnapshot error:', e))
 })
 
-const routeMap = { dashboard: 0, positions: 1, trade: 2, trends: 3, trend: 4, fund: 5 }
+const routeMap = { dashboard: 0, positions: 1, netvalue: 2, trend: 3, trends: 4, fund: 5 }
 const active = ref(routeMap[route.name] || 0)
 
 function go(name) {
@@ -129,6 +138,17 @@ watch(() => route.name, (name) => {
 }
 .main-layout :deep(.van-tabbar-item) {
   color: var(--text-secondary);
+}
+/* 图标容器强制 flex 居中：.van-badge 带 0 3px 内边距 + text-align:center，
+   display:block 的子元素不受 text-align 影响，只能靠 flex 保证水平垂直都居中 */
+.main-layout :deep(.van-tabbar-item__icon) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.main-layout :deep(.van-tabbar-item__icon svg) {
+  display: block;
+  margin: 0 auto;
 }
 .main-layout :deep(.van-tabbar-item--active) {
   color: #b18cff;

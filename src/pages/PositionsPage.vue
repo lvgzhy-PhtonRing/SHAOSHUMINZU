@@ -36,6 +36,34 @@
         </div>
       </div>
 
+      <!-- 股票比例模块 -->
+      <div class="section-card edge-rise">
+        <div class="section-title">
+          <span class="title-accent title-accent--rise"></span>股票比例
+        </div>
+        <div v-if="stockShares.length === 0" class="stock-empty">暂无持仓</div>
+        <template v-else>
+          <div class="stock-bar">
+            <div v-for="s in stockShares" :key="s.code" class="stock-bar-seg"
+              :style="{ width: s.percent + '%', background: s.color }"></div>
+          </div>
+          <div class="stock-list">
+            <div v-for="s in stockShares" :key="s.code" class="stock-item">
+              <span class="stock-dot" :style="{ background: s.color }"></span>
+              <span class="stock-name">{{ s.name }}</span>
+              <span class="stock-qty num-mono">{{ s.quantity }}股</span>
+              <span class="stock-mv num-mono">{{ formatMoney(s.marketValue) }}</span>
+              <span class="stock-pct num-mono">{{ s.percent.toFixed(1) }}%</span>
+            </div>
+          </div>
+          <div class="stock-sum">
+            <span class="stock-sum-label">合计</span>
+            <span class="stock-sum-value num-mono">{{ totalPositionRatio.toFixed(1) }}%</span>
+            <span class="stock-sum-hint">= 总体仓位</span>
+          </div>
+        </template>
+      </div>
+
       <!-- 各子池仓位模块 -->
       <div class="section-card edge-warn">
         <div class="section-title"><span class="title-accent title-accent--warn"></span>子池仓位</div>
@@ -233,6 +261,31 @@ const chartSegments = computed(() => {
   })
 })
 
+// ===== 股票比例（各股票市值占总资产，合计 = 总体仓位） =====
+const stockColorList = ['#4d9fff', '#ff4d6d', '#00f0a8', '#ffd23f', '#b18cff', '#ff6b35', '#7bdff2', '#c084fc']
+
+const stockShares = computed(() => {
+  const grouped = {}
+  for (const h of holdingStore.holdings) {
+    const code = h.stock_code
+    if (!grouped[code]) {
+      grouped[code] = {
+        code,
+        name: priceStore.prices[code]?.stock_name || h.stock_name || code,
+        quantity: 0,
+        marketValue: 0
+      }
+    }
+    grouped[code].quantity += h.quantity
+    const price = priceStore.prices[code]?.price || 0
+    grouped[code].marketValue += price * h.quantity
+  }
+  const list = Object.values(grouped)
+    .map(s => ({ ...s, percent: totalAsset.value > 0 ? (s.marketValue / totalAsset.value) * 100 : 0 }))
+    .sort((a, b) => b.percent - a.percent)
+  return list.map((s, i) => ({ ...s, color: stockColorList[i % stockColorList.length] }))
+})
+
 // ===== 详情弹窗 =====
 const detailShow = ref(false)
 const detail = ref({
@@ -358,6 +411,86 @@ onMounted(async () => {
 @keyframes slogan-bounce {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.15); }
+}
+
+/* 股票比例 */
+.stock-empty {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+  padding: 16px 0;
+}
+.stock-bar {
+  display: flex;
+  width: 100%;
+  height: 14px;
+  border-radius: 7px;
+  overflow: hidden;
+  background: rgba(255,255,255,0.06);
+  margin-bottom: 12px;
+}
+.stock-bar-seg {
+  height: 100%;
+  box-shadow: inset -1px 0 0 rgba(24,22,49,0.7);
+  transition: width 0.3s;
+}
+.stock-list {
+  display: flex;
+  flex-direction: column;
+}
+.stock-item {
+  display: grid;
+  grid-template-columns: 8px 1fr auto auto auto;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.stock-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.stock-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.stock-qty {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.stock-mv {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.stock-pct {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  min-width: 46px;
+  text-align: right;
+}
+.stock-sum {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  justify-content: flex-end;
+  padding: 10px 0 2px;
+}
+.stock-sum-label {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.stock-sum-value {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-rise);
+}
+.stock-sum-hint {
+  font-size: 10px;
+  color: var(--text-muted);
 }
 
 /* 详情弹窗 */

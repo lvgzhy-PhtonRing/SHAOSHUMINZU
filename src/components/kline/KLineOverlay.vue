@@ -24,6 +24,11 @@
         >{{ p.label }}</button>
       </div>
     </div>
+    <div class="kline-legend">
+      <span class="lg-item"><span class="lg-badge" style="background:#ff4d6d">B</span>买入</span>
+      <span class="lg-item"><span class="lg-badge" style="background:#00f0a8">S</span>卖出</span>
+      <span class="lg-item"><span class="lg-badge" style="background:#ffd23f">T</span>当日买卖</span>
+    </div>
     <div ref="chartRef" class="kline-chart"></div>
     <div v-if="loading" class="kline-mask">
       <div class="kline-mask-inner">K线加载中…</div>
@@ -36,8 +41,9 @@
 
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
-import { init, dispose } from 'klinecharts'
+import { init, dispose, registerOverlay } from 'klinecharts'
 import { fetchKLine, refreshStockPrice } from '@/api/stock'
+import { fetchAllTransactions } from '@/api/supabase'
 
 const PERIODS = [
   { key: 'day', label: '日K' },
@@ -49,6 +55,65 @@ const props = defineProps({
   stock: { type: Object, required: true }
 })
 const emit = defineEmits(['close'])
+
+// 交易标记：B=买入(画在K线下方) S=卖出(上方) T=当日既有买又有卖(上方)
+const TRADE_MARKS = {
+  B: { label: 'B', color: '#ff4d6d', dir: 'down' },
+  S: { label: 'S', color: '#00f0a8', dir: 'up' },
+  T: { label: 'T', color: '#ffd23f', dir: 'up' }
+}
+
+// 自定义 overlay：色块字母 + 下方/上方的操作日期
+// 色块宽度跟随单根蜡烛宽度（chart.getBarSpace().gapBar 口径，见 klinecharts 8080 行）
+registerOverlay({
+  name: 'tradePoint',
+  totalStep: 1,
+  createPointFigures({ chart, overlay, coordinates }) {
+    const meta = overlay.extendData || {}
+    const color = meta.color || '#b18cff'
+    const cx = coordinates[0].x
+    const cy = coordinates[0].y
+    const oy = meta.dir === 'up' ? -1 : 1
+
+    const { gapBar } = chart.getBarSpace()
+    const candleW = Math.max(1, Math.floor((gapBar || 1) / 2) * 2)
+    // 圆形色块基准宽度跟随蜡烛宽，再整体放大 20%
+    const base = Math.max(8, Math.min(20, candleW))
+    const w = Math.round(base * 1.2)
+    const h = Math.round((base + 4) * 1.2)
+    const fs = Math.round(Math.max(7, Math.min(11, base - 3)) * 1.2)
+    const r = w / 2
+
+    const edge = cy + oy * 12
+    const blockY = edge + oy * (h / 2)
+    return [
+      {
+        type: 'line',
+        attrs: { coordinates: [{ x: cx, y: cy + oy * 2 }, { x: cx, y: blockY - oy * r }] },
+        styles: { style: 'solid', size: 1, color },
+        ignoreEvent: true
+      },
+      {
+        type: 'circle',
+        attrs: { x: cx, y: blockY, r },
+        styles: { style: 'fill', color, borderSize: 0, borderColor: 'transparent' },
+        ignoreEvent: true
+      },
+      {
+        type: 'text',
+        attrs: { x: cx, y: blockY, text: meta.label || '', align: 'center', baseline: 'middle' },
+        styles: { color: '#12102a', size: fs, weight: 'bold', backgroundColor: 'transparent', borderSize: 0, borderColor: 'transparent' },
+        ignoreEvent: true
+      },
+      {
+        type: 'text',
+        attrs: { x: cx, y: edge + oy * (h + 8), text: meta.date || '', align: 'center', baseline: 'middle' },
+        styles: { color, size: 9, weight: 'bold', backgroundColor: 'transparent', borderSize: 0, borderColor: 'transparent' },
+        ignoreEvent: true
+      }
+    ]
+  }
+})
 
 const STYLES = {
   grid: {
@@ -188,6 +253,7 @@ const period = ref('day')
 const loading = ref(false)
 const error = ref('')
 let chart = null
+let priceOverlayId = null
 let priceTimer = null
 
 const costLabel = computed(() => {
@@ -210,6 +276,9 @@ async function refreshPrice() {
   if (d && d.price) {
     currentPrice.value = d.price
     changePct.value = Number(d.change_pct) || 0
+    if (priceOverlayId) {
+      chart.overrideOverlay({ id: priceOverlayId, points: [{ dataIndex: 0, value: currentPrice.value }] })
+    }
   }
 }
 
@@ -225,7 +294,8 @@ function switchPeriod(p) {
 }
 
 function resizeChart() {
-  if (chart) chart.resize()
+  if (!chart) return
+  chart.resize()
 }
 
 function enterFullscreen() {
@@ -258,7 +328,6 @@ function exitFullscreen() {
 
 function initChart() {
   if (!chartRef.value) return
-  const cost = Number(props.stock.cost_price) || 0
   chart = init(chartRef.value, { locale: 'zh-CN', styles: STYLES })
   chart.setSymbol({ ticker: props.stock.stock_code, pricePrecision: 3, volumePrecision: 0 })
   chart.setPeriod({ span: 1, type: period.value })
@@ -279,6 +348,8 @@ function initChart() {
         }
         callback(data, false)
         chart.scrollToRealTime()
+        if (currentPrice.value > 0) createPriceLine(currentPrice.value)
+        createTradeMarks(data)
       } catch (e) {
         error.value = 'K线加载失败'
         callback([])
@@ -288,18 +359,18 @@ function initChart() {
     }
   })
   chart.createIndicator({ name: 'MA', paneId: 'candle_pane' }, true)
-  chart.createIndicator('VOL')
-  if (cost > 0) createCostLine(cost)
   chart.setOffsetRightDistance(60)
 }
 
-function createCostLine(cost) {
-  chart.createOverlay({
+function createPriceLine(price) {
+  // 切周期会重复触发 init，先删旧线避免叠加残影
+  if (priceOverlayId) chart.removeOverlay(priceOverlayId)
+  priceOverlayId = chart.createOverlay({
     name: 'simpleTag',
     paneId: 'candle_pane',
-    points: [{ dataIndex: 0, value: cost }],
+    points: [{ dataIndex: 0, value: price }],
     styles: {
-      line: { style: 'dashed', size: 1, color: '#f4f2ff', dashedValue: [8, 4] },
+      line: { style: 'dashed', size: 1, color: '#b18cff', dashedValue: [8, 4] },
       text: {
         style: 'fill',
         color: '#12102a',
@@ -310,14 +381,59 @@ function createCostLine(cost) {
         paddingRight: 5,
         paddingTop: 2,
         paddingBottom: 2,
-        backgroundColor: '#f4f2ff'
+        backgroundColor: '#b18cff'
       }
     }
   })
 }
 
-onMounted(() => {
-  enterFullscreen()
+// K 线 bar 的 timestamp 是所属周期的最后一天，故取第一个 >= 交易日 的 bar
+function barIndexFor(bars, dayMs) {
+  for (let i = 0; i < bars.length; i++) {
+    if (bars[i].timestamp >= dayMs) return i
+  }
+  return bars.length - 1
+}
+
+// 把当日交易聚合到 K 线根上：只有买→B，只有卖→S，买卖都有→T
+async function createTradeMarks(bars) {
+  chart.removeOverlay({ name: 'tradePoint' })
+  if (!bars.length) return
+
+  const txs = await fetchAllTransactions()
+  if (!chart) return
+  const mine = txs.filter(t => t.stock_code === props.stock.stock_code && t.status === 'verified' && t.trade_date)
+  if (!mine.length) return
+
+  const byBar = new Map()
+  for (const t of mine) {
+    const dayMs = Date.parse(`${t.trade_date}T00:00:00+08:00`)
+    if (isNaN(dayMs)) continue
+    const idx = barIndexFor(bars, dayMs)
+    const rec = byBar.get(idx) || { buy: false, sell: false, date: t.trade_date }
+    if (t.type === 'buy') rec.buy = true
+    else rec.sell = true
+    if (t.trade_date < rec.date) rec.date = t.trade_date
+    byBar.set(idx, rec)
+  }
+
+  for (const [idx, rec] of byBar) {
+    const bar = bars[idx]
+    if (!bar) continue
+    const mark = rec.buy && rec.sell ? TRADE_MARKS.T : rec.buy ? TRADE_MARKS.B : TRADE_MARKS.S
+    const value = mark.dir === 'up' ? bar.high : bar.low
+    if (!(value > 0)) continue
+    chart.createOverlay({
+      name: 'tradePoint',
+      paneId: 'candle_pane',
+      points: [{ dataIndex: idx, value }],
+      extendData: { label: mark.label, color: mark.color, dir: mark.dir, date: rec.date.slice(5) }
+    })
+  }
+}
+
+onMounted(async () => {
+  await enterFullscreen()
   nextTick(() => {
     initChart()
     resizeChart()
@@ -449,6 +565,35 @@ onBeforeUnmount(() => {
 .kline-tab.active {
   background: var(--bg-accent);
   color: #fff;
+}
+
+.kline-legend {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  padding: 6px 12px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.lg-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.lg-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 14px;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 700;
+  color: #12102a;
+  line-height: 1;
 }
 
 .kline-chart {

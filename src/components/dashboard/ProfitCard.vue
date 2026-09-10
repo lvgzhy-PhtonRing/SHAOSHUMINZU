@@ -28,7 +28,7 @@ defineProps({
   gap: 8px;
 }
 .profit-item {
-  padding: 10px 12px;
+  padding: 8px 12px;
   border-radius: var(--radius-md);
 }
 .profit-item.fall {
@@ -41,7 +41,7 @@ defineProps({
 .profit-label {
   font-size: 11px;
   color: var(--text-secondary);
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 .profit-value {
   font-size: 16px;

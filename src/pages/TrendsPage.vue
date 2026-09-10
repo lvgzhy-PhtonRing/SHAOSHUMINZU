@@ -124,21 +124,13 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { usePoolStore } from '@/stores/pools'
-import { useHoldingStore } from '@/stores/holdings'
-import { usePriceStore } from '@/stores/prices'
-import { useFundStore } from '@/stores/funds'
 import { useTransactionStore } from '@/stores/transactions'
-import { fetchAllTransactions, loadPoolAllocation } from '@/api/supabase'
+import { fetchAllTransactions } from '@/api/supabase'
+import { useHardRanking } from '@/composables/useHardRanking'
 
 const loading = ref(true)
 
-const poolStore = usePoolStore()
-const holdingStore = useHoldingStore()
-const priceStore = usePriceStore()
-const fundStore = useFundStore()
 const transactionStore = useTransactionStore()
-const totalCapital = computed(() => fundStore.totalCapital)
 
 // ===== 盈亏排行（仅已清仓股票） =====
 const clearedProfitRankings = computed(() => {
@@ -276,33 +268,7 @@ function openStockDetail(item) {
 }
 
 // ===== 子池硬度 =====
-const POOL_COLORS = { '春': '#ff4d6d', '维': '#00f0a8', '队': '#ffd23f', '回': '#b18cff' }
-const POOL_ORDER = ['春', '维', '队', '回']
-const allocConfig = ref(null)
-// 公共池初始分配：从 allocConfig 读取，未配置时不写死 11w
-
-const hardData = computed(() => {
-  return POOL_ORDER.map(name => {
-    const pool = poolStore.pools.find(p => p.name === name)
-    if (!pool) return null
-    const adds = fundStore.capitalLogs.filter(l => l.pool_id === pool.id && l.type === 'add').reduce((s, l) => s + l.amount, 0)
-    const removes = fundStore.capitalLogs.filter(l => l.pool_id === pool.id && l.type === 'remove').reduce((s, l) => s + l.amount, 0)
-    // 从 allocConfig 读取该池的初始分配，未配置时为 0
-    const poolAlloc = allocConfig.value?.[pool.name] ?? 0
-    const poolAvailable = poolAlloc + adds - removes
-    const holdings = holdingStore.holdings.filter(h => h.pool_id === pool.id)
-    const mv = holdings.reduce((s, h) => {
-      return s + (priceStore.prices[h.stock_code]?.price || 0) * h.quantity
-    }, 0)
-    const totalAsset = poolAvailable + mv
-    const ratio = poolAlloc > 0 ? (totalAsset / poolAlloc) * 100 : 0
-    return { name, alloc: poolAlloc, mv, totalAsset, ratio, color: POOL_COLORS[name] }
-  }).filter(Boolean)
-})
-
-const sortedHard = computed(() =>
-  [...hardData.value].sort((a, b) => b.ratio - a.ratio)
-)
+const { hardData, sortedHard, loadRankingData } = useHardRanking()
 
 const hardBarScale = computed(() => {
   const vals = sortedHard.value.map(d => d.ratio)
@@ -321,18 +287,10 @@ function hardBarHeight(ratio) {
 // ===== 加载 =====
 onMounted(async () => {
   try {
-    try { allocConfig.value = await loadPoolAllocation() } catch (e) {}
-    await Promise.all([
-      poolStore.loadPools(),
-      holdingStore.loadHoldings(),
-      fundStore.loadCapitalLogs()
-    ])
+    await loadRankingData()
 
     const allTxs = await fetchAllTransactions()
     transactionStore.transactions = allTxs
-
-    const codes = holdingStore.stockCodes
-    if (codes.length) await priceStore.loadPrices(codes)
   } catch (e) {
     console.error('Trends page load error:', e)
   } finally {
