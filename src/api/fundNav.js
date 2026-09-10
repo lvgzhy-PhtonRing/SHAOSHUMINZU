@@ -55,7 +55,9 @@ function fetchEastmoneyNav(code) {
       if (done) return
       done = true
       clearTimeout(timer)
-      delete window.Data_netWorthTrend
+      // 不能 delete：东方财富 pingzhongdata 把 Data_netWorthTrend 声明为不可配置全局，
+      // 严格模式下 delete 会抛 TypeError（手机 Chrome irectly 崩回蓝底）；数据已 onload 取走，留空即可
+      try { window.Data_netWorthTrend = undefined } catch (e) {}
       if (script.parentNode) script.parentNode.removeChild(script)
     }
 

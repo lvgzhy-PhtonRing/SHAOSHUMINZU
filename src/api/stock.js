@@ -165,7 +165,8 @@ function fetchSinaJSONP(codes) {
           change_pct: prevClose > 0 ? ((price - prevClose) / prevClose * 100).toFixed(2) : '0',
           updated_at: new Date().toISOString()
         }
-        delete window[key]
+        // 不 delete：新浪 var 声明的全局同样可能不可配置（手机 Chrome 严格模式抛错），改赋空防旧数据残留
+        try { window[key] = undefined } catch (e) {}
       }
       resolve(prices)
     }
@@ -331,7 +332,8 @@ function fetchSuggestJSONP(key) {
     function cleanup() {
       clearTimeout(timer)
       if (script.parentNode) document.body.removeChild(script)
-      delete window.suggestvalue
+      // 不 delete（同 Data_netWorthTrend 原因），改赋空
+      try { window.suggestvalue = undefined } catch (e) {}
     }
 
     // Sina suggest 返回 var suggestvalue="..." 声明全局变量，不是 JSONP callback

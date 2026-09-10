@@ -7,15 +7,18 @@
   <title>结构化动态仓位配置亏损计划</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <script>
-    // 诊断层：JS 出错/未捕获 Promise 时把错误画到屏幕上，方便移动端 Chrome 卡蓝时看到真实原因
+    // 诊断层：JS 出错/未捕获 Promise 时浮一个红框显示真实错误，不清空 #app，点 × 关闭
     (function () {
       function show(kind, msg, stack) {
-        var el = document.getElementById('app');
-        if (!el) return;
         var d = document.createElement('div');
-        d.setAttribute('style', 'position:fixed;inset:0;padding:20px 16px;background:#150b2e;color:#ff6b6b;font:12px/1.55 Consolas,monospace;white-space:pre-wrap;overflow:auto;z-index:2147483647;word-break:break-word;');
+        d.setAttribute('style', 'position:fixed;left:8px;right:8px;top:8px;max-height:55vh;padding:14px;background:#150b2e;color:#ff6b6b;font:11px/1.5 Consolas,monospace;white-space:pre-wrap;overflow:auto;z-index:2147483647;border:1px solid #ff6b6b;border-radius:8px;');
         d.textContent = '[' + kind + ']\n\n' + (msg || '(no message)') + '\n\n' + (stack || '');
-        el.innerHTML = ''; el.appendChild(d);
+        var b = document.createElement('div');
+        b.textContent = '\u00d7';
+        b.setAttribute('style', 'position:absolute;top:2px;right:8px;color:#a7a3c8;cursor:pointer;font-size:16px;padding:2px 6px;');
+        b.onclick = function () { d.remove(); };
+        d.appendChild(b);
+        document.body.appendChild(d);
       }
       window.__errOverlay = show;
       window.addEventListener('error', function (e) {
