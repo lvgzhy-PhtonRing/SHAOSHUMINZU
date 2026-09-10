@@ -69,12 +69,12 @@ async function doLogin() {
   errorMsg.value = ''
 
   try {
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const { data, error: authError } = await supabase.auth.signInWithPassword({
       email: email.value.trim(),
       password: password.value
     })
 
-    if (error) {
+    if (authError) {
       errorMsg.value = '邮箱或密码错误'
       error.value = true
       return
