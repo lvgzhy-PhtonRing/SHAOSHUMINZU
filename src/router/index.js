@@ -1,5 +1,6 @@
 // src/router/index.js
 import { createRouter, createWebHashHistory } from 'vue-router'
+import { supabase } from '@/api/supabase'
 
 const routes = [
   {
@@ -64,9 +65,17 @@ const router = createRouter({
   routes
 })
 
-// 路由守卫
-router.beforeEach((to, from, next) => {
-  const isAuthenticated = localStorage.getItem('auth') === 'true'
+let sessionChecked = false
+
+router.beforeEach(async (to, from, next) => {
+  let isAuthenticated = false
+  try {
+    const { data } = await supabase.auth.getSession()
+    isAuthenticated = !!data.session
+  } catch {
+    isAuthenticated = false
+  }
+
   if (to.meta.requiresAuth && !isAuthenticated) {
     next({ name: 'login' })
   } else if (to.name === 'login' && isAuthenticated) {

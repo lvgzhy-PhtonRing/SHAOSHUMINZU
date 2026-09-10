@@ -8,23 +8,33 @@
     </div>
 
     <div class="login-form">
-      <div class="password-display">
-        <span v-for="(d, i) in 4" :key="i" class="pwd-dot" :class="{ filled: input.length > i }">
-          {{ input.length > i ? '●' : '○' }}
-        </span>
+      <div class="form-group">
+        <input
+          v-model="email"
+          type="email"
+          class="form-input"
+          placeholder="邮箱"
+          autocomplete="email"
+          @keyup.enter="doLogin"
+        />
+      </div>
+      <div class="form-group">
+        <input
+          v-model="password"
+          type="password"
+          class="form-input"
+          placeholder="密码"
+          autocomplete="current-password"
+          @keyup.enter="doLogin"
+        />
       </div>
 
-      <div v-if="error" class="error-msg shake">密码错误，请重试</div>
-
-      <div class="numpad">
-        <button v-for="n in 9" :key="n" class="num-btn" @click="press(n)">{{ n }}</button>
-        <button class="num-btn empty" disabled></button>
-        <button class="num-btn" @click="press(0)">0</button>
-        <button class="num-btn delete-btn" @click="deleteChar">⌫</button>
+      <div v-if="error" class="error-msg">
+        <span>{{ errorMsg }}</span>
       </div>
 
-      <button class="login-btn" :class="{ ready: input.length === 4 }" :disabled="input.length !== 4" @click="doLogin">
-        进入系统
+      <button class="login-btn" :class="{ loading: loading }" :disabled="loading || !email || !password" @click="doLogin">
+        {{ loading ? '登录中…' : '进入系统' }}
       </button>
     </div>
   </div>
@@ -33,75 +43,52 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { hashPassword, isHashed } from '@/utils/crypto'
+import { supabase } from '@/api/supabase'
 
 const router = useRouter()
-const input = ref('')
+const email = ref('')
+const password = ref('')
+const loading = ref(false)
 const error = ref(false)
+const errorMsg = ref('')
 
-// 开发模式（npm run dev）自动登录，方便测试，生产构建不受影响
+// 开发模式自动登录（仅本地测试）
 import.meta.env.DEV && (async () => {
-  localStorage.setItem('pwd', '1111')
-  localStorage.setItem('auth', 'true')
-  router.replace({ name: 'dashboard' })
+  const { data } = await supabase.auth.getSession()
+  if (data.session) {
+    router.replace({ name: 'dashboard' })
+  }
 })()
 
-function press(n) {
-  if (input.value.length >= 4) return
-  error.value = false
-  input.value += String(n)
-}
-
-function deleteChar() {
-  input.value = input.value.slice(0, -1)
-  error.value = false
-}
-
 async function doLogin() {
-  if (input.value.length !== 4) return
-  const pwd = input.value
+  if (!email.value || !password.value) return
+  loading.value = true
+  error.value = false
+  errorMsg.value = ''
 
-  // 1. 先验证服务器（权威来源，确保跨设备密码一致）
-  let serverOk = false, serverReachable = true
   try {
-    const { verifyPassword } = await import('@/api/supabase')
-    // 服务器验证加 3 秒超时，避免不可达时请求挂起导致登录卡死
-    serverOk = await Promise.race([
-      verifyPassword(pwd),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('verify timeout')), 3000))
-    ])
-  } catch {
-    serverReachable = false // 网络不可用/超时，回退本地
-  }
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: email.value.trim(),
+      password: password.value
+    })
 
-  if (serverOk) {
-    // 服务器认 → 更新本地缓存，放行
-    localStorage.setItem('pwd', await hashPassword(pwd))
-    localStorage.setItem('auth', 'true')
-    router.replace({ name: 'dashboard' })
-    return
-  }
-
-  // 2. 服务器不可达时，回退本地缓存
-  if (!serverReachable) {
-    const storedPwd = localStorage.getItem('pwd') || '1111'
-    const localValid = isHashed(storedPwd)
-      ? await hashPassword(pwd) === storedPwd
-      : pwd === storedPwd
-    if (localValid) {
-      if (!isHashed(storedPwd)) {
-        localStorage.setItem('pwd', await hashPassword(pwd))
-      }
-      localStorage.setItem('auth', 'true')
-      router.replace({ name: 'dashboard' })
+    if (error) {
+      errorMsg.value = '邮箱或密码错误'
+      error.value = true
+      setTimeout(() => { error.value = false }, 2000)
       return
     }
-  }
 
-  // 3. 都不通过 → 拒绝
-  error.value = true
-  input.value = ''
-  setTimeout(() => { error.value = false }, 1500)
+    if (data.session) {
+      router.replace({ name: 'dashboard' })
+    }
+  } catch (e) {
+    errorMsg.value = '网络连接失败，请检查网络'
+    error.value = true
+    setTimeout(() => { error.value = false }, 2000)
+  } finally {
+    loading.value = false
+  }
 }
 </script>
 
@@ -133,27 +120,37 @@ async function doLogin() {
   font-size: 13px;
   color: var(--text-secondary);
 }
-.password-display {
-  display: flex;
-  gap: 12px;
-  justify-content: center;
+.login-form {
+  width: 100%;
+  max-width: 320px;
+}
+.form-group {
   margin-bottom: 12px;
 }
-.pwd-dot {
-  font-size: 28px;
-  color: var(--text-secondary);
-  transition: all 0.2s;
-}
-.pwd-dot.filled {
+.form-input {
+  width: 100%;
+  padding: 14px 16px;
+  background: var(--bg-card);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: var(--radius-md);
   color: var(--text-primary);
+  font-size: 15px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+.form-input:focus {
+  border-color: var(--bg-accent);
+}
+.form-input::placeholder {
+  color: var(--text-muted);
 }
 .error-msg {
   text-align: center;
-  color: var(--color-fall);
+  color: var(--color-rise);
   font-size: 13px;
   margin-bottom: 16px;
-}
-.shake {
   animation: shake 0.4s ease-in-out;
 }
 @keyframes shake {
@@ -161,56 +158,25 @@ async function doLogin() {
   25% { transform: translateX(-8px); }
   75% { transform: translateX(8px); }
 }
-.numpad {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  max-width: 280px;
-  margin: 0 auto;
-}
-.num-btn {
-  width: 72px;
-  height: 56px;
-  background: var(--bg-card);
-  border: none;
-  border-radius: var(--radius-md);
-  color: var(--text-primary);
-  font-size: 22px;
-  cursor: pointer;
-  transition: background 0.15s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.num-btn:active {
-  background: var(--bg-accent);
-}
-.num-btn.empty {
-  background: transparent;
-  cursor: default;
-}
-.delete-btn {
-  font-size: 18px;
-}
 .login-btn {
   width: 100%;
-  max-width: 280px;
-  margin-top: 24px;
+  margin-top: 8px;
   padding: 14px;
-  background: rgba(111,77,255,0.28);
+  background: var(--bg-accent);
   border: none;
   border-radius: var(--radius-lg);
-  color: var(--text-secondary);
+  color: #fff;
   font-size: 16px;
   font-weight: 600;
+  font-family: inherit;
   cursor: pointer;
-  transition: all 0.2s;
-}
-.login-btn.ready {
-  background: var(--bg-accent);
-  color: #fff;
+  transition: opacity 0.2s;
 }
 .login-btn:disabled {
+  opacity: 0.5;
   cursor: not-allowed;
+}
+.login-btn.loading {
+  opacity: 0.7;
 }
 </style>

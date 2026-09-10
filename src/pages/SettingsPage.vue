@@ -53,7 +53,7 @@
         <div class="group-title">关于</div>
         <div class="settings-item">
           <div class="item-left"><span class="item-icon">ℹ️</span><span>版本</span></div>
-          <span class="item-value">v4.0.5</span>
+          <span class="item-value">v4.0.6</span>
         </div>
         <div class="settings-item">
           <div class="item-left"><span class="item-icon">🏛️</span><span>数据存储</span></div>
@@ -69,9 +69,8 @@
     <!-- 密码弹窗 -->
     <van-dialog v-model:show="showPwdDialog" title="修改密码" show-cancel-button @confirm="changePassword">
       <van-form>
-        <van-field v-model="oldPwd" label="旧密码" type="password" maxlength="4" placeholder="输入旧密码" :rules="[{ required: true, message: '请输入旧密码' }]" />
-        <van-field v-model="newPwd" label="新密码" type="password" maxlength="4" placeholder="4位数字新密码" :rules="[{ required: true, message: '请输入新密码' }, { validator: v => /^\d{4}$/.test(v), message: '必须为4位数字' }]" />
-        <van-field v-model="confirmPwd" label="确认密码" type="password" maxlength="4" placeholder="再次输入新密码" :rules="[{ required: true, message: '请确认新密码' }, { validator: v => v === newPwd, message: '两次密码不一致' }]" />
+        <van-field v-model="newPwd" label="新密码" type="password" maxlength="6" placeholder="6位数字新密码" :rules="[{ required: true, message: '请输入新密码' }, { validator: v => /^\d{6}$/.test(v), message: '必须为6位数字' }]" />
+        <van-field v-model="confirmPwd" label="确认密码" type="password" maxlength="6" placeholder="再次输入新密码" :rules="[{ required: true, message: '请确认新密码' }, { validator: v => v === newPwd, message: '两次密码不一致' }]" />
       </van-form>
     </van-dialog>
 
@@ -113,7 +112,6 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { supabase } from '@/api/supabase'
 import { isMockMode } from '@/api/mockDb'
-import { hashPassword, isHashed } from '@/utils/crypto'
 
 const props = defineProps({
   inDrawer: { type: Boolean, default: false }
@@ -122,7 +120,6 @@ const emit = defineEmits(['close'])
 
 const router = useRouter()
 const showPwdDialog = ref(false)
-const oldPwd = ref('')
 const newPwd = ref('')
 const confirmPwd = ref('')
 const exporting = ref(false)
@@ -325,21 +322,29 @@ async function doImport() {
 
 // ========== 密码 ==========
 async function changePassword() {
-  const currentPwd = localStorage.getItem('pwd') || '1111'
-  const isValid = isHashed(currentPwd)
-    ? await hashPassword(oldPwd.value) === currentPwd
-    : oldPwd.value === currentPwd
-  if (!isValid) return false
-  const hashed = await hashPassword(newPwd.value)
-  localStorage.setItem('pwd', hashed)
-  // 同步到服务器（跨设备）
-  const { updatePassword } = await import('@/api/supabase')
-  updatePassword(newPwd.value).catch(e => console.error('Sync password to server:', e))
-  return true
+  try {
+    const { error } = await supabase.auth.updateUser({
+      password: newPwd.value
+    })
+
+    if (error) {
+      alert('修改失败：' + error.message)
+      return false
+    }
+
+    showPwdDialog.value = false
+    oldPwd.value = ''
+    newPwd.value = ''
+    confirmPwd.value = ''
+    return true
+  } catch (e) {
+    console.error('Change password error:', e)
+    return false
+  }
 }
 
-function doLogout() {
-  localStorage.removeItem('auth')
+async function doLogout() {
+  await supabase.auth.signOut()
   router.replace({ name: 'login' })
 }
 </script>
