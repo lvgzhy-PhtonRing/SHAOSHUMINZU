@@ -49,7 +49,7 @@ import { useHoldingStore } from '@/stores/holdings'
 import { usePriceStore } from '@/stores/prices'
 import { useTransactionStore } from '@/stores/transactions'
 
-import { deleteCapitalLog, updateCapitalLog, updateTransaction, deleteTransaction, fetchTransactionsByPoolStock, deleteHolding, upsertHolding, savePoolAllocation, loadPoolAllocation } from '@/api/supabase'
+import { deleteCapitalLog, updateCapitalLog, updateTransaction, deleteTransaction, fetchTransactionsByPoolStock, deleteHolding, upsertHolding, savePoolAllocation, loadPoolAllocation, logDelete } from '@/api/supabase'
 import FundAllocationSummary from '@/components/fund/FundAllocationSummary.vue'
 import FundAllocationEditor from '@/components/fund/FundAllocationEditor.vue'
 import AdjustmentPanel from '@/components/fund/AdjustmentPanel.vue'
@@ -266,6 +266,7 @@ async function onDeleteLog(log) {
     // 普通资金变动（增资/减资）：只删记录
     if (!log.pool_id) {
       await deleteCapitalLog(log.id)
+      await logDelete('capital_log', log.id, `${log.type} ${log.amount} ${log.note || ''}`)
       await fundStore.loadCapitalLogs()
       return
     }
@@ -275,6 +276,7 @@ async function onDeleteLog(log) {
     const code = parseStockCode2(note)
     if (!code) {
       await deleteCapitalLog(id)
+      await logDelete('capital_log', id, `${capType} ${amount} ${note || ''}`)
       await fundStore.loadCapitalLogs()
       return
     }
@@ -312,6 +314,7 @@ async function onDeleteLog(log) {
 
     // 最后删资金记录 + 刷新
     await deleteCapitalLog(id)
+    await logDelete('capital_log', id, `${capType} ${amount} ${note || ''}`)
     await fundStore.loadCapitalLogs()
   } catch (e) {
     console.error('Delete cascade error:', e)

@@ -39,6 +39,10 @@
           <span class="item-arrow">↑</span>
         </label>
         <input id="import-file" ref="fileInput" type="file" accept=".json,application/json,text/plain,text/json" style="display:none" @change="onFileSelected" />
+        <div class="settings-item" @click="showAuditLog = true">
+          <div class="item-left"><span class="item-icon">📝</span><span>操作日志</span></div>
+          <span class="item-arrow">→</span>
+        </div>
       </div>
 
       <div class="settings-group">
@@ -53,7 +57,7 @@
         <div class="group-title">关于</div>
         <div class="settings-item">
           <div class="item-left"><span class="item-icon">ℹ️</span><span>版本</span></div>
-          <span class="item-value">v4.0.8</span>
+          <span class="item-value">v4.0.9</span>
         </div>
         <div class="settings-item">
           <div class="item-left"><span class="item-icon">🏛️</span><span>数据存储</span></div>
@@ -113,6 +117,27 @@
         </div>
       </div>
     </van-popup>
+
+    <!-- 操作日志弹窗 -->
+    <van-popup v-model:show="showAuditLog" position="bottom" :style="{ height: '60%' }" round @opened="loadAuditLog">
+      <div class="backup-list-popup">
+        <div class="popup-header">
+          <span>操作日志（删除记录）</span>
+          <span class="popup-close" @click="showAuditLog = false">✕</span>
+        </div>
+        <div v-if="loadingAudit" class="popup-loading">加载中…</div>
+        <div v-else-if="!auditLogs.length" class="popup-empty">暂无删除记录</div>
+        <div v-else class="backup-list">
+          <div v-for="log in auditLogs" :key="log.id" class="audit-item">
+            <div class="audit-info">
+              <div class="audit-time">{{ formatDate(log.created_at) }}</div>
+              <div class="audit-user">{{ log.user_email }}</div>
+              <div class="audit-detail">{{ log.record_info }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </van-popup>
   </div>
 </template>
 
@@ -120,6 +145,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { supabase } from '@/api/supabase'
+import { fetchAuditLogs } from '@/api/supabase'
 import { isMockMode } from '@/api/mockDb'
 
 const props = defineProps({
@@ -139,6 +165,9 @@ const autoBacking = ref(false)
 const loadingBackups = ref(false)
 const backups = ref([])
 const restoring = ref(null)
+const showAuditLog = ref(false)
+const loadingAudit = ref(false)
+const auditLogs = ref([])
 let pendingImportData = null
 
 const TABLES = ['pools', 'holdings', 'transactions', 'capital_log', 'stock_cache', 'app_config']
@@ -221,6 +250,19 @@ async function loadBackupList() {
     backups.value = []
   } finally {
     loadingBackups.value = false
+  }
+}
+
+async function loadAuditLog() {
+  if (isMockMode()) { auditLogs.value = []; return }
+  loadingAudit.value = true
+  try {
+    auditLogs.value = await fetchAuditLogs(50)
+  } catch (e) {
+    console.error('Load audit log error:', e)
+    auditLogs.value = []
+  } finally {
+    loadingAudit.value = false
   }
 }
 
@@ -391,4 +433,9 @@ async function doLogout() {
 .backup-info { display: flex; flex-direction: column; gap: 2px; }
 .backup-date { font-size: 13px; font-weight: 600; }
 .backup-size { font-size: 11px; color: var(--text-muted); }
+.audit-item { padding: 12px; background: var(--bg-card); border-radius: var(--radius-md); }
+.audit-info { display: flex; flex-direction: column; gap: 2px; }
+.audit-time { font-size: 13px; font-weight: 600; }
+.audit-user { font-size: 11px; color: var(--text-secondary); }
+.audit-detail { font-size: 12px; color: var(--text-muted); margin-top: 4px; padding: 6px 8px; background: rgba(255,77,109,0.08); border-radius: 6px; border-left: 2px solid var(--color-rise); }
 </style>

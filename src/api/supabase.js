@@ -339,3 +339,31 @@ export async function verifyTransaction(id, actualAmount) {
     .eq('id', id)
   return !error
 }
+
+/* 记录删除操作到 audit_log */
+export async function logDelete(tableName, recordId, recordInfo) {
+  try {
+    const { data: sessionData } = await supabase.auth.getSession()
+    const email = sessionData.session?.user?.email || 'unknown'
+    await supabase.from('audit_log').insert({
+      user_email: email,
+      action: 'delete',
+      table_name: tableName,
+      record_id: recordId,
+      record_info: recordInfo
+    })
+  } catch (e) {
+    console.warn('Audit log error:', e)
+  }
+}
+
+/* 获取删除操作日志 */
+export async function fetchAuditLogs(limit = 50) {
+  if (isMockMode()) return []
+  const { data, error } = await supabase
+    .from('audit_log')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(limit)
+  return error ? [] : data
+}

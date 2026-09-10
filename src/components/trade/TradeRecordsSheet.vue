@@ -187,7 +187,7 @@ import { formatMoney, formatPrice } from '@/utils/formatters'
 import { calcBuyFee, calcSellFee } from '@/utils/feeCalculator'
 import {
   updateCapitalLog, deleteCapitalLog, updateTransaction, deleteTransaction,
-  fetchTransactionsByPoolStock, deleteHolding, upsertHolding
+  fetchTransactionsByPoolStock, deleteHolding, upsertHolding, logDelete
 } from '@/api/supabase'
 import { matchTradedStocks } from '@/api/stock'
 import { usePoolStore } from '@/stores/pools'
@@ -404,14 +404,16 @@ function confirmDeleteTrade(log) { deletingTrade.value = log }
 async function doDeleteTrade() {
   if (!deletingTrade.value) return; const log = deletingTrade.value
   try {
-    const { id, pool_id, amount } = log; const code = log.stock_code
+    const { id, pool_id, amount, note, type } = log; const code = log.stock_code
     if (code) {
       const allTxs = await fetchTransactionsByPoolStock(pool_id, code); const matchedTx = allTxs.find(t => Math.abs(t.amount - amount) < 0.01 || Math.abs((t.actual_amount || t.amount) - amount) < 0.01)
       if (matchedTx) { await deleteTransaction(matchedTx.id); txStore.transactions = txStore.transactions.filter(t => t.id !== matchedTx.id) }
       await recalcHoldingsForPool(pool_id, code, matchedTx?.stock_name || '')
       await holdingStore.loadHoldings()
     }
-    await deleteCapitalLog(id); await Promise.all([fundStore.loadCapitalLogs(), txStore.loadTransactions()])
+    await deleteCapitalLog(id)
+    await logDelete('capital_log', id, `${type} ${amount} ${note || ''}`)
+    await Promise.all([fundStore.loadCapitalLogs(), txStore.loadTransactions()])
     deletingTrade.value = null
     emit('changed')
   } catch (e) { console.error('Delete trade error:', e) }
