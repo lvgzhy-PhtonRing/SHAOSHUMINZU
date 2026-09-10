@@ -59,7 +59,8 @@ function fetchEastmoneyNav(code) {
       if (script.parentNode) script.parentNode.removeChild(script)
     }
 
-    const timer = setTimeout(() => { cleanup(); resolve([]) }, 10000)
+    // 超时不宜过长，避免在弱网设备上迟迟不回落本地数据
+    const timer = setTimeout(() => { cleanup(); resolve([]) }, 6000)
     script.onload = () => {
       const trend = window.Data_netWorthTrend
       cleanup()

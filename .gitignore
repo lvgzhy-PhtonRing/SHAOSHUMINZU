@@ -11,5 +11,4 @@ Thumbs.db
 *.traineddata
 public/test.html
 public/seed-backup.json
-public/fund_nav/
 json/

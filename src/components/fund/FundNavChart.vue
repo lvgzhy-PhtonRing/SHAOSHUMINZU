@@ -5,6 +5,14 @@
         <span class="title-accent title-accent--accent"></span>
         <span class="nav-title">净值比较</span>
         <span class="nav-subtitle">NAV Compare</span>
+        <button v-if="!isFullscreen" class="nav-refresh" :class="{ 'is-spinning': refreshing }" @click="refreshAll" aria-label="刷新净值">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+            <path d="M21 3v5h-5" />
+            <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
+            <path d="M3 21v-5h5" />
+          </svg>
+        </button>
         <button v-if="!isFullscreen" class="nav-expand" @click="openFullscreen">⛶ 全屏</button>
         <span class="nav-fs-btn" v-if="isFullscreen" @click="closeFullscreen">✕ 退出</span>
       </div>
@@ -110,7 +118,8 @@
 <script setup>
 import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { fetchPositionSnapshots } from '@/api/supabase'
-import { FUND_CODES, getFundNav } from '@/api/fundNav'
+import { FUND_CODES, getFundNav, refreshFundNav } from '@/api/fundNav'
+import { showToast } from 'vant'
 import { MINE, MINE_BASE_DATE, MINE_BASE_ASSET, MINE_BASE_NOTE } from '@/utils/portfolioNav'
 
 const FUND_META = {
@@ -126,6 +135,7 @@ const fsSize = ref({ w: 900, h: 420 })
 const hover = ref(null)
 const chartEl = ref(null)
 let ro = null
+const refreshing = ref(false)
 
 
 // ===== 几何参数（compact 内嵌卡片 / large 全屏横版） =====
@@ -532,6 +542,26 @@ async function loadAll() {
   }
 }
 
+// 手动刷新：串行抓取两只基金（避免全局变量竞争），全部失败时提示并回退本地数据
+async function refreshAll() {
+  if (refreshing.value) return
+  refreshing.value = true
+  try {
+    let ok = 0
+    for (const code of FUND_CODES) {
+      const r = await refreshFundNav(code)
+      if (r.source === 'network' && r.data.length) ok++
+    }
+    await loadAll()
+    showToast(ok > 0 ? '已更新最新净值' : '抓取失败，已用本地数据')
+  } catch (e) {
+    console.warn('[FundNavChart] refresh error:', e)
+    showToast('抓取失败，已用本地数据')
+  } finally {
+    refreshing.value = false
+  }
+}
+
 // 系统手势退出浏览器全屏时同步收掉 CSS 全屏，避免遮罩卡住
 function onFsChange() {
   if (!document.fullscreenElement && isFullscreen.value) closeFullscreen()
@@ -592,6 +622,25 @@ onBeforeUnmount(() => {
 .nav-subtitle { font-size: 11px; color: var(--text-muted); font-weight: 400; letter-spacing: .5px; text-transform: uppercase; margin-left: 4px; margin-right: auto; }
 .nav-fs-btn { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; font-size: 10px; line-height: 1.2; color: var(--text-secondary); background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 999px; cursor: pointer; user-select: none; }
 .nav-fs-btn:active { background: rgba(255,255,255,0.13); color: var(--text-primary); }
+/* 手动刷新：紧贴全屏胶囊左侧的圆形图标按钮 */
+.nav-refresh {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 50%;
+  background: rgba(255,255,255,0.06);
+  color: var(--text-secondary);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.nav-refresh:active { background: rgba(255,255,255,0.13); color: var(--text-primary); }
+.nav-refresh svg { width: 13px; height: 13px; }
+.nav-refresh.is-spinning svg { animation: nav-spin 0.9s linear infinite; }
+@keyframes nav-spin { to { transform: rotate(360deg); } }
 /* 全屏入口：样式同持仓页 .kline-hint */
 .nav-expand { font-family: inherit; font-size: 11px; font-weight: 600; line-height: 1.2; color: #b18cff; background: rgba(111,77,255,0.14); border: 1px solid rgba(177,140,255,0.4); padding: 3px 10px; border-radius: 12px; white-space: nowrap; cursor: pointer; }
 .nav-expand:active { background: rgba(111,77,255,0.3); }
