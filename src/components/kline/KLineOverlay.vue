@@ -302,10 +302,10 @@ function enterFullscreen() {
   return new Promise(resolve => {
     const el = document.documentElement
     if (!el.requestFullscreen) return resolve()
-    el.requestFullscreen()
+    Promise.resolve(el.requestFullscreen())
       .then(() => {
         if (screen.orientation && screen.orientation.lock) {
-          screen.orientation.lock('landscape').catch(() => {})
+          Promise.resolve(screen.orientation.lock('landscape')).catch(() => {})
         }
         resolve()
       })
@@ -316,10 +316,10 @@ function enterFullscreen() {
 function exitFullscreen() {
   return new Promise(resolve => {
     if (screen.orientation && screen.orientation.unlock) {
-      screen.orientation.unlock().catch(() => {})
+      Promise.resolve(screen.orientation.unlock()).catch(() => {})
     }
     if (document.fullscreenElement && document.exitFullscreen) {
-      document.exitFullscreen().then(resolve).catch(resolve)
+      Promise.resolve(document.exitFullscreen()).then(resolve).catch(resolve)
     } else {
       resolve()
     }

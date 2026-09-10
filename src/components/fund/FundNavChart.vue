@@ -187,10 +187,10 @@ const G = computed(() => {
 function enterFullscreenApi() {
   const el = document.documentElement
   if (!el.requestFullscreen) return
-  el.requestFullscreen()
+  Promise.resolve(el.requestFullscreen())
     .then(() => {
       if (screen.orientation && screen.orientation.lock) {
-        screen.orientation.lock('landscape').catch(() => {})
+        Promise.resolve(screen.orientation.lock('landscape')).catch(() => {})
       }
     })
     .catch(() => {})
@@ -198,10 +198,10 @@ function enterFullscreenApi() {
 
 function exitFullscreenApi() {
   if (screen.orientation && screen.orientation.unlock) {
-    screen.orientation.unlock().catch(() => {})
+    Promise.resolve(screen.orientation.unlock()).catch(() => {})
   }
   if (document.fullscreenElement && document.exitFullscreen) {
-    document.exitFullscreen().catch(() => {})
+    Promise.resolve(document.exitFullscreen()).catch(() => {})
   }
 }
 
