@@ -53,7 +53,7 @@
         <div class="group-title">关于</div>
         <div class="settings-item">
           <div class="item-left"><span class="item-icon">ℹ️</span><span>版本</span></div>
-          <span class="item-value">v4.0.6</span>
+          <span class="item-value">v4.0.7</span>
         </div>
         <div class="settings-item">
           <div class="item-left"><span class="item-icon">🏛️</span><span>数据存储</span></div>
@@ -67,11 +67,20 @@
     </div>
 
     <!-- 密码弹窗 -->
-    <van-dialog v-model:show="showPwdDialog" title="修改密码" show-cancel-button @confirm="changePassword">
-      <van-form>
-        <van-field v-model="newPwd" label="新密码" type="password" maxlength="6" placeholder="6位数字新密码" :rules="[{ required: true, message: '请输入新密码' }, { validator: v => /^\d{6}$/.test(v), message: '必须为6位数字' }]" />
-        <van-field v-model="confirmPwd" label="确认密码" type="password" maxlength="6" placeholder="再次输入新密码" :rules="[{ required: true, message: '请确认新密码' }, { validator: v => v === newPwd, message: '两次密码不一致' }]" />
-      </van-form>
+    <van-dialog v-model:show="showPwdDialog" title="修改密码" show-cancel-button @confirm="changePassword" class="pwd-dialog">
+      <div class="pwd-dialog-content">
+        <div class="pwd-current-email">当前账号：{{ currentEmail }}</div>
+        <div class="pwd-input-group">
+          <label class="pwd-label">新密码</label>
+          <input v-model="newPwd" type="password" class="pwd-input" maxlength="6" placeholder="••••••" inputmode="numeric" pattern="[0-9]*" />
+        </div>
+        <div class="pwd-input-group">
+          <label class="pwd-label">确认密码</label>
+          <input v-model="confirmPwd" type="password" class="pwd-input" maxlength="6" placeholder="••••••" inputmode="numeric" pattern="[0-9]*" />
+        </div>
+        <div class="pwd-error" v-if="pwdError">{{ pwdError }}</div>
+        <div class="pwd-hint">密码要求：6位数字</div>
+      </div>
     </van-dialog>
 
     <!-- 导入确认弹窗 -->
@@ -363,8 +372,16 @@ async function doLogout() {
 .logout-section { padding: 24px 0; }
 .in-drawer { padding: 56px 0 0; }
 .in-drawer .logout-section { padding: 12px 0; }
-.import-dialog-actions { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: 8px; }
-.import-dialog-hint { font-size: 12px; color: var(--color-fall); font-weight: 600; }
+.pwd-dialog { background: var(--bg-card); border-radius: 16px; }
+.pwd-dialog-content { padding: 8px 4px; }
+.pwd-current-email { font-size: 13px; color: var(--text-secondary); margin-bottom: 16px; padding: 8px 12px; background: rgba(255,255,255,0.05); border-radius: 8px; }
+.pwd-input-group { margin-bottom: 12px; }
+.pwd-label { display: block; font-size: 13px; color: var(--text-secondary); margin-bottom: 6px; }
+.pwd-input { width: 100%; padding: 14px 16px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 10px; color: #fff; font-size: 24px; letter-spacing: 8px; font-family: inherit; outline: none; transition: border-color 0.2s; box-sizing: border-box; }
+.pwd-input:focus { border-color: var(--bg-accent); }
+.pwd-input::placeholder { color: rgba(255,255,255,0.3); letter-spacing: 8px; }
+.pwd-error { color: var(--color-rise); font-size: 12px; margin-bottom: 8px; padding-left: 4px; }
+.pwd-hint { font-size: 12px; color: var(--text-muted); margin-top: 8px; padding-left: 4px; }
 .backup-list-popup { padding: 16px; display: flex; flex-direction: column; height: 100%; }
 .popup-header { display: flex; justify-content: space-between; align-items: center; font-size: 15px; font-weight: 600; margin-bottom: 12px; }
 .popup-close { cursor: pointer; color: var(--text-muted); font-size: 16px; }

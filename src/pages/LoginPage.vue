@@ -8,23 +8,25 @@
     </div>
 
     <div class="login-form">
-      <div class="form-group">
+      <div class="form-group" :class="{ error: error }">
         <input
           v-model="email"
           type="email"
           class="form-input"
           placeholder="邮箱"
           autocomplete="email"
+          @input="error = false"
           @keyup.enter="doLogin"
         />
       </div>
-      <div class="form-group">
+      <div class="form-group" :class="{ error: error }">
         <input
           v-model="password"
           type="password"
           class="form-input"
           placeholder="密码"
           autocomplete="current-password"
+          @input="error = false"
           @keyup.enter="doLogin"
         />
       </div>
@@ -75,7 +77,6 @@ async function doLogin() {
     if (error) {
       errorMsg.value = '邮箱或密码错误'
       error.value = true
-      setTimeout(() => { error.value = false }, 2000)
       return
     }
 
@@ -85,7 +86,6 @@ async function doLogin() {
   } catch (e) {
     errorMsg.value = '网络连接失败，请检查网络'
     error.value = true
-    setTimeout(() => { error.value = false }, 2000)
   } finally {
     loading.value = false
   }
@@ -142,6 +142,9 @@ async function doLogin() {
 }
 .form-input:focus {
   border-color: var(--bg-accent);
+}
+.form-group.error .form-input {
+  border-color: var(--color-rise);
 }
 .form-input::placeholder {
   color: var(--text-muted);
