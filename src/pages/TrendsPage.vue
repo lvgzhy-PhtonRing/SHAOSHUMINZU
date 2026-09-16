@@ -62,8 +62,11 @@
         <div v-else class="hard-cols">
           <div v-for="(item, idx) in sortedHard" :key="item.name"
             class="hard-col"
-            :class="{ 'hard-col--top': idx === 0 }">
-            <div class="hard-col-rank" :class="`hard-col-rank--${idx + 1}`">{{ idx + 1 }}</div>
+            :class="{ 'hard-col--top': !item.isPublic && idx === 0 }"
+            @click="openPoolDetail(item)">
+            <div class="hard-col-rank" :class="item.isPublic ? 'hard-col-rank--pub' : `hard-col-rank--${idx + 1}`">
+              {{ item.isPublic ? '—' : idx + 1 }}
+            </div>
             <div class="hard-col-pct" :class="item.ratio >= 100 ? 'pct-up' : 'pct-down'">
               {{ item.ratio.toFixed(1) }}%
             </div>
@@ -73,7 +76,7 @@
             </div>
             <div class="hard-col-name" :style="{ color: item.color }">{{ item.name }}</div>
             <div class="hard-col-asset">{{ Math.round(item.totalAsset) }}</div>
-            <div v-if="idx === 0" class="hard-col-crown">&#9733;</div>
+            <div v-if="!item.isPublic && idx === 0" class="hard-col-crown">&#9733;</div>
           </div>
         </div>
       </div>
@@ -116,7 +119,30 @@
             共 {{ detail.cycleCount }} 次完整买卖，均价为加权合计
           </div>
         </div>
-      </van-popup>
+        </van-popup>
+
+        <!-- 子池持仓盈亏弹窗 -->
+        <van-popup
+          v-model:show="poolDetailShow"
+          position="bottom"
+          round
+          :style="{ maxHeight: '60vh' }"
+        >
+          <div class="pool-detail-panel">
+            <div class="pd-header">
+              <span class="pd-title">{{ poolDetail.name }} 持仓盈亏</span>
+            </div>
+            <div v-if="!poolDetail.holdings.length" class="pd-empty">暂无持仓</div>
+            <div v-else class="pd-list">
+              <div v-for="h in poolDetail.holdings" :key="h.stock_code" class="pd-item">
+                <span class="pd-stock">{{ h.stock_name }}</span>
+                <span class="pd-profit num-mono" :class="h.profit >= 0 ? 'pd-up' : 'pd-down'">
+                  {{ formatProfit(h.profit) }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </van-popup>
 
     </template>
   </div>
@@ -125,12 +151,18 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useTransactionStore } from '@/stores/transactions'
+import { usePoolStore } from '@/stores/pools'
+import { useHoldingStore } from '@/stores/holdings'
+import { usePriceStore } from '@/stores/prices'
 import { fetchAllTransactions } from '@/api/supabase'
 import { useHardRanking } from '@/composables/useHardRanking'
 
 const loading = ref(true)
 
 const transactionStore = useTransactionStore()
+const poolStore = usePoolStore()
+const holdingStore = useHoldingStore()
+const priceStore = usePriceStore()
 
 // ===== 盈亏排行（仅已清仓股票） =====
 const clearedProfitRankings = computed(() => {
@@ -267,6 +299,27 @@ function openStockDetail(item) {
   detailShow.value = true
 }
 
+// ===== 子池持仓盈亏弹窗 =====
+const poolDetailShow = ref(false)
+const poolDetail = ref({ name: '', holdings: [] })
+
+function openPoolDetail(item) {
+  const pool = poolStore.pools.find(p => p.name === item.name)
+  if (!pool) return
+  const holdings = holdingStore.holdings
+    .filter(h => h.pool_id === pool.id)
+    .map(h => {
+      const price = priceStore.prices[h.stock_code]?.price || 0
+      return {
+        stock_code: h.stock_code,
+        stock_name: h.stock_name,
+        profit: (price - h.cost_price) * h.quantity
+      }
+    })
+  poolDetail.value = { name: item.name, holdings }
+  poolDetailShow.value = true
+}
+
 // ===== 子池硬度 =====
 const { hardData, sortedHard, loadRankingData } = useHardRanking()
 
@@ -391,13 +444,14 @@ onMounted(async () => {
 .pct-down { color: var(--color-fall); }
 
 .hard-cols {
-  display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px;
   align-items: start;
 }
 .hard-col {
   display: flex; flex-direction: column; align-items: center;
-  padding: 14px 6px 12px; border-radius: 12px;
+  padding: 12px 4px 10px; border-radius: 12px;
   background: var(--bg-card); position: relative;
+  cursor: pointer;
   transition: transform 0.2s, box-shadow 0.2s;
 }
 .hard-col--top {
@@ -413,6 +467,7 @@ onMounted(async () => {
 .hard-col-rank--2 { background: linear-gradient(135deg, #90a4ae, #78909c); }
 .hard-col-rank--3 { background: linear-gradient(135deg, #a1887f, #8d6e63); }
 .hard-col-rank--4 { background: linear-gradient(135deg, #b0bec5, #90a4ae); }
+.hard-col-rank--pub { background: #607080; }
 .hard-col-pct {
   font-size: 13px; font-weight: 800; font-family: var(--font-number);
   margin-bottom: 6px; letter-spacing: -0.5px;
@@ -531,4 +586,50 @@ onMounted(async () => {
   color: var(--text-muted);
   text-align: center;
 }
+
+/* ===== 子池持仓盈亏弹窗 ===== */
+.pool-detail-panel {
+  background: var(--bg-solid);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+  color: var(--text-primary);
+}
+.pd-header {
+  text-align: center;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  margin-bottom: 8px;
+}
+.pd-title {
+  font-size: 15px;
+  font-weight: 700;
+}
+.pd-empty {
+  text-align: center;
+  padding: 24px 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.pd-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.pd-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 4px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.pd-stock {
+  font-size: 14px;
+  font-weight: 600;
+}
+.pd-profit {
+  font-size: 15px;
+  font-weight: 700;
+}
+.pd-up { color: var(--color-rise); }
+.pd-down { color: var(--color-fall); }
 </style>

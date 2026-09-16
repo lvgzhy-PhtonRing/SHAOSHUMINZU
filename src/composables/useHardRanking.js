@@ -8,7 +8,7 @@ import { usePriceStore } from '@/stores/prices'
 import { useFundStore } from '@/stores/funds'
 import { loadPoolAllocation } from '@/api/supabase'
 
-export const POOL_COLORS = { '春': '#ff4d6d', '维': '#00f0a8', '队': '#ffd23f', '回': '#b18cff' }
+export const POOL_COLORS = { '春': '#ff4d6d', '维': '#00f0a8', '队': '#ffd23f', '回': '#b18cff', '公共池': '#90a4ae' }
 export const POOL_ORDER = ['春', '维', '队', '回']
 
 export function useHardRanking() {
@@ -19,13 +19,20 @@ export function useHardRanking() {
   const allocConfig = ref(null)
 
   const hardData = computed(() => {
-    return POOL_ORDER.map(name => {
+    const rankedNames = POOL_ORDER
+    const fourAlloc = poolStore.pools
+      .filter(p => rankedNames.includes(p.name))
+      .reduce((sum, p) => sum + (allocConfig.value?.[p.name] ?? 0), 0)
+    const totalCapital = fundStore.totalCapital
+
+    return [...rankedNames, '公共池'].map(name => {
       const pool = poolStore.pools.find(p => p.name === name)
       if (!pool) return null
       const adds = fundStore.capitalLogs.filter(l => l.pool_id === pool.id && l.type === 'add').reduce((s, l) => s + l.amount, 0)
       const removes = fundStore.capitalLogs.filter(l => l.pool_id === pool.id && l.type === 'remove').reduce((s, l) => s + l.amount, 0)
-      // 从 allocConfig 读取该池的初始分配，未配置时为 0
-      const poolAlloc = allocConfig.value?.[pool.name] ?? 0
+      const poolAlloc = name === '公共池'
+        ? (totalCapital - fourAlloc)
+        : (allocConfig.value?.[pool.name] ?? 0)
       const poolAvailable = poolAlloc + adds - removes
       const holdings = holdingStore.holdings.filter(h => h.pool_id === pool.id)
       const mv = holdings.reduce((s, h) => {
@@ -33,13 +40,15 @@ export function useHardRanking() {
       }, 0)
       const totalAsset = poolAvailable + mv
       const ratio = poolAlloc > 0 ? (totalAsset / poolAlloc) * 100 : 0
-      return { name, alloc: poolAlloc, mv, totalAsset, ratio, color: POOL_COLORS[name] }
+      return { name, alloc: poolAlloc, mv, totalAsset, ratio, color: POOL_COLORS[name], isPublic: name === '公共池' }
     }).filter(Boolean)
   })
 
-  const sortedHard = computed(() =>
-    [...hardData.value].sort((a, b) => b.ratio - a.ratio)
-  )
+  const sortedHard = computed(() => {
+    const ranked = hardData.value.filter(d => !d.isPublic).sort((a, b) => b.ratio - a.ratio)
+    const pub = hardData.value.filter(d => d.isPublic)
+    return [...ranked, ...pub]
+  })
 
   // 榜单第一名；未配置初始分配时 ratio 全为 0，视为无结果
   const topHard = computed(() => (sortedHard.value[0]?.alloc > 0 ? sortedHard.value[0] : null))
