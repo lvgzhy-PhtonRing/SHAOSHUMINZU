@@ -57,7 +57,7 @@
         <div class="group-title">关于</div>
         <div class="settings-item">
           <div class="item-left"><span class="item-icon">ℹ️</span><span>版本</span></div>
-          <span class="item-value">v4.10.2</span>
+          <span class="item-value">v4.10.3</span>
         </div>
         <div class="settings-item">
           <div class="item-left"><span class="item-icon">🏛️</span><span>数据存储</span></div>
@@ -353,28 +353,31 @@ async function doImport() {
         const { error } = await supabase.from(table).delete().neq(keyField, emptyVal)
         if (error) throw new Error(`${table} 清空失败：${error.message}`)
       }
-      // 插入 pools：移除 id 由数据库自增，并建立 旧id→新id 映射
+      // 批量插入 pools：移除 id 由数据库自增，一次性返回全部新 id 建立映射
       const poolIdMap = {}
-      for (const row of (pendingImportData.pools || [])) {
-        const { id, updated_at, ...clean } = row
-        const { data, error } = await supabase.from('pools').insert(clean).select('id')
+      const poolRows = (pendingImportData.pools || []).map(({ id, updated_at, ...clean }) => clean)
+      if (poolRows.length) {
+        const { data, error } = await supabase.from('pools').insert(poolRows).select('id')
         if (error) throw new Error(`pools 插入失败：${error.message}`)
-        poolIdMap[id] = data[0].id
+        pendingImportData.pools.forEach((p, i) => { poolIdMap[p.id] = data[i].id })
       }
-      // 插入子表：移除 id，pool_id 映射为新池 id
+      // 批量插入子表：移除 id，pool_id 映射为新池 id
       for (const table of ['holdings', 'transactions', 'capital_log']) {
-        for (const row of (pendingImportData[table] || [])) {
-          const { id, updated_at, ...clean } = row
+        const rows = (pendingImportData[table] || []).map(({ id, updated_at, ...clean }) => {
           if (clean.pool_id != null && poolIdMap[clean.pool_id]) clean.pool_id = poolIdMap[clean.pool_id]
-          const { error } = await supabase.from(table).insert(clean)
-          if (error) console.warn(`${table} row insert error:`, error.message)
+          return clean
+        })
+        if (rows.length) {
+          const { error } = await supabase.from(table).insert(rows)
+          if (error) throw new Error(`${table} 插入失败：${error.message}`)
         }
       }
-      // 无自增 id 表：stock_cache / app_config
+      // 批量插入无自增 id 表：stock_cache / app_config
       for (const table of ['stock_cache', 'app_config']) {
-        for (const row of (pendingImportData[table] || [])) {
-          const { error } = await supabase.from(table).insert(row)
-          if (error) console.warn(`${table} row insert error:`, error.message)
+        const rows = pendingImportData[table] || []
+        if (rows.length) {
+          const { error } = await supabase.from(table).insert(rows)
+          if (error) throw new Error(`${table} 插入失败：${error.message}`)
         }
       }
       alert('✅ 数据导入成功！请刷新页面查看')
