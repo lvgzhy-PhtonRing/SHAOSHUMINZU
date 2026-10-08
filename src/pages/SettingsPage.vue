@@ -57,7 +57,7 @@
         <div class="group-title">关于</div>
         <div class="settings-item">
           <div class="item-left"><span class="item-icon">ℹ️</span><span>版本</span></div>
-          <span class="item-value">v4.10.1</span>
+          <span class="item-value">v4.10.2</span>
         </div>
         <div class="settings-item">
           <div class="item-left"><span class="item-icon">🏛️</span><span>数据存储</span></div>
@@ -340,17 +340,18 @@ async function doImport() {
       loadBackup(pendingImportData)
       alert('✅ 数据已导入本地测试库！请刷新页面查看')
     } else {
-      // 删除顺序：先子表后父表，避免外键 409 Conflict
-      const deleteOrder = ['capital_log', 'transactions', 'holdings', 'pools', 'stock_cache', 'app_config']
-      for (const table of deleteOrder) {
-        const keyField = table === 'stock_cache' ? 'stock_code' : table === 'app_config' ? 'key' : 'id'
-        const { data: current } = await supabase.from(table).select(keyField)
-        if (current && current.length) {
-          for (const item of current) {
-            const { error } = await supabase.from(table).delete().eq(keyField, item[keyField])
-            if (error) console.warn(`${table} delete error:`, error.message)
-          }
-        }
+      // 删除顺序：先子表后父表；批量删除，任一失败立即中止（避免残留导致插入冲突）
+      const deleteOrder = [
+        ['capital_log', 'id', 0],
+        ['transactions', 'id', 0],
+        ['holdings', 'id', 0],
+        ['pools', 'id', 0],
+        ['stock_cache', 'stock_code', ''],
+        ['app_config', 'key', '']
+      ]
+      for (const [table, keyField, emptyVal] of deleteOrder) {
+        const { error } = await supabase.from(table).delete().neq(keyField, emptyVal)
+        if (error) throw new Error(`${table} 清空失败：${error.message}`)
       }
       // 插入 pools：移除 id 由数据库自增，并建立 旧id→新id 映射
       const poolIdMap = {}
