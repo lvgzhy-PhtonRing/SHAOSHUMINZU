@@ -57,7 +57,7 @@
         <div class="group-title">关于</div>
         <div class="settings-item">
           <div class="item-left"><span class="item-icon">ℹ️</span><span>版本</span></div>
-          <span class="item-value">v4.10.0</span>
+          <span class="item-value">v4.10.1</span>
         </div>
         <div class="settings-item">
           <div class="item-left"><span class="item-icon">🏛️</span><span>数据存储</span></div>
@@ -340,24 +340,40 @@ async function doImport() {
       loadBackup(pendingImportData)
       alert('✅ 数据已导入本地测试库！请刷新页面查看')
     } else {
-      for (const table of TABLES) {
-        const rows = pendingImportData[table]
-        // 先查出当前表中所有记录ID，逐条删除
-        const { data: current } = await supabase.from(table).select(table === 'stock_cache' ? 'stock_code' : table === 'app_config' ? 'key' : 'id')
+      // 删除顺序：先子表后父表，避免外键 409 Conflict
+      const deleteOrder = ['capital_log', 'transactions', 'holdings', 'pools', 'stock_cache', 'app_config']
+      for (const table of deleteOrder) {
+        const keyField = table === 'stock_cache' ? 'stock_code' : table === 'app_config' ? 'key' : 'id'
+        const { data: current } = await supabase.from(table).select(keyField)
         if (current && current.length) {
           for (const item of current) {
-            if (table === 'stock_cache') await supabase.from(table).delete().eq('stock_code', item.stock_code)
-            else if (table === 'app_config') await supabase.from(table).delete().eq('key', item.key)
-            else await supabase.from(table).delete().eq('id', item.id)
+            const { error } = await supabase.from(table).delete().eq(keyField, item[keyField])
+            if (error) console.warn(`${table} delete error:`, error.message)
           }
         }
-        // 插入备份数据（保留原始 ID 以维持外键关联）
-        if (rows && rows.length) {
-          for (const row of rows) {
-            const { updated_at, ...clean } = row
-            const { error } = await supabase.from(table).insert(clean)
-            if (error) console.warn(`${table} row insert error:`, error.message)
-          }
+      }
+      // 插入 pools：移除 id 由数据库自增，并建立 旧id→新id 映射
+      const poolIdMap = {}
+      for (const row of (pendingImportData.pools || [])) {
+        const { id, updated_at, ...clean } = row
+        const { data, error } = await supabase.from('pools').insert(clean).select('id')
+        if (error) throw new Error(`pools 插入失败：${error.message}`)
+        poolIdMap[id] = data[0].id
+      }
+      // 插入子表：移除 id，pool_id 映射为新池 id
+      for (const table of ['holdings', 'transactions', 'capital_log']) {
+        for (const row of (pendingImportData[table] || [])) {
+          const { id, updated_at, ...clean } = row
+          if (clean.pool_id != null && poolIdMap[clean.pool_id]) clean.pool_id = poolIdMap[clean.pool_id]
+          const { error } = await supabase.from(table).insert(clean)
+          if (error) console.warn(`${table} row insert error:`, error.message)
+        }
+      }
+      // 无自增 id 表：stock_cache / app_config
+      for (const table of ['stock_cache', 'app_config']) {
+        for (const row of (pendingImportData[table] || [])) {
+          const { error } = await supabase.from(table).insert(row)
+          if (error) console.warn(`${table} row insert error:`, error.message)
         }
       }
       alert('✅ 数据导入成功！请刷新页面查看')
