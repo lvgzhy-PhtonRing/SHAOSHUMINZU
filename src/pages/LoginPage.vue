@@ -75,7 +75,13 @@ async function doLogin() {
     })
 
     if (authError) {
-      errorMsg.value = '邮箱或密码错误'
+      if (authError.code === 'invalid_credentials') {
+        errorMsg.value = '邮箱或密码错误'
+      } else if (authError.name === 'AuthRetryableFetchError' || !authError.status) {
+        errorMsg.value = '无法连接登录服务，请检查网络后重试'
+      } else {
+        errorMsg.value = '登录服务暂时不可用，请稍后重试'
+      }
       error.value = true
       return
     }
