@@ -125,13 +125,13 @@ async function fetchViaEdge(codes) {
 }
 
 // ========== 方法2: 新浪 JSONP (无 CORS 问题) ==========
+function sinaQuoteSymbol(code) {
+  return /^[569]/.test(code) ? `sh${code}` : `sz${code}`
+}
+
 function fetchSinaJSONP(codes) {
   return new Promise((resolve) => {
-    const formatted = codes.map(c => {
-      if (c.startsWith('6')) return `sh${c}`
-      if (c.startsWith('0') || c.startsWith('3')) return `sz${c}`
-      return c
-    }).join(',')
+    const formatted = codes.map(sinaQuoteSymbol).join(',')
 
     const script = document.createElement('script')
     script.src = `https://hq.sinajs.cn/list=${formatted}&t=${Date.now()}`
@@ -147,7 +147,7 @@ function fetchSinaJSONP(codes) {
       cleanup()
       const prices = {}
       for (const code of codes) {
-        const key = code.startsWith('6') ? `hq_str_sh${code}` : `hq_str_sz${code}`
+        const key = `hq_str_${sinaQuoteSymbol(code)}`
         const raw = window[key]
         if (!raw) continue
         const f = String(raw).split(',')
@@ -189,9 +189,11 @@ export async function fetchStockPrices(codes) {
   // 优先用 Edge Function
   let fresh = await fetchViaEdge(needFetch).catch(() => ({}))
 
-  // Edge Function 未部署或失败时，用 JSONP
-  if (Object.keys(fresh).length === 0) {
-    fresh = await fetchSinaJSONP(needFetch).catch(() => ({}))
+  // Edge Function 未部署、失败或未返回部分代码时，用 JSONP 补齐
+  const missing = needFetch.filter(code => !fresh[code])
+  if (missing.length) {
+    const fallback = await fetchSinaJSONP(missing).catch(() => ({}))
+    fresh = { ...fresh, ...fallback }
   }
 
   const now = Date.now()

@@ -41,7 +41,7 @@
       <div class="stock-info-header">
         <span class="si-name">{{ stockInfo.stock_name }}</span>
         <span class="si-code">{{ stockInfo.stock_code }}</span>
-        <span class="si-market">{{ stockInfo.stock_code?.startsWith('3') ? '创业板' : stockInfo.stock_code?.startsWith('6') ? '沪市' : '深市' }}</span>
+        <span class="si-market">{{ marketName(stockInfo.stock_code) }}</span>
       </div>
       <div class="stock-info-price">
         <span class="si-price num-mono">{{ formatPrice(stockInfo.price) }}</span>
@@ -77,6 +77,11 @@ const showDropdown = ref(false)
 let lastRequestId = 0
 
 const isCode = computed(() => /^\d{6}$/.test(query.value))
+
+function marketName(code) {
+  if (/^[569]/.test(code || '')) return '沪市'
+  return code?.startsWith('3') ? '创业板' : '深市'
+}
 
 function onInputChange(val) {
   stockInfo.value = null
