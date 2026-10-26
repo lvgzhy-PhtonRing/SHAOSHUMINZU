@@ -65,9 +65,8 @@ serve(async (req) => {
 
   try {
     var sinaCodes = codes.map(function(c) {
-      if (c.startsWith('6')) return 'sh' + c
-      if (c.startsWith('0') || c.startsWith('3')) return 'sz' + c
-      return c
+      if (/^[569]/.test(c)) return 'sh' + c
+      return 'sz' + c
     }).join(',')
 
     var resp = await fetch('https://hq.sinajs.cn/list=' + sinaCodes, {
