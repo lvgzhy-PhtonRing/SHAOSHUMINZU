@@ -48,6 +48,7 @@ import { useFundStore } from '@/stores/funds'
 import { useHoldingStore } from '@/stores/holdings'
 import { usePriceStore } from '@/stores/prices'
 import { useTransactionStore } from '@/stores/transactions'
+import { serializeCorrectionNote } from '@/utils/correctionDetails'
 
 import { deleteCapitalLog, updateCapitalLog, updateTransaction, deleteTransaction, fetchTransactionsByPoolStock, deleteHolding, upsertHolding, savePoolAllocation, loadPoolAllocation, logDelete } from '@/api/supabase'
 import FundAllocationSummary from '@/components/fund/FundAllocationSummary.vue'
@@ -171,11 +172,11 @@ async function onCapitalChange({ type, amount, note }) {
 }
 
 // 校对核缺新增（只调可用资金/总资产，不进总资本）
-async function onAdjustChange({ type, amount, note, date }) {
+async function onAdjustChange({ type, amount, note, date, details }) {
   try {
     await fundStore.addCapitalLog({
       pool_id: null, type, amount,
-      note: note || '',
+      note: serializeCorrectionNote(note, details),
       category: 'adjust',
       created_at: (date || todayStr()) + 'T00:00:00+00:00',
       created_by: 'admin'

@@ -30,11 +30,59 @@
     <!-- 确认弹窗 -->
     <teleport to="body">
       <div v-if="showDialog" class="overlay" @click.self="closeDialog">
-        <div class="dialog">
+        <div class="dialog adjustment-dialog">
           <div class="dlg-title">确认校对核缺</div>
           <div class="dlg-info">
-            <b class="num-mono">{{ adjType === 'add' ? '+' : '-' }}{{ formatMoney(adjAmount) }}</b> 元
+            分项合计
+            <b class="num-mono" :class="adjTotal?.type === 'add' ? 'rise' : 'fall'">
+              {{ adjTotal ? formatSignedAmount(adjTotal.cents) : '—' }}
+            </b>
+            元
           </div>
+          <div class="detail-entry-list">
+            <div v-for="(row, index) in detailRows" :key="row.id" class="detail-entry">
+              <div class="detail-entry-top">
+                <select v-model="row.category" class="dlg-input detail-category" aria-label="分项类别">
+                  <option value="stock_dividend">股票红利</option>
+                  <option value="reverse_repo">逆回购收益</option>
+                  <option value="interest">利息归本</option>
+                  <option value="dividend_tax">股息个税</option>
+                  <option value="fee_error">费用误差</option>
+                </select>
+                <select v-if="row.category === 'fee_error'" v-model="row.direction" class="dlg-input detail-direction" aria-label="费用误差方向">
+                  <option value="add">补回 +</option>
+                  <option value="remove">扣减 −</option>
+                </select>
+                <button v-if="detailRows.length > 1" class="detail-remove" type="button" @click="removeDetailRow(index)">删除</button>
+              </div>
+              <input
+                v-if="row.category === 'stock_dividend'"
+                v-model="row.stockName"
+                type="text"
+                class="dlg-input detail-name"
+                placeholder="股票名称"
+                aria-label="股票名称"
+              />
+              <div class="detail-amount-row">
+                <input
+                  v-model="row.amount"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  inputmode="decimal"
+                  class="dlg-input detail-amount"
+                  placeholder="金额"
+                  aria-label="分项金额"
+                />
+                <span class="detail-sign num-mono" :class="row.category === 'dividend_tax' || (row.category === 'fee_error' && row.direction === 'remove') ? 'fall' : 'rise'">
+                  {{ row.category === 'dividend_tax' || (row.category === 'fee_error' && row.direction === 'remove') ? '-' : '+' }}
+                </span>
+              </div>
+            </div>
+          </div>
+          <button class="detail-add" type="button" @click="addDetailRow">＋ 添加分项</button>
+          <div class="detail-hint">分项净额需与上方券商差额一致</div>
+          <div v-if="detailError" class="detail-error">{{ detailError }}</div>
           <div class="dlg-field">
             <label class="dlg-label">日期</label>
             <input v-model="adjDate" type="date" class="dlg-input" />
@@ -45,7 +93,7 @@
           </div>
           <div class="dlg-btns">
             <button class="d-cancel" @click="closeDialog">取消</button>
-            <button :class="adjType==='add'?'d-ok add':'d-ok remove'" @click="submit">✅ 确认</button>
+            <button :class="adjTotal?.type==='add'?'d-ok add':'d-ok remove'" :disabled="!adjTotal || !!detailError" @click="submit">✅ 确认</button>
           </div>
         </div>
       </div>
@@ -57,12 +105,14 @@
           <div class="dlg-info">确定删除此条校对核缺记录？</div>
           <div class="dlg-rows">
             <div class="dlg-row">
-              <span>{{ deleting.type === 'add' ? '校对核缺+' : '校对核缺−' }}</span>
-              <span class="num-mono">{{ formatMoney(deleting.amount) }}</span>
+              <span>校对核缺</span>
+              <span class="num-mono" :class="deleting.type === 'add' ? 'rise' : 'fall'">
+                {{ formatSignedAmount((deleting.type === 'add' ? 1 : -1) * Math.round(deleting.amount * 100)) }}
+              </span>
             </div>
-            <div v-if="deleting.note" class="dlg-row">
+            <div v-if="parsedLog(deleting).note" class="dlg-row">
               <span>备注</span>
-              <span>{{ deleting.note }}</span>
+              <span>{{ parsedLog(deleting).note }}</span>
             </div>
           </div>
           <div class="dlg-btns">
@@ -83,23 +133,31 @@
       <div v-if="!logs.length" class="list-empty">暂无校对核缺记录</div>
       <div v-else class="trade-log-list">
         <van-swipe-cell v-for="log in logs" :key="log.id" :right-width="70">
-          <div class="trade-log-item">
+          <button class="trade-log-item" type="button" @click="toggleExpanded(log.id)">
             <div class="tli-body">
               <div class="tli-header">
-                <span class="tli-action" :class="log.type === 'add' ? 'rise' : 'fall'">
-                  {{ log.type === 'add' ? '校对核缺+' : '校对核缺−' }}
-                </span>
+                <span class="tli-date">{{ formatDate(log.created_at) }}</span>
+                <span class="tli-action">校对核缺</span>
                 <span class="tli-amount num-mono" :class="log.type === 'add' ? 'rise' : 'fall'">
-                  {{ log.type === 'add' ? '+' : '-' }}{{ formatMoney(log.amount) }}
+                  {{ formatSignedAmount((log.type === 'add' ? 1 : -1) * Math.round(log.amount * 100)) }}
                 </span>
               </div>
-              <div v-if="log.note" class="tli-note">{{ log.note }}</div>
-              <div class="tli-meta">
-                <span>{{ formatDate(log.created_at) }}</span>
+              <div v-if="expandedIds.has(log.id)" class="detail-breakdown">
+                <template v-if="parsedLog(log).items.length">
+                  <div v-for="(item, index) in parsedLog(log).items" :key="index" class="detail-breakdown-row">
+                    <span>
+                      {{ CORRECTION_CATEGORY_LABELS[item.category] || item.category }}
+                      <span v-if="item.category === 'stock_dividend' && item.stockName" class="detail-stock-name">{{ item.stockName }}</span>
+                    </span>
+                    <span class="num-mono" :class="item.signedAmount < 0 ? 'fall' : 'rise'">{{ formatSignedAmount(item.signedAmount) }}</span>
+                  </div>
+                  <div v-if="parsedLog(log).note" class="detail-legacy-note">{{ parsedLog(log).note }}</div>
+                </template>
+                <div v-else class="detail-legacy-note">旧记录无分项明细<span v-if="parsedLog(log).note"> · {{ parsedLog(log).note }}</span></div>
               </div>
             </div>
-            <span class="tli-arrow">›</span>
-          </div>
+            <span class="tli-arrow">{{ expandedIds.has(log.id) ? '⌄' : '›' }}</span>
+          </button>
           <template #right>
             <div class="swipe-actions">
               <button class="swipe-del-btn" @click.stop="deleting = log">删除</button>
@@ -114,6 +172,13 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { formatMoney } from '@/utils/formatters'
+import {
+  CORRECTION_CATEGORY_LABELS,
+  normalizeCorrectionItems,
+  resolveCorrectionTotal,
+  parseCorrectionNote,
+  formatSignedAmount
+} from '@/utils/correctionDetails'
 
 const props = defineProps({
   logs: { type: Array, default: () => [] },
@@ -146,10 +211,36 @@ const diff = computed(() => {
 
 // ===== 确认弹窗 =====
 const showDialog = ref(false)
-const adjType = ref('add')
-const adjAmount = ref(0)
 const adjDate = ref(todayStr())
 const adjNote = ref('')
+let nextDetailId = 1
+const detailRows = ref([createDetailRow()])
+const expectedCents = ref(0)
+const expandedIds = ref(new Set())
+const normalizedItems = computed(() => {
+  try {
+    return normalizeCorrectionItems(detailRows.value)
+  } catch {
+    return null
+  }
+})
+const adjTotal = computed(() => normalizedItems.value ? resolveCorrectionTotal(normalizedItems.value) : null)
+const detailError = computed(() => {
+  if (!normalizedItems.value) {
+    const activeRow = detailRows.value.find(row => row.amount || row.category === 'stock_dividend')
+    if (activeRow?.category === 'stock_dividend' && !String(activeRow.stockName || '').trim()) return '股票红利请填写股票名称'
+    return '请填写有效的分项金额，并确认费用误差方向'
+  }
+  if (!adjTotal.value) return '分项净额为零，请检查正负金额'
+  if (adjTotal.value.cents !== expectedCents.value) {
+    return `分项合计 ${formatSignedAmount(adjTotal.value.cents)}，应为 ${formatSignedAmount(expectedCents.value)}`
+  }
+  return ''
+})
+
+function createDetailRow() {
+  return { id: nextDetailId++, category: 'fee_error', stockName: '', amount: '', direction: 'add' }
+}
 
 function todayStr() {
   const d = new Date()
@@ -162,11 +253,33 @@ function generate() {
     alert('系统与券商一致，无需校对')
     return
   }
-  adjType.value = d > 0 ? 'add' : 'remove'
-  adjAmount.value = Math.abs(d)
+  expectedCents.value = Math.round((d + Number.EPSILON) * 100)
   adjDate.value = todayStr()
   adjNote.value = ''
+  const firstRow = createDetailRow()
+  firstRow.amount = (Math.abs(expectedCents.value) / 100).toFixed(2)
+  firstRow.direction = expectedCents.value > 0 ? 'add' : 'remove'
+  detailRows.value = [firstRow]
   showDialog.value = true
+}
+
+function addDetailRow() {
+  detailRows.value.push(createDetailRow())
+}
+
+function removeDetailRow(index) {
+  detailRows.value.splice(index, 1)
+}
+
+function parsedLog(log) {
+  return parseCorrectionNote(log?.note)
+}
+
+function toggleExpanded(id) {
+  const next = new Set(expandedIds.value)
+  if (next.has(id)) next.delete(id)
+  else next.add(id)
+  expandedIds.value = next
 }
 
 function closeDialog() {
@@ -174,8 +287,14 @@ function closeDialog() {
 }
 
 function submit() {
-  if (!adjAmount.value || adjAmount.value <= 0) return
-  emit('add', { type: adjType.value, amount: adjAmount.value, note: adjNote.value, date: adjDate.value })
+  if (!adjTotal.value || detailError.value) return
+  emit('add', {
+    type: adjTotal.value.type,
+    amount: adjTotal.value.amount,
+    details: normalizedItems.value,
+    note: adjNote.value,
+    date: adjDate.value
+  })
   closeDialog()
   brokerAsset.value = ''
 }
@@ -249,17 +368,22 @@ function formatDate(isoStr) {
 .log-count { font-size: 12px; color: var(--text-secondary); margin-left: auto; }
 .list-empty { font-size: 12px; color: var(--text-muted); padding: 10px 0; text-align: center; }
 .trade-log-list { display: flex; flex-direction: column; gap: 2px; }
-.trade-log-item { padding: 12px 14px; background: var(--bg-hover); display: flex; gap: 8px; align-items: center; border-radius: var(--radius-md); }
+.trade-log-item { width: 100%; text-align: left; padding: 9px 12px; border: 0; color: inherit; font: inherit; background: var(--bg-hover); display: flex; gap: 8px; align-items: center; border-radius: var(--radius-md); cursor: pointer; }
 .tli-body { flex: 1; min-width: 0; }
-.tli-header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; flex-wrap: wrap; }
-.tli-action { font-size: 14px; font-weight: 600; font-family: var(--font-number); }
+.tli-header { display: flex; align-items: baseline; gap: 7px; flex-wrap: wrap; }
+.tli-date { color: var(--text-secondary); font-size: 12px; font-weight: 600; font-family: var(--font-number); }
+.tli-action { font-size: 13px; font-weight: 600; }
 .tli-action.rise { color: var(--color-rise); }
 .tli-action.fall { color: var(--color-fall); }
 .tli-amount { font-size: 14px; font-weight: 700; font-family: var(--font-number); }
 .tli-amount.rise { color: var(--color-rise); }
 .tli-amount.fall { color: var(--color-fall); }
-.tli-note { font-size: 13px; color: var(--text-primary); font-weight: 500; margin-bottom: 4px; }
-.tli-meta { font-size: 11px; color: var(--text-muted); }
+.detail-breakdown { padding: 6px 0 0 16px; display: grid; gap: 3px; }
+.detail-breakdown-row { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; line-height: 1.35; color: var(--text-muted); }
+.detail-stock-name { margin-left: 5px; opacity: .75; }
+.detail-legacy-note { font-size: 10px; color: var(--text-muted); line-height: 1.4; }
+.detail-breakdown-row .rise, .detail-sign.rise, .dlg-info b.rise { color: var(--color-rise); }
+.detail-breakdown-row .fall, .detail-sign.fall, .dlg-info b.fall { color: var(--color-fall); }
 .tli-arrow { font-size: 16px; color: var(--text-muted); opacity: 0.3; flex-shrink: 0; }
 .swipe-actions { display: flex; height: 100%; }
 .swipe-del-btn { width: 70px; border: none; background: var(--color-fall); color: #fff; font-size: 13px; font-weight: 500; cursor: pointer; }
@@ -284,6 +408,20 @@ function formatDate(isoStr) {
   font-size: 15px; outline: none; box-sizing: border-box;
 }
 .dlg-input:focus { border-color: var(--color-warn); }
+.adjustment-dialog { max-height: calc(100dvh - 40px); overflow-y: auto; }
+.detail-entry-list { display: grid; gap: 8px; max-height: 35vh; overflow-y: auto; }
+.detail-entry { padding: 8px; border-radius: var(--radius-md); background: rgba(255,255,255,.035); }
+.detail-entry-top, .detail-amount-row { display: flex; align-items: center; gap: 7px; }
+.detail-category { flex: 1; min-width: 0; }
+.detail-direction { width: 104px; padding-inline: 6px; }
+.detail-remove { border: 0; padding: 5px; color: var(--text-muted); background: transparent; }
+.detail-name, .detail-amount { margin-top: 6px; }
+.detail-amount { flex: 1; min-width: 0; }
+.detail-sign { width: 16px; font-size: 15px; font-weight: 700; text-align: center; }
+.detail-add { width: 100%; margin: 8px 0 12px; padding: 8px; border: 1px dashed rgba(255,255,255,.14); border-radius: var(--radius-md); background: transparent; color: var(--text-secondary); }
+.detail-hint { color: var(--text-muted); font-size: 10px; margin: -4px 0 4px; }
+.detail-error { color: var(--color-fall); font-size: 11px; margin: -4px 0 10px; }
+.d-ok:disabled { opacity: .35; cursor: not-allowed; }
 .dlg-btns { display: flex; gap: 10px; margin-top: 16px; }
 .d-cancel {
   flex: 1; padding: 10px; border: 1px solid rgba(255,255,255,0.1);
