@@ -38,7 +38,7 @@ export const useFundStore = defineStore('funds', {
       this.loading = true
       this.error = null
       try {
-        this.capitalLogs = await fetchCapitalLogs()
+        this.capitalLogs = await fetchCapitalLogs({ strict: true })
       } catch (e) {
         this.error = e.message
         console.error('Load capital logs error:', e)

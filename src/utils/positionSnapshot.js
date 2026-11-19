@@ -4,6 +4,7 @@ import { useFundStore } from '@/stores/funds'
 import { useHoldingStore } from '@/stores/holdings'
 import { usePriceStore } from '@/stores/prices'
 import { savePositionSnapshot, fetchPositionSnapshots } from '@/api/supabase'
+import { marketDate } from './historicalSnapshotLedger'
 
 // 判断某日是否为周五或本月最后一个工作日（周一~周五）
 function isPeriodicDay(date) {
@@ -26,9 +27,9 @@ function isPeriodicDay(date) {
 
 // 若今天为周五或本月最后一个工作日且当日尚无快照，则补存当日快照
 export async function ensurePeriodicSnapshot() {
-  const today = new Date()
+  const todayStr = marketDate()
+  const today = new Date(todayStr + 'T00:00:00')
   if (!isPeriodicDay(today)) return
-  const todayStr = today.toISOString().slice(0, 10)
   const recent = await fetchPositionSnapshots(30)
   if (recent.some(s => s.date === todayStr)) return
   const fundStore = useFundStore()
@@ -51,6 +52,7 @@ export async function saveCurrentPositionSnapshot() {
   const totalAvailable = fundStore.totalAvailable
   const holdings = holdingStore.holdings
   const prices = priceStore.prices
+  if (fundStore.error || holdingStore.error || holdings.some(h => !(prices[h.stock_code]?.price > 0))) return
 
   const totalMv = holdings.reduce((s, h) => {
     return s + (prices[h.stock_code]?.price || 0) * h.quantity
@@ -59,10 +61,9 @@ export async function saveCurrentPositionSnapshot() {
   const ratio = asset > 0 ? (totalMv / asset) * 100 : 0
 
   // 计算本日外部资金净变动（排除"初始"，只计增减资）
-  const today = new Date().toISOString().slice(0, 10)
-  const todayStart = new Date(today + 'T00:00:00').toISOString()
+  const today = marketDate()
   const todayCapitalChanges = fundStore.capitalLogs
-    .filter(l => l.pool_id === null && l.created_at >= todayStart && l.note !== '初始' && l.category !== 'adjust')
+    .filter(l => l.pool_id === null && marketDate(l.created_at || '') === today && l.note !== '初始' && l.category !== 'adjust')
     .reduce((sum, l) => sum + (l.type === 'add' ? l.amount : -l.amount), 0)
 
   await savePositionSnapshot(today, {

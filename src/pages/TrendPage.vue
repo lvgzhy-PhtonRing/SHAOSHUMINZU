@@ -43,7 +43,7 @@
                 </span>
               </div>
               <div class="week-block-pnl-wrap">
-                <div class="week-block-pnl" :class="pnlClass(week.pnl)">{{ pnlText(week.pnl) }}</div>
+                <div class="week-block-pnl" :class="pnlClass(week.pnl)">{{ week.pnl === null ? '—' : pnlText(week.pnl) }}</div>
               </div>
             </div>
           </van-swipe-item>
@@ -66,9 +66,12 @@
             <span class="th-col">总资产</span>
           </div>
           <!-- 数据行 -->
-          <div v-for="(d, i) in trendData" :key="i" class="trend-row"
+          <div v-for="(d, i) in trendData" :key="d.date" class="trend-row"
             :class="{ 'trend-row--week-start': i > 0 && d.label.startsWith('周一') }">
-            <span class="tr-label">{{ d.label }}</span>
+            <span class="tr-label">
+              {{ d.label }}
+              <span v-if="d.estimated" class="trend-estimate">收盘估算</span>
+            </span>
             <!-- 仓位比例列 -->
             <div class="tr-col">
               <div class="bar-track">
@@ -121,6 +124,8 @@ import { usePriceStore } from '@/stores/prices'
 import { useFundStore } from '@/stores/funds'
 import { fetchPositionSnapshots } from '@/api/supabase'
 import { saveCurrentPositionSnapshot } from '@/utils/positionSnapshot'
+import { marketDate } from '@/utils/historicalSnapshotLedger'
+import { mergeHistorySnapshots, refreshHistoricalSnapshots } from '@/utils/historicalSnapshots'
 import { formatMoney } from '@/utils/formatters'
 
 const loading = ref(true)
@@ -143,11 +148,6 @@ function lastIdxAtOrBefore(dateStr) {
     if (arr[mid] <= dateStr) { ans = mid; lo = mid + 1 } else { hi = mid - 1 }
   }
   return ans
-}
-function assetAtOrBefore(dateStr) {
-  const idx = lastIdxAtOrBefore(dateStr)
-  if (idx === -1) return null
-  return snapByDate.value[sortedDates.value[idx]].asset
 }
 function snapDateAtOrBefore(dateStr) {
   const idx = lastIdxAtOrBefore(dateStr)
@@ -197,7 +197,7 @@ function externalNetIn(startDate, endDate) {
   return fundStore.capitalLogs
     .filter(l => l.pool_id === null && l.category !== 'adjust' && l.note !== '初始' && l.created_at)
     .filter(l => {
-      const d = l.created_at.slice(0, 10)
+      const d = marketDate(l.created_at)
       return d > startDate && d <= endDate
     })
     .reduce((sum, l) => sum + (l.type === 'add' ? l.amount : -l.amount), 0)
@@ -224,8 +224,7 @@ function buildMonthPanel(year, month) {
     }
     // 本周盈亏 = 该周块"入月日"区间的资产变动 − 区间内外部增资
     // 入月日区间在各周块间首尾相接，逐周求和恰好抵消为月度盈亏（与月视图口径闭环）
-    const today = new Date()
-    const todayStr = toDateStr(today)
+    const todayStr = marketDate()
     let pnl = null
     const inMonthDates = days.filter(d => d.inMonth).map(d => toDateStr(d.date))
     if (inMonthDates.length && inMonthDates[0] <= todayStr) {
@@ -234,7 +233,7 @@ function buildMonthPanel(year, month) {
         : todayStr
       const curDate = snapDateAtOrBefore(curEnd)
       const prevDate = snapDateAtOrBefore(dateStrAddDays(inMonthDates[0], -1))
-      if (curDate && prevDate) {
+      if (curDate && prevDate && curDate !== prevDate) {
         const cur = snapByDate.value[curDate].asset
         const prev = snapByDate.value[prevDate].asset
         const netIn = externalNetIn(prevDate, curDate)
@@ -243,24 +242,15 @@ function buildMonthPanel(year, month) {
     }
     weeks.push({
       days,
-      pnl: pnl ?? 0
+      pnl
     })
-    // cursor 目前已移动到周六(或月末)，下次 while 循环将从下一周开始
   }
   return { year, month, weeks }
 }
 
-// 保留 weekRefDate 作为兼容接口（实际不再直接使用，但保留以免报错）
-function weekRefDate(days) {
-  const friday = days[4].date
-  const today = new Date()
-  if (friday > today) return toDateStr(today)
-  return toDateStr(friday)
-}
-
 // 面板顺序 [上月, 本月]：initial-swipe=1 默认显示本月，右滑切到上月
 function buildMonthPanels() {
-  const now = new Date()
+  const now = new Date(marketDate() + 'T00:00:00')
   const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1)
   const panels = [buildMonthPanel(prev.getFullYear(), prev.getMonth())]
   panels.push(buildMonthPanel(now.getFullYear(), now.getMonth()))
@@ -283,20 +273,21 @@ function lastSnapshotIdxInMonth(year, month) {
 function externalInvestedAt(endDate) {
   return fundStore.capitalLogs
     .filter(l => l.pool_id === null && l.category !== 'adjust' && l.created_at)
-    .filter(l => l.created_at.slice(0, 10) <= endDate)
+    .filter(l => marketDate(l.created_at) <= endDate)
     .reduce((sum, l) => sum + (l.type === 'add' ? l.amount : -l.amount), 0)
 }
 
 function buildYearPnls() {
-  const year = new Date().getFullYear()
+  const todayStr = marketDate()
+  const today = new Date(todayStr + 'T00:00:00')
+  const year = today.getFullYear()
   const list = []
-  const todayStr = toDateStr(new Date())
   let prevDate = ''
   let prevAsset = null
   for (let m = 0; m < 12; m++) {
     // 该月结算点：非当前月取该月末快照；当前月取最新快照（尚无月末快照）
     let curDate
-    if (m === new Date().getMonth()) {
+    if (m === today.getMonth()) {
       curDate = snapDateAtOrBefore(todayStr)
     } else {
       const idx = lastSnapshotIdxInMonth(year, m)
@@ -398,13 +389,13 @@ const capitalDetailList = computed(() => {
   return fundStore.capitalLogs
     .filter(l => l.pool_id === null && l.note !== '初始' && l.category !== 'adjust' && l.created_at)
     .filter(l => {
-      const d = l.created_at.slice(0, 10)
+      const d = marketDate(l.created_at)
       return d >= minDate && d <= maxDate
     })
     .slice()
     .sort((a, b) => a.created_at.localeCompare(b.created_at))
     .map(l => {
-      const dStr = l.created_at.slice(0, 10)
+      const dStr = marketDate(l.created_at)
       const d = new Date(dStr + 'T00:00:00')
       return {
         label: formatTrendLabel(d),
@@ -417,15 +408,24 @@ const capitalDetailList = computed(() => {
 
 onMounted(async () => {
   try {
+    const history = refreshHistoricalSnapshots().catch(e => {
+      console.warn('历史快照暂未补齐：', e)
+      return { estimates: [], tradingDates: [] }
+    })
     await Promise.all([
       holdingStore.loadHoldings(),
       fundStore.loadCapitalLogs()
     ])
     const codes = holdingStore.stockCodes
     if (codes.length) await priceStore.loadPrices(codes)
-    await saveCurrentPositionSnapshot()
+    await saveCurrentPositionSnapshot().catch(e => console.warn('当日快照暂未保存：', e))
 
-    const snaps = await fetchPositionSnapshots(500)
+    const { originals, estimates, tradingDates } = await history
+    const stored = await fetchPositionSnapshots(500).catch(e => {
+      console.warn('快照暂未读取：', e)
+      return []
+    })
+    const snaps = mergeHistorySnapshots([...(originals || []), ...stored], estimates)
     const map = {}
     for (const s of snaps) map[s.date] = s
     snapByDate.value = map
@@ -435,31 +435,17 @@ onMounted(async () => {
     buildYearPnls()
     nextTick(updateSwipeHeight)
 
-    // 趋势总览（近15交易日，缺失顺延补数）
-    const dates = sortedDates.value
-    if (dates.length) {
-      const end = new Date(dates[dates.length - 1] + 'T00:00:00')
-      const start = new Date(end)
-      start.setDate(start.getDate() - 30)
-
-      const filled = []
-      let lastData = null
-      const cursor = new Date(start)
-      while (cursor <= end) {
-        const dateStr = toDateStr(cursor)
-        if (!isWeekend(dateStr)) {
-          const snap = snapByDate.value[dateStr]
-          if (snap) {
-            lastData = { ratio: snap.ratio, asset: snap.asset || 0, capitalChange: snap.capitalChange || 0 }
-            filled.push({ label: formatTrendLabel(cursor), date: dateStr, ...lastData })
-          } else if (lastData) {
-            filled.push({ label: formatTrendLabel(cursor), date: dateStr, ...lastData, capitalChange: 0 })
-          }
-        }
-        cursor.setDate(cursor.getDate() + 1)
-      }
-      trendData.value = filled.slice(-15)
-    }
+    // 近 15 个交易日只展示可用的原始快照与收盘估算。
+    const today = marketDate()
+    const dates = tradingDates.length ? tradingDates : sortedDates.value.filter(date => !isWeekend(date))
+    trendData.value = dates.filter(date => date <= today).slice(-15).flatMap(date => {
+      const snapshot = map[date]
+      if (!snapshot) return []
+      return [{
+        ...snapshot,
+        label: formatTrendLabel(new Date(date + 'T00:00:00'))
+      }]
+    })
   } catch (e) {
     console.error('Trend page load error:', e)
   } finally {
@@ -473,6 +459,7 @@ onMounted(async () => {
 .section-title .subtitle { font-size: 11px; color: var(--text-secondary); font-weight: 400; }
 .section-card + .section-card { margin-top: 16px; }
 .section-card { padding: 16px 14px 18px; }
+.trend-estimate { display: block; font-size: 10px; color: var(--text-muted); }
 
 /* 标题左边 accent 色条，替代 emoji */
 .title-accent {

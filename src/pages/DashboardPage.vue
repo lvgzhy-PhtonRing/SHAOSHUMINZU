@@ -175,6 +175,8 @@ function onSellStock(stock) {
 
 async function onTradeChanged() {
   try {
+    const { refreshHistoricalSnapshots } = await import('@/utils/historicalSnapshots')
+    refreshHistoricalSnapshots({ afterLedgerChange: true }).catch(e => console.warn('历史快照暂未更新：', e))
     await Promise.all([holdingStore.loadHoldings(), fundStore.loadCapitalLogs()])
     const codes = holdingStore.stockCodes
     if (codes.length) {

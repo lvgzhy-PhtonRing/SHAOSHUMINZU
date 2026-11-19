@@ -51,6 +51,7 @@ import { ref, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import SettingsPage from '@/pages/SettingsPage.vue'
 import { ensurePeriodicSnapshot } from '@/utils/positionSnapshot'
+import { refreshHistoricalSnapshots } from '@/utils/historicalSnapshots'
 
 const route = useRoute()
 const router = useRouter()
@@ -58,6 +59,7 @@ const showDrawer = ref(false)
 
 onMounted(() => {
   ensurePeriodicSnapshot().catch(e => console.error('ensurePeriodicSnapshot error:', e))
+  refreshHistoricalSnapshots().catch(e => console.warn('历史快照暂未补齐：', e))
 })
 
 const routeMap = { dashboard: 0, positions: 1, netvalue: 2, trend: 3, trends: 4, fund: 5 }

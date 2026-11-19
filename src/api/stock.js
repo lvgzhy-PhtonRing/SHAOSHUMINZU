@@ -242,15 +242,10 @@ const KLINE_DATALEN = { day: 500, week: 250, month: 120 }
 let klineCache = {}
 let klineCacheTime = {}
 
-function klineSymbol(code) {
-  // 5/6/9 开头归沪市（含 ETF），其余归深市
-  return /^[569]/.test(code) ? `sh${code}` : `sz${code}`
-}
-
-function fetchKLineJSONP(code, period) {
+function fetchKLineJSONP(symbol, period) {
   return new Promise((resolve) => {
     const cb = `kline_cb_${Date.now()}_${Math.floor(Math.random() * 1e6)}`
-    const url = `https://quotes.sina.cn/cn/api/jsonp_v2.php/${cb}/CN_MarketDataService.getKLineData?symbol=${klineSymbol(code)}&scale=${KLINE_SCALE[period]}&ma=no&datalen=${KLINE_DATALEN[period]}`
+    const url = `https://quotes.sina.cn/cn/api/jsonp_v2.php/${cb}/CN_MarketDataService.getKLineData?symbol=${symbol}&scale=${KLINE_SCALE[period]}&ma=no&datalen=${KLINE_DATALEN[period]}`
     const script = document.createElement('script')
     let done = false
 
@@ -270,14 +265,13 @@ function fetchKLineJSONP(code, period) {
   })
 }
 
-export async function fetchKLine(code, period = 'day') {
-  if (!/^\d{6}$/.test(code)) return []
-  const key = `${code}_${period}`
+async function fetchKLineBySymbol(symbol, period) {
+  const key = `${symbol}_${period}`
   if (klineCache[key] && Date.now() - klineCacheTime[key] < KLINE_MAX_AGE) {
     return klineCache[key]
   }
 
-  const raw = await fetchKLineJSONP(code, period)
+  const raw = await fetchKLineJSONP(symbol, period)
   const data = raw
     .filter(r => r && r.day && r.open)
     .map(r => {
@@ -299,6 +293,16 @@ export async function fetchKLine(code, period = 'day') {
     klineCacheTime[key] = Date.now()
   }
   return data
+}
+
+export function fetchKLine(code, period = 'day') {
+  if (!/^\d{6}$/.test(code)) return Promise.resolve([])
+  return fetchKLineBySymbol(sinaQuoteSymbol(code), period)
+}
+
+// 沪深交易日以指数日线为准，避免将节假日误当作交易日。
+export function fetchMarketDailyBars() {
+  return fetchKLineBySymbol('sh000001', 'day')
 }
 
 export function clearKLineCache() {

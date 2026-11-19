@@ -49,11 +49,12 @@ export async function fetchPools() {
 }
 
 /* 获取持仓 */
-export async function fetchHoldings() {
+export async function fetchHoldings({ strict = false } = {}) {
   if (isMockMode()) return getTable('holdings')
   const { data, error } = await supabase
     .from('holdings')
     .select('*')
+  if (error && strict) throw new Error(error.message)
   return error ? [] : data
 }
 
@@ -74,7 +75,7 @@ export async function fetchTransactions(limit = 50) {
 }
 
 /* 获取资金变动记录 */
-export async function fetchCapitalLogs() {
+export async function fetchCapitalLogs({ strict = false } = {}) {
   if (isMockMode()) {
     const pools = getTable('pools')
     return getTable('capital_log')
@@ -91,6 +92,7 @@ export async function fetchCapitalLogs() {
     .from('capital_log')
     .select('*, pools(name)')
     .order('created_at', { ascending: false })
+  if (error && strict) throw new Error(error.message)
   return error ? [] : data
 }
 
@@ -103,6 +105,27 @@ export async function fetchAllTransactions() {
     .order('created_at', { ascending: false })
     .limit(10000)
   return error ? [] : data
+}
+
+// 历史估值需要完整账本，读取失败时不使用空数组冒充空账户。
+export async function fetchHistoricalSnapshotLedger() {
+  async function read(table, columns) {
+    if (isMockMode()) return getTable(table)
+    const rows = []
+    const size = 500
+    for (let offset = 0; ; offset += size) {
+      const { data, error } = await supabase.from(table).select(columns).order('id').range(offset, offset + size - 1)
+      if (error) throw new Error(error.message)
+      rows.push(...data)
+      if (data.length < size) return rows
+    }
+  }
+  const [holdings, transactions, capitalLogs] = await Promise.all([
+    read('holdings', 'stock_code, quantity'),
+    read('transactions', 'pool_id, stock_code, type, quantity, amount, actual_amount, status, trade_date'),
+    read('capital_log', 'pool_id, type, amount, category, note, created_at')
+  ])
+  return { holdings, transactions, capitalLogs }
 }
 
 /* 查询子池+股票的完整交易记录（用于重算持仓） */
@@ -297,7 +320,7 @@ export async function savePositionSnapshot(date, data) {
 }
 
 /* 读取最近 N 条快照（含资产 & 资金变动） */
-export async function fetchPositionSnapshots(limit = 10) {
+export async function fetchPositionSnapshots(limit = 10, { strict = false } = {}) {
   const parseSnap = (d) => {
     const parsed = JSON.parse(d.value)
     return {
@@ -321,7 +344,10 @@ export async function fetchPositionSnapshots(limit = 10) {
     .like('key', 'pos_snap:%')
     .order('key', { ascending: false })
     .limit(limit)
-  if (error) return []
+  if (error) {
+    if (strict) throw new Error(error.message)
+    return []
+  }
   return data
     .map(parseSnap)
     .reverse()

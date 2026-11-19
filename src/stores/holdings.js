@@ -26,7 +26,7 @@ export const useHoldingStore = defineStore('holdings', {
       this.loading = true
       this.error = null
       try {
-        this.holdings = await fetchHoldings()
+        this.holdings = await fetchHoldings({ strict: true })
       } catch (e) {
         this.error = e.message
         console.error('Load holdings error:', e)
