@@ -1,30 +1,41 @@
 <template>
   <div class="card edge-warn">
-    <div class="card-title"><span class="title-accent title-accent--warn"></span>券商APP校对</div>
-    <div class="card-desc">输入券商APP显示的「账户资产」，系统自动计算差额并记录。只调可用资金/总资产，不计入总资本</div>
+    <button
+      class="broker-menu-trigger"
+      type="button"
+      :aria-expanded="showBrokerForm"
+      @click="showBrokerForm = !showBrokerForm"
+    >
+      <span class="broker-menu-title"><span class="title-accent title-accent--warn"></span>券商APP校对</span>
+      <span class="broker-menu-action">{{ showBrokerForm ? '收起' : '展开校对表单' }} <span aria-hidden="true">{{ showBrokerForm ? '⌄' : '›' }}</span></span>
+    </button>
 
-    <div v-if="tradingLocked" class="lock-banner">
-      ⛔ 交易时段内（工作日 9:00–15:30）禁止校对核缺，请在 15:30 收盘后操作
-      <div class="lock-note">法定休市日仍按工作日判断，以券商实际休市为准</div>
-    </div>
+    <div v-if="showBrokerForm" class="broker-form">
+      <div class="card-desc">输入券商APP显示的「账户资产」，系统自动计算差额并记录。只调可用资金/总资产，不计入总资本</div>
 
-    <div class="amount-row">
-      <input
-        v-model="brokerAsset"
-        type="number"
-        inputmode="decimal"
-        placeholder="券商账户资产（元）"
-        class="big-input num-mono"
-        :disabled="tradingLocked"
-      />
-    </div>
-    <div class="action-row">
-      <button class="act-btn gen" :disabled="tradingLocked || !brokerValid || submitting" @click="generate">生成校对核缺</button>
-    </div>
-    <div v-if="brokerValid" class="diff-preview" :class="diff >= 0 ? 'pos' : 'neg'">
-      差额 = 券商账户资产 − 系统账户资产 =
-      <b class="num-mono">{{ diff >= 0 ? '+' : '' }}{{ formatMoney(diff) }}</b>
-      <span class="hint">系统账户资产（市值 + 可用资金）{{ formatMoney(systemAsset) }}</span>
+      <div v-if="tradingLocked" class="lock-banner">
+        ⛔ 交易时段内（工作日 9:00–15:30）禁止校对核缺，请在 15:30 收盘后操作
+        <div class="lock-note">法定休市日仍按工作日判断，以券商实际休市为准</div>
+      </div>
+
+      <div class="amount-row">
+        <input
+          v-model="brokerAsset"
+          type="number"
+          inputmode="decimal"
+          placeholder="券商账户资产（元）"
+          class="big-input num-mono"
+          :disabled="tradingLocked"
+        />
+      </div>
+      <div class="action-row">
+        <button class="act-btn gen" :disabled="tradingLocked || !brokerValid || submitting" @click="generate">生成校对核缺</button>
+      </div>
+      <div v-if="brokerValid" class="diff-preview" :class="diff >= 0 ? 'pos' : 'neg'">
+        差额 = 券商账户资产 − 系统账户资产 =
+        <b class="num-mono">{{ diff >= 0 ? '+' : '' }}{{ formatMoney(diff) }}</b>
+        <span class="hint">系统账户资产（市值 + 可用资金）{{ formatMoney(systemAsset) }}</span>
+      </div>
     </div>
 
     <!-- 确认弹窗 -->
@@ -33,16 +44,20 @@
         <div class="dialog adjustment-dialog">
           <div class="dlg-title">确认校对核缺</div>
           <div class="dlg-info">
-            分项合计
-            <b class="num-mono" :class="adjTotal?.type === 'add' ? 'rise' : 'fall'">
-              {{ adjTotal ? formatSignedAmount(adjTotal.cents) : '—' }}
-            </b>
-            元
+            <div class="dlg-info-row">
+              <span>校对核缺总额</span>
+              <b class="num-mono" :class="expectedCents >= 0 ? 'rise' : 'fall'">{{ formatSignedAmount(expectedCents) }} 元</b>
+            </div>
+            <div class="dlg-info-row">
+              <span>当前分项合计</span>
+              <b class="num-mono" :class="adjTotal?.cents >= 0 ? 'rise' : 'fall'">{{ adjTotal ? formatSignedAmount(adjTotal.cents) : '—' }} 元</b>
+            </div>
           </div>
           <div class="detail-entry-list">
             <div v-for="(row, index) in detailRows" :key="row.id" class="detail-entry">
               <div class="detail-entry-top">
-                <select v-model="row.category" class="dlg-input detail-category" aria-label="分项类别">
+                <select v-model="row.category" class="dlg-input detail-category" aria-label="分项类别" required>
+                  <option value="" disabled>请选择分项类别</option>
                   <option value="stock_dividend">股票红利</option>
                   <option value="reverse_repo">逆回购收益</option>
                   <option value="interest">利息归本</option>
@@ -62,6 +77,7 @@
                 class="dlg-input detail-name"
                 placeholder="股票名称"
                 aria-label="股票名称"
+                required
               />
               <div class="detail-amount-row">
                 <input
@@ -73,15 +89,16 @@
                   class="dlg-input detail-amount"
                   placeholder="金额"
                   aria-label="分项金额"
+                  required
                 />
-                <span class="detail-sign num-mono" :class="row.category === 'dividend_tax' || (row.category === 'fee_error' && row.direction === 'remove') ? 'fall' : 'rise'">
+                <span v-if="row.category" class="detail-sign num-mono" :class="row.category === 'dividend_tax' || (row.category === 'fee_error' && row.direction === 'remove') ? 'fall' : 'rise'">
                   {{ row.category === 'dividend_tax' || (row.category === 'fee_error' && row.direction === 'remove') ? '-' : '+' }}
                 </span>
               </div>
             </div>
           </div>
           <button class="detail-add" type="button" @click="addDetailRow">＋ 添加分项</button>
-          <div class="detail-hint">分项净额需与上方券商差额一致</div>
+          <div class="detail-hint">请逐项填写差额来源；所有分项净额必须与校对核缺总额完全一致</div>
           <div v-if="detailError" class="detail-error">{{ detailError }}</div>
           <div class="dlg-field">
             <label class="dlg-label">日期</label>
@@ -129,6 +146,16 @@
         <span class="log-title">校对核缺明细</span>
         <span class="swipe-hint">◀ 左滑删除</span>
         <span class="log-count" v-if="logs.length">共 {{ logs.length }} 条</span>
+      </div>
+      <div class="history-summary" aria-label="校对核缺分项历史汇总">
+        <div class="history-summary-title">分项历史汇总 <span>按类别累计</span></div>
+        <div v-if="historySummary.length" class="history-summary-grid">
+          <div v-for="item in historySummary" :key="item.category" class="history-summary-item">
+            <span class="history-summary-label">{{ item.label }}</span>
+            <b class="num-mono" :class="item.cents < 0 ? 'fall' : 'rise'">共 {{ formatSignedAmount(item.cents) }} 元</b>
+          </div>
+        </div>
+        <div v-else class="history-summary-empty">暂无可汇总的分项记录</div>
       </div>
       <div v-if="!logs.length" class="list-empty">暂无校对核缺记录</div>
       <div v-else class="trade-log-list">
@@ -187,6 +214,7 @@ const props = defineProps({
   totalAvailable: { type: Number, default: 0 }
 })
 const emit = defineEmits(['add', 'delete'])
+const showBrokerForm = ref(false)
 
 // ===== 交易时段判定：工作日 9:00–15:30 禁止（分钟 540–930） =====
 const tradingLocked = computed(() => {
@@ -217,6 +245,18 @@ let nextDetailId = 1
 const detailRows = ref([createDetailRow()])
 const expectedCents = ref(0)
 const expandedIds = ref(new Set())
+const historySummary = computed(() => {
+  const totals = new Map()
+  for (const log of props.logs) {
+    for (const item of parseCorrectionNote(log?.note).items) {
+      if (!CORRECTION_CATEGORY_LABELS[item.category] || !Number.isInteger(item.signedAmount)) continue
+      totals.set(item.category, (totals.get(item.category) || 0) + item.signedAmount)
+    }
+  }
+  return Object.entries(CORRECTION_CATEGORY_LABELS)
+    .filter(([category]) => totals.has(category))
+    .map(([category, label]) => ({ category, label, cents: totals.get(category) }))
+})
 const normalizedItems = computed(() => {
   try {
     return normalizeCorrectionItems(detailRows.value)
@@ -226,9 +266,14 @@ const normalizedItems = computed(() => {
 })
 const adjTotal = computed(() => normalizedItems.value ? resolveCorrectionTotal(normalizedItems.value) : null)
 const detailError = computed(() => {
+  if (!detailRows.value.length) return '请至少添加一项分项明细'
+  for (const row of detailRows.value) {
+    if (!row.category) return '请选择每一项的分项类别'
+    if (row.category === 'stock_dividend' && !String(row.stockName || '').trim()) return '股票红利请填写股票名称'
+    if (!String(row.amount ?? '').trim() || !Number.isFinite(Number(row.amount)) || Number(row.amount) <= 0) return '请填写每一项的有效金额'
+    if (row.category === 'fee_error' && !['add', 'remove'].includes(row.direction)) return '请选择费用误差方向'
+  }
   if (!normalizedItems.value) {
-    const activeRow = detailRows.value.find(row => row.amount || row.category === 'stock_dividend')
-    if (activeRow?.category === 'stock_dividend' && !String(activeRow.stockName || '').trim()) return '股票红利请填写股票名称'
     return '请填写有效的分项金额，并确认费用误差方向'
   }
   if (!adjTotal.value) return '分项净额为零，请检查正负金额'
@@ -239,7 +284,7 @@ const detailError = computed(() => {
 })
 
 function createDetailRow() {
-  return { id: nextDetailId++, category: 'fee_error', stockName: '', amount: '', direction: 'add' }
+  return { id: nextDetailId++, category: '', stockName: '', amount: '', direction: 'add' }
 }
 
 function todayStr() {
@@ -256,10 +301,7 @@ function generate() {
   expectedCents.value = Math.round((d + Number.EPSILON) * 100)
   adjDate.value = todayStr()
   adjNote.value = ''
-  const firstRow = createDetailRow()
-  firstRow.amount = (Math.abs(expectedCents.value) / 100).toFixed(2)
-  firstRow.direction = expectedCents.value > 0 ? 'add' : 'remove'
-  detailRows.value = [firstRow]
+  detailRows.value = [createDetailRow()]
   showDialog.value = true
 }
 
@@ -319,6 +361,13 @@ function formatDate(isoStr) {
 .card { background: var(--bg-card); border-radius: var(--radius-lg); padding: 16px; margin-bottom: 12px; }
 .card-title { display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 700; margin-bottom: 2px; }
 .card-desc { font-size: 12px; color: var(--text-secondary); margin-bottom: 12px; }
+.broker-menu-trigger {
+  display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 0; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer;
+}
+.broker-menu-title { display: inline-flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 700; }
+.broker-menu-action { flex-shrink: 0; color: var(--text-muted); font-size: 12px; }
+.broker-form { margin-top: 12px; }
 
 .lock-banner {
   background: rgba(233,69,96,0.12); color: var(--color-rise);
@@ -366,6 +415,19 @@ function formatDate(isoStr) {
   font-weight: 600;
 }
 .log-count { font-size: 12px; color: var(--text-secondary); margin-left: auto; }
+.history-summary {
+  margin: 0 0 10px; padding: 10px; border-radius: var(--radius-md);
+  background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.05);
+}
+.history-summary-title { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 8px; font-size: 12px; font-weight: 600; }
+.history-summary-title span, .history-summary-empty { color: var(--text-muted); font-size: 10px; font-weight: 400; }
+.history-summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 6px; }
+.history-summary-item { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 6px 8px; border-radius: var(--radius-sm); background: rgba(255,255,255,0.035); }
+.history-summary-label { color: var(--text-secondary); font-size: 11px; }
+.history-summary-item b { font-size: 11px; white-space: nowrap; }
+.history-summary-item .rise { color: var(--color-rise); }
+.history-summary-item .fall { color: var(--color-fall); }
+.history-summary-empty { line-height: 1.5; }
 .list-empty { font-size: 12px; color: var(--text-muted); padding: 10px 0; text-align: center; }
 .trade-log-list { display: flex; flex-direction: column; gap: 2px; }
 .trade-log-item { width: 100%; text-align: left; padding: 9px 12px; border: 0; color: inherit; font: inherit; background: var(--bg-hover); display: flex; gap: 8px; align-items: center; border-radius: var(--radius-md); cursor: pointer; }
@@ -400,6 +462,8 @@ function formatDate(isoStr) {
 .dlg-title { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
 .dlg-info { font-size: 14px; color: var(--text-secondary); margin-bottom: 12px; }
 .dlg-info b { color: #fff; }
+.dlg-info-row { display: flex; justify-content: space-between; gap: 12px; }
+.dlg-info-row + .dlg-info-row { margin-top: 6px; }
 .dlg-field { margin-bottom: 12px; }
 .dlg-label { display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; }
 .dlg-input {
